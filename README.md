@@ -11,7 +11,7 @@ TODO
 * add a function to debug duckhook itself.
 * add tests.
 
-Supportd Platform
+Supported Platform
 -----------------
 
 * Linux x86_64
@@ -19,7 +19,7 @@ Supportd Platform
 * Windows x64 (*1)
 * Windows 32-bit (*1)
 
-*1 compiled by mingw-w64 and tested on Wine. I havn't tested it on Windows yet.
+*1 compiled by mingw-w64 and tested on Wine. I haven't tested it on Windows yet.
 
 Compilation
 -----------
@@ -48,7 +48,7 @@ static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags);
     return rv;
 }
 
-int instal_hook()
+int install_hook()
 {
     /* Change the first 5 bytes of the recv function to redirect
      * all recv calls to recv_hook.
