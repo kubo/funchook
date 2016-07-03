@@ -25,7 +25,9 @@ Compilation
 -----------
 
 ```shell
-$ git clone https://github.com/kubo/duckhook.git # diStorm3 is also cloned as a submodule.
+$ git clone https://github.com/kubo/duckhook.git
+$ git submodule init
+$ git submodule update # clone diStorm3
 $ cd src
 $ make
 ```
