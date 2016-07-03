@@ -1,0 +1,7 @@
+{
+    global:
+        duckhook_install;
+        duckhook_uninstall;
+    local:
+        *;
+};
