@@ -129,8 +129,8 @@ int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
             }
             if (memcmp(target, "\x8b\x0c\x24\xc3", 4) == 0) {
                 /* special case to handle "call __i686.get_pc_thunk.cx"
-                 * If the target instructions are "movl (%esp), %ebc; ret",
-                 * use "movl di->addr + 5, %ebc" instead.
+                 * If the target instructions are "movl (%esp), %ecx; ret",
+                 * use "movl di->addr + 5, %ecx" instead.
                  */
                 *(work + offset) = 0xb9;
                 *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
