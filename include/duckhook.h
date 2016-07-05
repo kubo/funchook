@@ -40,10 +40,49 @@
 #define DUCKHOOK_DLLEXPORT
 #endif /* WIN32 */
 
-typedef struct duckhook_memo duckhook_memo_t;
+typedef struct duckhook duckhook_t;
 
-DUCKHOOK_DLLEXPORT void *duckhook_install(void *target_func, void *hook_func, duckhook_memo_t **memo);
+/**
+ * Create a duckhook handle
+ *
+ * @return allocated duckhook handle.
+ */
+DUCKHOOK_DLLEXPORT duckhook_t *duckhook_create(void);
 
-DUCKHOOK_DLLEXPORT void duckhook_uninstall(duckhook_memo_t *memo);
+/**
+ * Prepare hooking
+ *
+ * @param duckhook     a duckhook handle created by duckhook_create()
+ * @param target_func  function pointer to be intercepted
+ * @param hook_func    function pointer which is called istead of target_func
+ * @return             trampoline function which is used in hook_func to call the original target_func
+ */
+DUCKHOOK_DLLEXPORT void *duckhook_prepare(duckhook_t *duckhook, void *target_func, void *hook_func);
+
+/**
+ * Install hooks prepared by duckhook_prepare().
+ *
+ * @param duckhook     a duckhook handle created by duckhook_create()
+ * @param flags        reserved. Set zero.
+ * @return             0 on success, -1 on error
+ */
+DUCKHOOK_DLLEXPORT int duckhook_install(duckhook_t *duckhook, int flags);
+
+/**
+ * Uninstall hooks installed by duckhook_install().
+ *
+ * @param duckhook     a duckhook handle created by duckhook_create()
+ * @param flags        reserved. Set zero.
+ * @return             0 on success, -1 on error
+ */
+DUCKHOOK_DLLEXPORT int duckhook_uninstall(duckhook_t *duckhook, int flags);
+
+/**
+ * Destroy a duckhook handle
+ *
+ * @param duckhook     a duckhook handle created by duckhook_create()
+ * @return             0 on success, -1 on error
+ */
+DUCKHOOK_DLLEXPORT int duckhook_destroy(duckhook_t *duckhook);
 
 #endif

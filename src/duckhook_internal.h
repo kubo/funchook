@@ -56,23 +56,6 @@
 
 #define TRAMPOLINE_SIZE (JUMP32_SIZE + (MAX_INSN_LEN - 1) + JUMP32_SIZE)
 
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-
-typedef struct {
-    uchar used;
-    uchar trampoline[TRAMPOLINE_SIZE];
-#ifdef CPU_X86_64
-    uchar transit[JUMP64_SIZE];
-#endif
-} code_mem_t;
-
-typedef struct code_mem_buffer {
-    struct code_mem_buffer *next;
-    struct code_mem_buffer **prev;
-    code_mem_t code_mem[1];
-} code_mem_buffer_t;
-
 typedef struct {
     void *addr;
     size_t size;
@@ -83,28 +66,28 @@ typedef struct {
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
-extern size_t allocation_unit;
-extern size_t code_mem_count_in_buffer;
-
+size_t duckhook_mem_size();
 void *duckhook_mem_alloc(void *hint);
 int duckhook_mem_free(void *mem);
+int duckhook_mem_protect(void *addr);
+int duckhook_mem_unprotect(void *addr);
 
-int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len);
+int duckhook_unprotect_begin(mem_state_t *mstate, void *addr, size_t len);
 int duckhook_unprotect_end(const mem_state_t *mstate);
 
 void *duckhook_resolve_func(void *func);
 
-int duckhook_get_module_region(const uchar *addr, uchar **start, uchar **end);
+int duckhook_get_module_region(const uint8_t *addr, uint8_t **start, uint8_t **end);
 
 /* Functions in duckhook_x86.c */
 
-int duckhook_write_jump32(uchar *src, const uchar *dst, int unprotect);
+int duckhook_write_jump32(const uint8_t *src, const uint8_t *dst, uint8_t *out);
 #ifdef CPU_X86_64
-int duckhook_write_jump64(uchar *src, const uchar *dst, int unprotect);
-int duckhook_jump32_avail(const uchar *src, const uchar *dst);
+int duckhook_write_jump64(uint8_t *src, const uint8_t *dst);
+int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst);
 #endif
 
-int duckhook_make_trampoline(const uchar *func, uchar *trampoline);
+int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline);
 
 
 #endif

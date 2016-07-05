@@ -28,28 +28,47 @@
  * You should have received a copy of the GNU General Public License
  * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
  */
-#include <stddef.h>
+#include <stdint.h>
 #include <windows.h>
 #include "duckhook_internal.h"
 
-size_t allocation_unit;
-size_t code_mem_count_in_buffer;
-
+static size_t allocation_unit;
 static size_t page_size;
+
+size_t duckhook_mem_size()
+{
+    SYSTEM_INFO si;
+
+    GetSystemInfo(&si);
+    page_size = si.dwPageSize;
+    allocation_unit = si.dwAllocationGranularity;
+    return allocation_unit;
+}
 
 void *duckhook_mem_alloc(void *hint)
 {
     void *mem;
+    if (hint != NULL) {
 
-    if (allocation_unit == 0) {
-        SYSTEM_INFO si;
-
-        GetSystemInfo(&si);
-        page_size = si.dwPageSize;
-        allocation_unit = si.dwAllocationGranularity;
-        code_mem_count_in_buffer = (allocation_unit - offsetof(code_mem_buffer_t, code_mem)) / sizeof(code_mem_t);
+        while (1) {
+            MEMORY_BASIC_INFORMATION mbi;
+            if (VirtualQuery(hint, &mbi, sizeof(mbi)) == 0) {
+                return (void *)-1;
+            }
+            if (mbi.State == MEM_FREE) {
+                size_t addr = ROUND_UP((size_t)mbi.BaseAddress, allocation_unit);
+                int diff = addr - (size_t)mbi.BaseAddress;
+                if (diff >= 0) {
+                    if (mbi.RegionSize - diff >= allocation_unit) {
+                        hint = (void*)addr;
+                        break;
+                    }
+                }
+            }
+            hint = (void*)((size_t)mbi.BaseAddress + mbi.RegionSize);
+        }
     }
-    mem = VirtualAlloc(hint, allocation_unit, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    mem = VirtualAlloc(NULL, allocation_unit, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (mem == NULL) {
         return (void *)-1;
     }
@@ -61,6 +80,16 @@ int duckhook_mem_free(void *mem)
     return VirtualFree(mem, 0, MEM_RELEASE) ? 0 : -1;
 }
 
+int duckhook_mem_protect(void *addr)
+{
+    return VirtualProtect(addr, allocation_unit, PAGE_EXECUTE_READ, NULL) ? 0 : -1;
+}
+
+int duckhook_mem_unprotect(void *addr)
+{
+    return VirtualProtect(addr, allocation_unit, PAGE_READWRITE, NULL) ? 0 : -1;
+}
+
 int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
 {
     size_t saddr = ROUND_DOWN((size_t)start, page_size);
@@ -69,7 +98,7 @@ int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
     len = ROUND_UP(len, page_size);
     mstate->addr = (void*)saddr;
     mstate->size = len;
-    return VirtualProtect(mstate->addr, mstate->size, PAGE_READWRITE, &mstate->protect) ? 0 : -1;
+    return VirtualProtect(mstate->addr, mstate->size, PAGE_EXECUTE_READWRITE, &mstate->protect) ? 0 : -1;
 }
 
 int duckhook_unprotect_end(const mem_state_t *mstate)
@@ -82,7 +111,7 @@ void *duckhook_resolve_func(void *func)
     return func;
 }
 
-int duckhook_get_module_region(const uchar *addr, uchar **start, uchar **end)
+int duckhook_get_module_region(const uint8_t *addr, uint8_t **start, uint8_t **end)
 {
     MEMORY_BASIC_INFORMATION mbi;
     IMAGE_DOS_HEADER *dhdr;
@@ -99,7 +128,7 @@ int duckhook_get_module_region(const uchar *addr, uchar **start, uchar **end)
     if (nthdr->Signature != IMAGE_NT_SIGNATURE) {
         return -1;
     }
-    *start = (uchar*)mbi.AllocationBase;
+    *start = (uint8_t*)mbi.AllocationBase;
     *end = *start + nthdr->OptionalHeader.SizeOfImage;
     return 0;
 }

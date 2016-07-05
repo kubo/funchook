@@ -29,8 +29,8 @@
  * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <stdint.h>
 #include <limits.h>
-#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -40,27 +40,35 @@
 #include <link.h>
 #include "duckhook_internal.h"
 
-size_t allocation_unit;
-size_t code_mem_count_in_buffer;
+static size_t page_size;
 
-#define page_size allocation_unit
+size_t duckhook_mem_size()
+{
+    page_size = sysconf(_SC_PAGE_SIZE);;
+    return page_size;
+}
 
 void *duckhook_mem_alloc(void *hint)
 {
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-    if (allocation_unit == 0) {
-        allocation_unit = sysconf(_SC_PAGE_SIZE);
-        code_mem_count_in_buffer = (allocation_unit - offsetof(code_mem_buffer_t, code_mem)) / sizeof(code_mem_t);
-    }
     if ((size_t)hint < INT_MAX) {
         flags |= MAP_32BIT;
     }
-    return mmap(hint, allocation_unit, PROT_EXEC | PROT_READ, flags, -1, 0);
+    return mmap(hint, page_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 }
 
 int duckhook_mem_free(void *mem)
 {
-    return munmap(mem, allocation_unit);
+    return munmap(mem, page_size);
+}
+
+int duckhook_mem_protect(void *addr)
+{
+    return mprotect(addr, page_size, PROT_READ | PROT_EXEC);
+}
+int duckhook_mem_unprotect(void *addr)
+{
+    return mprotect(addr, page_size, PROT_READ | PROT_WRITE);
 }
 
 int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
@@ -161,15 +169,15 @@ void *duckhook_resolve_func(void *func)
     return func;
 }
 
-int duckhook_get_module_region(const uchar *addr, uchar **start, uchar **end)
+int duckhook_get_module_region(const uint8_t *addr, uint8_t **start, uint8_t **end)
 {
     Dl_info dli;
     ElfW(Ehdr) *ehdr;
     ElfW(Phdr) *phdr;
-    uchar *base = NULL;
+    uint8_t *base = NULL;
     int i;
 
-    *start = (uchar*)-1;
+    *start = (uint8_t*)-1;
     *end = 0;
 
     if (dladdr(addr, &dli) == 0) {
@@ -180,7 +188,7 @@ int duckhook_get_module_region(const uchar *addr, uchar **start, uchar **end)
         return -1;
     }
     if (ehdr->e_type == ET_DYN) {
-        base = (uchar*)dli.dli_fbase;
+        base = (uint8_t*)dli.dli_fbase;
     }
     phdr = (ElfW(Phdr) *)((size_t)dli.dli_fbase + ehdr->e_phoff);
 

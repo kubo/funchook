@@ -29,6 +29,7 @@
  * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -38,220 +39,190 @@
 #include "duckhook.h"
 #include "duckhook_internal.h"
 
-struct duckhook_memo {
+typedef struct duckhook_entry {
     void *func;
     void *new_func;
-    code_mem_t *code_mem;
-    uchar orig_code[JUMP32_SIZE];
+    uint8_t trampoline[TRAMPOLINE_SIZE];
+    uint8_t old_code[JUMP32_SIZE];
+    uint8_t new_code[JUMP32_SIZE];
+#ifdef CPU_X86_64
+    uint8_t transit[JUMP64_SIZE];
+#endif
+} duckhook_entry_t;
+
+typedef struct duckhook_buffer {
+    struct duckhook_buffer *next;
+    uint16_t used;
+    duckhook_entry_t entries[1];
+} duckhook_buffer_t;
+
+struct duckhook {
+    int installed;
+    duckhook_buffer_t *buffer;
 };
 
-static code_mem_buffer_t *code_mem_buffer_head;
+static size_t mem_size;
+static size_t num_entries;
 
-static int copy_code(void *dest, void *src, size_t n);
-static code_mem_buffer_t *code_mem_buffer_alloc(uchar *hint);
-static int code_mem_buffer_free(code_mem_buffer_t *mb);
-static code_mem_t *code_mem_get(uchar *addr);
-static void code_mem_free(code_mem_t *code_mem);
+static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr);
 
 #ifdef CPU_X86_64
 
-static int code_mem_buffer_avail(uchar *mod_start, uchar *mod_end, code_mem_buffer_t *mb)
+static int buffer_avail(duckhook_buffer_t *buffer, uint8_t *mod_start, uint8_t *mod_end)
 {
-    return duckhook_jump32_avail(mod_end, (uchar*)mb) &&
-        duckhook_jump32_avail(mod_start, (uchar*)mb + allocation_unit);
+    return duckhook_jump32_avail(mod_end, (uint8_t*)buffer) &&
+        duckhook_jump32_avail(mod_start, (uint8_t*)buffer + mem_size);
 }
 
 #else
 
-#define code_mem_buffer_avail(mod_start, mod_end, mb) (1)
+#define buffer_avail(buffer, mod_start, mod_end) (1)
 
 #endif
 
-void *duckhook_install(void *func, void *new_func, duckhook_memo_t **memo_out)
+duckhook_t *duckhook_create(void)
 {
-    duckhook_memo_t *memo;
-    mem_state_t mstate;
+    if (mem_size == 0) {
+        mem_size = duckhook_mem_size();
+        num_entries = (mem_size - offsetof(duckhook_buffer_t, entries)) / mem_size;
+    }
+    return calloc(1, sizeof(duckhook_t));
+}
 
-    memo = calloc(1, sizeof(duckhook_memo_t));
-    if (memo == NULL) {
-        return NULL;
-    }
-    func = duckhook_resolve_func(func);
-    memo->func = func;
-    memo->new_func = new_func;
-    memo->code_mem = code_mem_get(func);
-    if (memo->code_mem == NULL) {
-        free(memo);
-        return NULL;
-    }
-    memcpy(memo->orig_code, func, JUMP32_SIZE);
+void *duckhook_prepare(duckhook_t *duckhook, void *func, void *new_func)
+{
+    duckhook_buffer_t *buf;
+    duckhook_entry_t *entry;
 
-    duckhook_unprotect_begin(&mstate, memo->code_mem, sizeof(code_mem_t));
-    if (duckhook_make_trampoline(func, memo->code_mem->trampoline) != 0) {
-        duckhook_unprotect_end(&mstate);
+    if (duckhook->installed) {
         return NULL;
     }
+
+    buf = get_buffer(duckhook, (uint8_t*)func);
+    if (buf == NULL) {
+        return NULL;
+    }
+    entry = &buf->entries[buf->used];
+    entry->func = duckhook_resolve_func(func);
+    entry->new_func = new_func;
+
+    if (duckhook_make_trampoline(func, entry->trampoline) != 0) {
+        return NULL;
+    }
+    memcpy(entry->old_code, func, JUMP32_SIZE);
 #ifdef CPU_X86_64
     if (duckhook_jump32_avail(func, new_func)) {
-        memset(memo->code_mem->transit, 0, sizeof(memo->code_mem->transit));
-        duckhook_write_jump32(func, new_func, 1);
+        duckhook_write_jump32(func, new_func, entry->new_code);
     } else {
-        if (!duckhook_jump32_avail(func, memo->code_mem->transit)) {
-            duckhook_unprotect_end(&mstate);
-            free(memo);
-            return NULL;
-        }
-        duckhook_write_jump64(memo->code_mem->transit, new_func, 0);
-        duckhook_write_jump32(func, memo->code_mem->transit, 1);
+        duckhook_write_jump32(func, entry->transit, entry->new_code);
+        duckhook_write_jump64(entry->transit, new_func);
     }
 #else
-    duckhook_write_jump32(func, new_func, 1);
+    duckhook_write_jump32(func, new_func, entry->new_code);
 #endif
-    memo->code_mem->used = 1;
-    duckhook_unprotect_end(&mstate);
-    if (memo_out != NULL) {
-        *memo_out = memo;
-    }
-    return (void*)memo->code_mem->trampoline;
+    buf->used++;
+    return (void*)entry->trampoline;
 }
 
-void duckhook_uninstall(duckhook_memo_t *memo)
+int duckhook_install(duckhook_t *duckhook, int flags)
 {
-    copy_code(memo->func, memo->orig_code, JUMP32_SIZE);
-    code_mem_free(memo->code_mem);
-    free(memo);
-}
+    duckhook_buffer_t *buf;
 
-static int copy_code(void *dest, void *src, size_t n)
-{
-    mem_state_t mstate;
-
-    if (duckhook_unprotect_begin(&mstate, dest, n) != 0) {
+    if (duckhook->installed) {
         return -1;
     }
-    memcpy(dest, src, n);
-    duckhook_unprotect_end(&mstate);
+
+    for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
+        int i;
+
+        duckhook_mem_protect(buf);
+
+        for (i = 0; i < buf->used; i++) {
+            duckhook_entry_t *entry = &buf->entries[i];
+            mem_state_t mstate;
+
+            if (duckhook_unprotect_begin(&mstate, entry->func, JUMP32_SIZE) != 0) {
+                return -1;
+            }
+            memcpy(entry->func, entry->new_code, JUMP32_SIZE);
+            duckhook_unprotect_end(&mstate);
+        }
+    }
+    duckhook->installed = 1;
     return 0;
 }
 
-static code_mem_buffer_t *code_mem_buffer_alloc(uchar *hint)
+int duckhook_uninstall(duckhook_t *duckhook, int flags)
 {
-    code_mem_buffer_t *mb;
-    mem_state_t mstate;
+    duckhook_buffer_t *buf;
 
-#ifdef CPU_X86_64
-    mb = duckhook_mem_alloc(hint);
-#else
-    mb = duckhook_mem_alloc(NULL);
-#endif
-    if (mb == (void*)-1) {
-        return NULL;
+    if (!duckhook->installed) {
+        return -1;
     }
 
-    if (duckhook_unprotect_begin(&mstate, mb, sizeof(*mb)) != 0) {
-        duckhook_mem_free(mb);
-        return NULL;
-    }
-    mb->next = code_mem_buffer_head;
-    mb->prev = &code_mem_buffer_head;
-    duckhook_unprotect_end(&mstate);
+    for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
+        int i;
 
-    if (mb->next != NULL) {
-        if (duckhook_unprotect_begin(&mstate, mb->next, sizeof(*mb)) != 0) {
-            duckhook_mem_free(mb);
-            return NULL;
+        for (i = 0; i < buf->used; i++) {
+            duckhook_entry_t *entry = &buf->entries[i];
+            mem_state_t mstate;
+
+            if (duckhook_unprotect_begin(&mstate, entry->func, JUMP32_SIZE) != 0) {
+                return -1;
+            }
+            memcpy(entry->func, entry->old_code, JUMP32_SIZE);
+            duckhook_unprotect_end(&mstate);
         }
-        mb->next->prev = &mb;
-        duckhook_unprotect_end(&mstate);
+        duckhook_mem_unprotect(buf);
     }
-    code_mem_buffer_head = mb;
-    return mb;
+    duckhook->installed = 0;
+    return 0;
 }
 
-static int code_mem_buffer_free(code_mem_buffer_t *mb)
+int duckhook_destroy(duckhook_t *duckhook)
 {
-    mem_state_t mstate = {0,};
+    duckhook_buffer_t *buf, *buf_next;
 
-    if (mb->prev != &code_mem_buffer_head) {
-        if (duckhook_unprotect_begin(&mstate, mb->prev, sizeof(*mb)) != 0) {
-            return -1;
-        }
-        *mb->prev = mb->next;
-        duckhook_unprotect_end(&mstate);
-    } else {
-        code_mem_buffer_head = mb->next;
+    if (duckhook == NULL) {
+       return -1;
     }
-    if (mb->next != NULL) {
-        if (duckhook_unprotect_begin(&mstate, mb->next, sizeof(*mb)) != 0) {
-            return -1;
-        }
-        mb->next->prev = mb->prev;
-        duckhook_unprotect_end(&mstate);
+    if (duckhook->installed) {
+        return -1;
     }
-    return duckhook_mem_free(mb);
+    for (buf = duckhook->buffer; buf != NULL; buf = buf_next) {
+        buf_next = buf->next;
+        duckhook_mem_free(buf);
+    }
+    free(duckhook);
+    return 0;
 }
 
-static code_mem_t *code_mem_get(uchar *addr)
+static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr)
 {
-    code_mem_buffer_t *mb;
+    duckhook_buffer_t *buf;
 #ifdef CPU_X86_64
-    uchar *mod_start, *mod_end;
+    uint8_t *mod_start, *mod_end;
     if (duckhook_get_module_region(addr, &mod_start, &mod_end) != 0) {
         return NULL;
     }
+#else
+    addr = NULL; /* no need to check the address. */
 #endif
 
-    for (mb = code_mem_buffer_head; mb != NULL; mb = mb->next) {
-        int i;
-        if (!code_mem_buffer_avail(mod_start, mod_end, mb)) {
-            /* too far */
-          continue;
-        }
-        for (i = 0; i < code_mem_count_in_buffer; i++) {
-            code_mem_t *code_mem = &mb->code_mem[i];
-            if (!code_mem->used) {
-                return code_mem;
-            }
+    for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
+        if (buf->used < num_entries && buffer_avail(buf, mod_start, mod_end)) {
+            return buf;
         }
     }
-    mb = code_mem_buffer_alloc(addr);
-    if (mb == NULL) {
+    buf = (duckhook_buffer_t *)duckhook_mem_alloc(addr);
+    if (buf == (void*)-1) {
         return NULL;
     }
-    if (!code_mem_buffer_avail(mod_start, mod_end, mb)) {
-        code_mem_buffer_free(mb);
+    if (!buffer_avail(buf, mod_start, mod_end)) {
         return NULL;
     }
-    return &mb->code_mem[0];
-}
-
-static void code_mem_free(code_mem_t *code_mem)
-{
-    code_mem_buffer_t *mb;
-
-    for (mb = code_mem_buffer_head; mb != NULL; mb = mb->next) {
-        size_t idx = code_mem - mb->code_mem;
-        if (idx < code_mem_count_in_buffer) {
-            mem_state_t mstate;
-
-            if (code_mem != mb->code_mem + idx) {
-                /* invalid situation */
-                return;
-            }
-            if (duckhook_unprotect_begin(&mstate, mb, sizeof(code_mem_buffer_t) + sizeof(code_mem_t) * idx) != 0) {
-                return;
-            }
-            code_mem->used = 0;
-            duckhook_unprotect_end(&mstate);
-            for (idx = 0; idx < code_mem_count_in_buffer; idx++) {
-                if (mb->code_mem[idx].used) {
-	            /* find an unused entry. */
-                    return;
-                }
-            }
-            /* all entries are unused. */
-            code_mem_buffer_free(mb);
-            return;
-        }
-    }
+    buf->next = duckhook->buffer;
+    buf->used = 0;
+    duckhook->buffer = buf;
+    return buf;
 }

@@ -1,5 +1,8 @@
 {
     global:
+        duckhook_create;
+        duckhook_destroy;
+        duckhook_prepare;
         duckhook_install;
         duckhook_uninstall;
     local:

@@ -46,54 +46,43 @@
 static void print_instruction(const _CodeInfo *ci, const _DInst *di);
 #endif
 
-int duckhook_write_jump32(uchar *src, const uchar *dst, int unprotect)
+int duckhook_write_jump32(const uint8_t *src, const uint8_t *dst, uint8_t *out)
 {
-    mem_state_t mstate;
-
-    if (unprotect && duckhook_unprotect_begin(&mstate, src, JUMP32_SIZE) != 0) {
-        return -1;
-    }
-    src[0] = 0xe9;
-    *(int*)(src + 1) = (int)(dst - (src + 5));
-    if (unprotect) {
-        duckhook_unprotect_end(&mstate);
-    }
+    out[0] = 0xe9;
+    *(int*)(out + 1) = (int)(dst - (src + 5));
     return 0;
 }
 
 #ifdef CPU_X86_64
 
-int duckhook_write_jump64(uchar *src, const uchar *dst, int unprotect)
+int duckhook_write_jump64(uint8_t *src, const uint8_t *dst)
 {
-    mem_state_t mstate;
-
-    if (unprotect && duckhook_unprotect_begin(&mstate, src, JUMP64_SIZE) != 0) {
-        return -1;
-    }
     src[0] = 0xFF;
     src[1] = 0x25;
     src[2] = 0x00;
     src[3] = 0x00;
     src[4] = 0x00;
     src[5] = 0x00;
-    *(const uchar**)(src + 6) = dst;
-    if (unprotect) {
-        duckhook_unprotect_end(&mstate);
-    }
+    *(const uint8_t**)(src + 6) = dst;
     return 0;
 }
 
-int duckhook_jump32_avail(const uchar *src, const uchar *dst)
+static int within_32bit_relative(const uint8_t *src, const uint8_t *dst)
 {
-    int64_t diff = (int64_t)(dst - (src + 5));
+    int64_t diff = (int64_t)(dst - src);
     return (INT32_MIN <= diff && diff <= INT32_MAX);
+}
+
+int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst)
+{
+    return within_32bit_relative(src + 5, dst);
 }
 
 #endif
 
-int duckhook_make_trampoline(const uchar *func, uchar *trampoline)
+int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
 {
-    uchar work[MAX_INSN_LEN];
+    uint8_t work[MAX_INSN_LEN];
     _DInst dis[MAX_INSN_LEN];
     unsigned int di_cnt = 0;
     _CodeInfo ci;
@@ -127,14 +116,23 @@ int duckhook_make_trampoline(const uchar *func, uchar *trampoline)
 #endif
 
 #if defined(__linux) && defined(__i386)
-        /* special case to handle "call __i686.get_pc_thunk.bx" */
         if (*(work + offset) == 0xe8) {
             uint8_t *target = (uint8_t *)(size_t)INSTRUCTION_GET_TARGET(di);
             if (memcmp(target, "\x8b\x1c\x24\xc3", 4) == 0) {
-                /* If the target instructions are "movl (%esp), %ebx; ret",
+                /* special case to handle "call __i686.get_pc_thunk.bx"
+                 * If the target instructions are "movl (%esp), %ebx; ret",
                  * use "movl di->addr + 5, %ebx" instead.
                  */
                 *(work + offset) = 0xbb;
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            }
+            if (memcmp(target, "\x8b\x0c\x24\xc3", 4) == 0) {
+                /* special case to handle "call __i686.get_pc_thunk.cx"
+                 * If the target instructions are "movl (%esp), %ebc; ret",
+                 * use "movl di->addr + 5, %ebc" instead.
+                 */
+                *(work + offset) = 0xb9;
                 *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
                 goto before_copy_code;
             }
@@ -170,18 +168,44 @@ int duckhook_make_trampoline(const uchar *func, uchar *trampoline)
             }
         }
         if (disp_offset != -1) {
-            uint32_t *pos = (uint32_t*)(work + offset + di->size - opsiz + disp_offset);
-            if (*pos != (uint32_t)di->disp) {
+            int32_t *pos = (int32_t*)(work + offset + di->size - opsiz + disp_offset);
+#ifdef CPU_X86_64
+            size_t addr = (size_t)INSTRUCTION_GET_RIP_TARGET(di);
+            if (!within_32bit_relative(trampoline + offset + di->size, (uint8_t*)addr)) {
+                /* out of 32-bit relative addressing.
+                 * reach here if code_mem_get() returns incorrect address.
+                 */
                 return -1;
             }
-            *pos += func - trampoline;
+#endif
+            if (*pos != (uint32_t)di->disp) {
+                /* sanity check.
+                 * reach here if opsiz and/or disp_offset are incorrectly
+                 * estimated.
+                 */
+                return -1;
+            }
+            *pos += func - trampoline; /* fix RIP-relative offset */
         }
         if (imm_offset != -1) {
             uint32_t *pos = (uint32_t*)(work + offset + di->size - opsiz + imm_offset);
-            if (*pos != (uint32_t)di->imm.addr) {
+#ifdef CPU_X86_64
+            size_t addr = (size_t)INSTRUCTION_GET_TARGET(di);
+            if (!within_32bit_relative(trampoline + offset + di->size, (uint8_t*)addr)) {
+                /* out of 32-bit relative addressing.
+                 * reach here if get_buffer() returns incorrect address.
+                 */
                 return -1;
             }
-            *pos += func - trampoline;
+#endif
+            if (*pos != (uint32_t)di->imm.addr) {
+                /* sanity check.
+                 * reach here if opsiz and/or imm_offset are incorrectly
+                 * estimated.
+                 */
+                return -1;
+            }
+            *pos += func - trampoline; /* fix RIP-relative offset */
         }
 #if defined(__linux) && defined(__i386)
 before_copy_code:
@@ -189,7 +213,7 @@ before_copy_code:
         memcpy(trampoline + offset, work + offset, di->size);
         offset += di->size;
         if (offset >= JUMP32_SIZE) {
-            duckhook_write_jump32(trampoline + offset, func + offset, 0);
+            duckhook_write_jump32(trampoline + offset, func + offset, trampoline + offset);
             return 0;
         }
     }

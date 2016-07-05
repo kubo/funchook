@@ -1,13 +1,15 @@
 Duckhook - an API hook library
 ==============================
 
+Note: This is unstable. Some functions may be changed.
+
 This library depends on [diStorm3][].
 
 TODO
 ----
 
-* write more documents.
-* add a function to get the error reason when `duckhook_install` returns NULL.
+* write documents.
+* add a function to get the error reason when `duckhook_prepare` returns NULL.
 * add a function to debug duckhook itself.
 * add tests.
 
@@ -36,7 +38,18 @@ Example
 -------
 
 ```c
+static ssize_t (*send_orig)(int sockfd, const void *buf, size_t len, int flags);
 static ssize_t (*recv_orig)(int sockfd, void *buf, size_t len, int flags);
+
+static ssize_t send_hook(int sockfd, const void *buf, size_t len, int flags);
+{
+    ssize_t rv;
+
+    ... do your task: logging, etc. ...
+    rv = send_orig(sockfd, buf, len, flags); /* call the original send(). */
+    ... do your task: logging, checking the return value, etc. ...
+    return rv;
+}
 
 static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags);
 {
@@ -48,35 +61,36 @@ static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags);
     return rv;
 }
 
-int install_hook()
+int install_hooks()
 {
-    /* Change the first 5 bytes of the recv function to redirect
-     * all recv calls to recv_hook.
-     * The return value is used to call the original recv function
-     * in recv_hook.
-     */
-    recv_orig = duckhook_install(recv, recv_hook, NULL);
+    duckhook_t *duckhook = duckhook_create();
 
-    if (recv_orig == NULL) {
-       return -1;
+    /* Prepare hooking.
+     * The return value is used to call the original send function
+     * in send_hook.
+     */
+    send_orig = duckhook_prepare(duckhook, send, send_hook);
+    if (send_orig == NULL) {
+       /* error */
+       ...
     }
-    ... other stuff ...
-}
 
-```
+    /* ditto */
+    recv_orig = duckhook_prepare(duckhook, recv, recv_hook);
+    if (recv_orig == NULL) {
+       /* error */
+       ...
+    }
 
-```
-    duckhook_memo_t *memo;
-
-    /* install a hook. The modified part of the recv function
-     * is saved to 'memo'.
+    /* Install hooks.
+     * The first 5-byte code of send() and recv() are changed respectively.
      */
-    recv_orig = duckhook_install(recv, recv_hook, &memo);
-
-    ...
-
-    /* restore the recv function. */
-    duckhook_uninstall(memo);
+    int rv = duckhook_install(duckhook, 0);
+    if (rv != 0) {
+       /* error */
+       ...
+    }
+}
 
 ```
 
