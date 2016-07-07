@@ -117,22 +117,42 @@ int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
 
 #if defined(__linux) && defined(__i386)
         if (*(work + offset) == 0xe8) {
-            uint8_t *target = (uint8_t *)(size_t)INSTRUCTION_GET_TARGET(di);
-            if (memcmp(target, "\x8b\x1c\x24\xc3", 4) == 0) {
-                /* special case to handle "call __i686.get_pc_thunk.bx"
-                 * If the target instructions are "movl (%esp), %ebx; ret",
-                 * use "movl di->addr + 5, %ebx" instead.
-                 */
-                *(work + offset) = 0xbb;
+            /* special cases to handle "call __x86.get_pc_thunk.??"
+             * If the target instructions are "movl (%esp), %???; ret",
+             * use "movl di->addr + 5, %???" instead.
+             */
+            uint32_t first_4_bytes = *(uint32_t*)(size_t)INSTRUCTION_GET_TARGET(di);
+            switch (first_4_bytes) {
+            case 0xc324048b: /* 8b 04 24 c3: movl (%esp), %eax; ret */
+                *(work + offset) = 0xb8;  /* movl di->addr + 5, %eax */
                 *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
                 goto before_copy_code;
-            }
-            if (memcmp(target, "\x8b\x0c\x24\xc3", 4) == 0) {
-                /* special case to handle "call __i686.get_pc_thunk.cx"
-                 * If the target instructions are "movl (%esp), %ecx; ret",
-                 * use "movl di->addr + 5, %ecx" instead.
-                 */
-                *(work + offset) = 0xb9;
+            case 0xc3241c8b: /* 8b 1c 24 c3: movl (%esp), %ebx; ret */
+                *(work + offset) = 0xbb;  /* movl di->addr + 5, %ebx */
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            case 0xc3240c8b: /* 8b 0c 24 c3: movl (%esp), %ecx; ret */
+                *(work + offset) = 0xb9;  /* movl di->addr + 5, %ecx */
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            case 0xc324148b: /* 8b 14 24 c3: movl (%esp), %edx; ret */
+                *(work + offset) = 0xba;  /* movl di->addr + 5, %edx */
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            case 0xc324348b: /* 8b 34 24 c3: movl (%esp), %esi; ret */
+                *(work + offset) = 0xbe;  /* movl di->addr + 5, %esi */
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            case 0xc3243c8b: /* 8b 3c 24 c3: movl (%esp), %edi; ret */
+                *(work + offset) = 0xbf;  /* movl di->addr + 5, %edi */
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            case 0xc3242c8b: /* 8b 2c 24 c3: movl (%esp), %ebp; ret */
+                *(work + offset) = 0xbd;  /* movl di->addr + 5, %ebp */
+                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
+                goto before_copy_code;
+            case 0xc324248b: /* 8b 24 24 c3: movl (%esp), %esp; ret */
+                *(work + offset) = 0xbc;  /* movl di->addr + 5, %esp */
                 *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
                 goto before_copy_code;
             }
