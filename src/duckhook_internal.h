@@ -47,7 +47,7 @@
 #endif
 
 #define MAX_INSN_LEN 16
-#define MAX_EXE_SIZE
+#define MAX_INSN_CHECK_SIZE 256
 
 #define JUMP32_SIZE 5
 #ifdef CPU_X86_64

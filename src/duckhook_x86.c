@@ -46,6 +46,29 @@
 static void print_instruction(const _CodeInfo *ci, const _DInst *di);
 #endif
 
+/* RIP-relative address information */
+typedef struct {
+    uint8_t *addr; /* absolute address */
+    intptr_t raddr; /* relative address */
+    int offset;
+    int size;
+} rip_relative_t;
+
+typedef struct {
+    const uint8_t *src;
+    uint8_t *dst;
+    rip_relative_t disp;
+    rip_relative_t imm;
+} make_trampoline_context_t;
+
+#if defined(__linux) && defined(__i386)
+static int handle_x86_get_pc_thunk(make_trampoline_context_t *ctx, const _DInst *di);
+#else
+#define handle_x86_get_pc_thunk(ctx, di) (0)
+#endif
+static void get_rip_relative(make_trampoline_context_t *ctx, const _DInst *di);
+static int handle_rip_relative(make_trampoline_context_t *ctx, rip_relative_t *rel, const _DInst *di);
+
 int duckhook_write_jump32(const uint8_t *src, const uint8_t *dst, uint8_t *out)
 {
     out[0] = 0xe9;
@@ -82,162 +105,371 @@ int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst)
 
 int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
 {
-    uint8_t work[MAX_INSN_LEN];
-    _DInst dis[MAX_INSN_LEN];
+    make_trampoline_context_t ctx;
+    _DInst dis[MAX_INSN_CHECK_SIZE];
     unsigned int di_cnt = 0;
     _CodeInfo ci;
     _DecodeResult decres;
-    int offset = 0;
     int i;
 
-    memcpy(work, func, MAX_INSN_LEN);
+    ctx.src = func;
+    ctx.dst = trampoline;
 
     ci.codeOffset = (_OffsetType)(size_t)func;
-    ci.code = work;
-    ci.codeLen = MAX_INSN_LEN;
+    ci.code = func;
+    ci.codeLen = MAX_INSN_CHECK_SIZE;
 #ifdef CPU_X86_64
     ci.dt = Decode64Bits;
 #else
     ci.dt = Decode32Bits;
 #endif
-    ci.features = DF_NONE;
-    decres = distorm_decompose64(&ci, dis, MAX_INSN_LEN, &di_cnt);
+    ci.features = DF_STOP_ON_RET;
+    decres = distorm_decompose64(&ci, dis, MAX_INSN_CHECK_SIZE, &di_cnt);
     if (decres != DECRES_SUCCESS) {
         return -1;
     }
     for (i = 0; i < di_cnt; i++) {
         const _DInst *di = &dis[i];
-        int j;
-        int opsiz = 0;
-        int disp_offset = -1;
-        int imm_offset = -1;
 #ifdef PRINT_INSTRUCTION
         print_instruction(&ci, di);
 #endif
 
-#if defined(__linux) && defined(__i386)
-        if (*(work + offset) == 0xe8) {
-            /* special cases to handle "call __x86.get_pc_thunk.??"
-             * If the target instructions are "movl (%esp), %???; ret",
-             * use "movl di->addr + 5, %???" instead.
-             */
-            uint32_t first_4_bytes = *(uint32_t*)(size_t)INSTRUCTION_GET_TARGET(di);
-            switch (first_4_bytes) {
-            case 0xc324048b: /* 8b 04 24 c3: movl (%esp), %eax; ret */
-                *(work + offset) = 0xb8;  /* movl di->addr + 5, %eax */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc3241c8b: /* 8b 1c 24 c3: movl (%esp), %ebx; ret */
-                *(work + offset) = 0xbb;  /* movl di->addr + 5, %ebx */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc3240c8b: /* 8b 0c 24 c3: movl (%esp), %ecx; ret */
-                *(work + offset) = 0xb9;  /* movl di->addr + 5, %ecx */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc324148b: /* 8b 14 24 c3: movl (%esp), %edx; ret */
-                *(work + offset) = 0xba;  /* movl di->addr + 5, %edx */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc324348b: /* 8b 34 24 c3: movl (%esp), %esi; ret */
-                *(work + offset) = 0xbe;  /* movl di->addr + 5, %esi */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc3243c8b: /* 8b 3c 24 c3: movl (%esp), %edi; ret */
-                *(work + offset) = 0xbf;  /* movl di->addr + 5, %edi */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc3242c8b: /* 8b 2c 24 c3: movl (%esp), %ebp; ret */
-                *(work + offset) = 0xbd;  /* movl di->addr + 5, %ebp */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
-            case 0xc324248b: /* 8b 24 24 c3: movl (%esp), %esp; ret */
-                *(work + offset) = 0xbc;  /* movl di->addr + 5, %esp */
-                *(uint32_t*)(work + offset + 1) = (uint32_t)(di->addr + 5);
-                goto before_copy_code;
+        if (handle_x86_get_pc_thunk(&ctx, di)) {
+            ;
+        } else {
+            memcpy(ctx.dst, ctx.src, di->size);
+            get_rip_relative(&ctx, di);
+            if (handle_rip_relative(&ctx, &ctx.disp, di) != 0) {
+                return -1;
             }
+            if (handle_rip_relative(&ctx, &ctx.imm, di) != 0) {
+                return -1;
+            }
+            ctx.src += di->size;
+            ctx.dst += di->size;
         }
-#endif
-
-        for (j = 0; j < OPERANDS_NO && di->ops[j].type != O_NONE; j++) {
-            const _Operand *op = &di->ops[j];
-            switch (op->type) {
-            case O_IMM:
-                opsiz += op->size / 8;
-                break;
-            case O_PC:
-                if (op->size != 32) {
+        if (ctx.src - func >= JUMP32_SIZE) {
+            duckhook_write_jump32(ctx.dst, ctx.src, ctx.dst);
+            while (i < di_cnt) {
+                get_rip_relative(&ctx, &dis[i]);
+                if (func <= ctx.imm.addr && ctx.imm.addr < func + JUMP32_SIZE) {
+                    /* jump to the hot-patched region. */
                     return -1;
                 }
-                imm_offset = opsiz;
-                opsiz += op->size / 8;
-                break;
-            case O_SMEM:
-                if (di->dispSize != 0 && op->index == R_RIP) {
-                    if (di->dispSize != 32) {
-                        return -1;
-                    }
-                    disp_offset = opsiz;
-                }
-                opsiz += di->dispSize / 8;
-                break;
-            case O_MEM:
-            case O_DISP:
-                opsiz += di->dispSize / 8;
-                break;
+                i++;
             }
-        }
-        if (disp_offset != -1) {
-            int32_t *pos = (int32_t*)(work + offset + di->size - opsiz + disp_offset);
-#ifdef CPU_X86_64
-            size_t addr = (size_t)INSTRUCTION_GET_RIP_TARGET(di);
-            if (!within_32bit_relative(trampoline + offset + di->size, (uint8_t*)addr)) {
-                /* out of 32-bit relative addressing.
-                 * reach here if code_mem_get() returns incorrect address.
-                 */
-                return -1;
-            }
-#endif
-            if (*pos != (uint32_t)di->disp) {
-                /* sanity check.
-                 * reach here if opsiz and/or disp_offset are incorrectly
-                 * estimated.
-                 */
-                return -1;
-            }
-            *pos += func - trampoline; /* fix RIP-relative offset */
-        }
-        if (imm_offset != -1) {
-            uint32_t *pos = (uint32_t*)(work + offset + di->size - opsiz + imm_offset);
-#ifdef CPU_X86_64
-            size_t addr = (size_t)INSTRUCTION_GET_TARGET(di);
-            if (!within_32bit_relative(trampoline + offset + di->size, (uint8_t*)addr)) {
-                /* out of 32-bit relative addressing.
-                 * reach here if get_buffer() returns incorrect address.
-                 */
-                return -1;
-            }
-#endif
-            if (*pos != (uint32_t)di->imm.addr) {
-                /* sanity check.
-                 * reach here if opsiz and/or imm_offset are incorrectly
-                 * estimated.
-                 */
-                return -1;
-            }
-            *pos += func - trampoline; /* fix RIP-relative offset */
-        }
-#if defined(__linux) && defined(__i386)
-before_copy_code:
-#endif
-        memcpy(trampoline + offset, work + offset, di->size);
-        offset += di->size;
-        if (offset >= JUMP32_SIZE) {
-            duckhook_write_jump32(trampoline + offset, func + offset, trampoline + offset);
             return 0;
         }
     }
-    return -1;
+    /* too short function. Check whether NOP instructions continue. */
+    while (ctx.src - func < JUMP32_SIZE) {
+        if (*ctx.src != 0x90 /* NOP */) {
+            return -1;
+        }
+        ctx.src++;
+    }
+    return 0;
+}
+
+#ifndef handle_x86_get_pc_thunk
+/* special cases to handle "call __x86.get_pc_thunk.??"
+ * If the target instructions are "movl (%esp), %???; ret",
+ * use "movl di->addr + 5, %???" instead.
+ */
+static int handle_x86_get_pc_thunk(make_trampoline_context_t *ctx, const _DInst *di)
+{
+    if (*ctx->src == 0xe8) {
+        uint32_t first_4_bytes = *(uint32_t*)(size_t)INSTRUCTION_GET_TARGET(di);
+        switch (first_4_bytes) {
+        case 0xc324048b: /* 8b 04 24 c3: movl (%esp), %eax; ret */
+            *ctx->dst = 0xb8; /*         movl di->addr + 5, %eax */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        case 0xc3241c8b: /* 8b 1c 24 c3: movl (%esp), %ebx; ret */
+            *ctx->dst = 0xbb; /*         movl di->addr + 5, %ebx */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        case 0xc3240c8b: /* 8b 0c 24 c3: movl (%esp), %ecx; ret */
+            *ctx->dst = 0xb9; /*         movl di->addr + 5, %ecx */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        case 0xc324148b: /* 8b 14 24 c3: movl (%esp), %edx; ret */
+            *ctx->dst = 0xba; /*         movl di->addr + 5, %edx */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        case 0xc324348b: /* 8b 34 24 c3: movl (%esp), %esi; ret */
+            *ctx->dst = 0xbe; /*         movl di->addr + 5, %esi */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        case 0xc3243c8b: /* 8b 3c 24 c3: movl (%esp), %edi; ret */
+            *ctx->dst = 0xbf; /*         movl di->addr + 5, %edi */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        case 0xc3242c8b: /* 8b 2c 24 c3: movl (%esp), %ebp; ret */
+            *ctx->dst = 0xbd; /*         movl di->addr + 5, %ebp */
+            *(uint32_t*)(ctx->dst + 1) = (uint32_t)(di->addr + 5);
+            goto fixed;
+        }
+    }
+    return 0;
+
+fixed:
+    ctx->dst += 5;
+    ctx->src += 5;
+    return 1;
+}
+#endif
+
+static void get_rip_relative(make_trampoline_context_t *ctx, const _DInst *di)
+{
+    int opsiz = 0;
+    int disp_offset = 0;
+    int imm_offset = 0;
+    int i;
+
+    memset(&ctx->disp, 0, sizeof(ctx->disp));
+    memset(&ctx->imm, 0, sizeof(ctx->imm));
+
+    /*
+     * Estimate total operand size and RIP-relative address offsets.
+     */
+    for (i = 0; i < OPERANDS_NO && di->ops[i].type != O_NONE; i++) {
+        const _Operand *op = &di->ops[i];
+        switch (op->type) {
+        case O_IMM:
+            opsiz += op->size / 8;
+            break;
+        case O_PC:
+            ctx->imm.addr = (uint8_t*)(size_t)(di->addr + di->size + di->imm.addr);
+            ctx->imm.raddr = di->imm.addr;
+            ctx->imm.size = op->size;
+            imm_offset = opsiz;
+            opsiz += op->size / 8;
+            break;
+        case O_SMEM:
+            if (di->dispSize != 0 && op->index == R_RIP) {
+                ctx->disp.addr = (uint8_t*)(size_t)(di->addr + di->size + di->disp);
+                ctx->disp.raddr = di->disp;
+                ctx->disp.size = di->dispSize;
+                disp_offset = opsiz;
+            }
+            opsiz += di->dispSize / 8;
+            break;
+        case O_MEM:
+        case O_DISP:
+            opsiz += di->dispSize / 8;
+            break;
+        }
+    }
+    switch (di->opcode) {
+    /* CMPSD */
+    case I_CMPEQSD:
+    case I_CMPLTSD:
+    case I_CMPLESD:
+    case I_CMPUNORDSD:
+    case I_CMPNEQSD:
+    case I_CMPNLTSD:
+    case I_CMPNLESD:
+    case I_CMPORDSD:
+    case I_VCMPEQSD:
+    case I_VCMPLTSD:
+    case I_VCMPLESD:
+    case I_VCMPUNORDSD:
+    case I_VCMPNEQSD:
+    case I_VCMPNLTSD:
+    case I_VCMPNLESD:
+    case I_VCMPORDSD:
+    case I_VCMPEQ_UQSD:
+    case I_VCMPNGESD:
+    case I_VCMPNGTSD:
+    case I_VCMPFALSESD:
+    case I_VCMPNEQ_OQSD:
+    case I_VCMPGESD:
+    case I_VCMPGTSD:
+    case I_VCMPTRUESD:
+    case I_VCMPEQ_OSSD:
+    case I_VCMPLT_OQSD:
+    case I_VCMPLE_OQSD:
+    case I_VCMPUNORD_SSD:
+    case I_VCMPNEQ_USSD:
+    case I_VCMPNLT_UQSD:
+    case I_VCMPNLE_UQSD:
+    case I_VCMPORD_SSD:
+    case I_VCMPEQ_USSD:
+    case I_VCMPNGE_UQSD:
+    case I_VCMPNGT_UQSD:
+    case I_VCMPFALSE_OSSD:
+    case I_VCMPNEQ_OSSD:
+    case I_VCMPGE_OQSD:
+    case I_VCMPGT_OQSD:
+    /* CMPSS */
+    case I_CMPEQSS:
+    case I_CMPLTSS:
+    case I_CMPLESS:
+    case I_CMPUNORDSS:
+    case I_CMPNEQSS:
+    case I_CMPNLTSS:
+    case I_CMPNLESS:
+    case I_CMPORDSS:
+    case I_VCMPEQSS:
+    case I_VCMPLTSS:
+    case I_VCMPLESS:
+    case I_VCMPUNORDSS:
+    case I_VCMPNEQSS:
+    case I_VCMPNLTSS:
+    case I_VCMPNLESS:
+    case I_VCMPORDSS:
+    case I_VCMPEQ_UQSS:
+    case I_VCMPNGESS:
+    case I_VCMPNGTSS:
+    case I_VCMPFALSESS:
+    case I_VCMPNEQ_OQSS:
+    case I_VCMPGESS:
+    case I_VCMPGTSS:
+    case I_VCMPTRUESS:
+    case I_VCMPEQ_OSSS:
+    case I_VCMPLT_OQSS:
+    case I_VCMPLE_OQSS:
+    case I_VCMPUNORD_SSS:
+    case I_VCMPNEQ_USSS:
+    case I_VCMPNLT_UQSS:
+    case I_VCMPNLE_UQSS:
+    case I_VCMPORD_SSS:
+    case I_VCMPEQ_USSS:
+    case I_VCMPNGE_UQSS:
+    case I_VCMPNGT_UQSS:
+    case I_VCMPFALSE_OSSS:
+    case I_VCMPNEQ_OSSS:
+    case I_VCMPGE_OQSS:
+    case I_VCMPGT_OQSS:
+    /* CMPPD */
+    case I_CMPEQPD:
+    case I_CMPLTPD:
+    case I_CMPLEPD:
+    case I_CMPUNORDPD:
+    case I_CMPNEQPD:
+    case I_CMPNLTPD:
+    case I_CMPNLEPD:
+    case I_CMPORDPD:
+    case I_VCMPEQPD:
+    case I_VCMPLTPD:
+    case I_VCMPLEPD:
+    case I_VCMPUNORDPD:
+    case I_VCMPNEQPD:
+    case I_VCMPNLTPD:
+    case I_VCMPNLEPD:
+    case I_VCMPORDPD:
+    case I_VCMPEQ_UQPD:
+    case I_VCMPNGEPD:
+    case I_VCMPNGTPD:
+    case I_VCMPFALSEPD:
+    case I_VCMPNEQ_OQPD:
+    case I_VCMPGEPD:
+    case I_VCMPGTPD:
+    case I_VCMPTRUEPD:
+    case I_VCMPEQ_OSPD:
+    case I_VCMPLT_OQPD:
+    case I_VCMPLE_OQPD:
+    case I_VCMPUNORD_SPD:
+    case I_VCMPNEQ_USPD:
+    case I_VCMPNLT_UQPD:
+    case I_VCMPNLE_UQPD:
+    case I_VCMPORD_SPD:
+    case I_VCMPEQ_USPD:
+    case I_VCMPNGE_UQPD:
+    case I_VCMPNGT_UQPD:
+    case I_VCMPFALSE_OSPD:
+    case I_VCMPNEQ_OSPD:
+    case I_VCMPGE_OQPD:
+    case I_VCMPGT_OQPD:
+    case I_VCMPTRUE_USPD:
+    /* CMPPS */
+    case I_CMPEQPS:
+    case I_CMPLTPS:
+    case I_CMPLEPS:
+    case I_CMPUNORDPS:
+    case I_CMPNEQPS:
+    case I_CMPNLTPS:
+    case I_CMPNLEPS:
+    case I_CMPORDPS:
+    case I_VCMPEQPS:
+    case I_VCMPLTPS:
+    case I_VCMPLEPS:
+    case I_VCMPUNORDPS:
+    case I_VCMPNEQPS:
+    case I_VCMPNLTPS:
+    case I_VCMPNLEPS:
+    case I_VCMPORDPS:
+    case I_VCMPEQ_UQPS:
+    case I_VCMPNGEPS:
+    case I_VCMPNGTPS:
+    case I_VCMPFALSEPS:
+    case I_VCMPNEQ_OQPS:
+    case I_VCMPGEPS:
+    case I_VCMPGTPS:
+    case I_VCMPTRUEPS:
+    case I_VCMPEQ_OSPS:
+    case I_VCMPLT_OQPS:
+    case I_VCMPLE_OQPS:
+    case I_VCMPUNORD_SPS:
+    case I_VCMPNEQ_USPS:
+    case I_VCMPNLT_UQPS:
+    case I_VCMPNLE_UQPS:
+    case I_VCMPORD_SPS:
+    case I_VCMPEQ_USPS:
+    case I_VCMPNGE_UQPS:
+    case I_VCMPNGT_UQPS:
+    case I_VCMPFALSE_OSPS:
+    case I_VCMPNEQ_OSPS:
+    case I_VCMPGE_OQPS:
+    case I_VCMPGT_OQPS:
+    case I_VCMPTRUE_USPS:
+    /* ohters */
+    case I_PI2FD:
+    case I_PI2FW:
+    case I_PF2IW:
+    case I_PF2ID:
+    case I_PSWAPD:
+    case I_VPBLENDVB:
+    case I_PFNACC:
+        opsiz++;
+    }
+
+    if (ctx->disp.size > 0) {
+        ctx->disp.offset = di->size - opsiz + disp_offset;
+    }
+    if (ctx->imm.size > 0) {
+        ctx->imm.offset = di->size - opsiz + imm_offset;
+    }
+}
+
+/*
+ * Fix RIP-relative address in an instruction
+ */
+static int handle_rip_relative(make_trampoline_context_t *ctx, rip_relative_t *rr, const _DInst *di)
+{
+    if (rr->size == 32) {
+        int32_t *pos = (int32_t*)(ctx->dst + rr->offset);
+#ifdef CPU_X86_64
+        if (!within_32bit_relative(ctx->dst + di->size, (uint8_t*)rr->addr)) {
+            /* out of 32-bit relative addressing.
+             * reach here if code_mem_get() returns incorrect address.
+             */
+            return -1;
+        }
+#endif
+        if (*pos != (uint32_t)rr->raddr) {
+            /* sanity check.
+             * reach here if opsiz and/or disp_offset are incorrectly
+             * estimated.
+             */
+            return -1;
+        }
+        *pos += ctx->src - ctx->dst;
+    } else if (rr->size != 0) {
+        return -1;
+    }
+    return 0;
 }
 
 #ifdef PRINT_INSTRUCTION
