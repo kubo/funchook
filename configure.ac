@@ -8,26 +8,21 @@ if test "$GCC"; then
    CFLAGS="$CFLAGS -Wall"
 fi
 
-case "$host_os" in
-mingw32)
+if test "$EXEEXT"; then
   DUCKHOOK_OS=windows
   LIBDUCKHOOK_SO=duckhook.dll
   CFLAGS="$CFLAGS -DBUILD_DUCKHOOK_DLL"
   LINK_SHARED="\$(CC) -shared -Wl,--out-implib,duckhook.lib"
   COPY_DLL_ON_TEST=
-  ;;
-linux-gnu)
+else
   DUCKHOOK_OS=linux
   LIBDUCKHOOK_SO=libduckhook.so
   CFLAGS="$CFLAGS -fPIC"
   LINK_SHARED="\$(CC) -shared -Wl,--version-script,\$(srcdir)/duckhook.map"
   COPY_DLL_ON_TEST='#'
   LIBS="-ldl"
-  ;;
-*)
-  AC_MSG_ERROR([Unsupported OS: $host_os])
-  exit 1
-esac
+fi
+
 AC_SUBST(DUCKHOOK_OS)
 AC_SUBST(LIBDUCKHOOK_SO)
 AC_SUBST(LINK_SHARED)

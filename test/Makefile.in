@@ -7,6 +7,7 @@ AS = @CC@ -c
 OBJS = test_main.o @DUCKHOOK_CPU@_test.o
 CFLAGS += -O2 -I$(srcdir)/../include
 LIBS = -lduckhook -Wl,-rpath,$(top_builddir)/src
+EXEEXT = @EXEEXT@
 
 VPATH = $(srcdir):../src
 

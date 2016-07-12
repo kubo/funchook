@@ -8,5 +8,5 @@ script:
   - ./autogen.sh
   - mkdir x86_64-linux   && (cd x86_64-linux   && ../configure && make test)
   - mkdir i686-linux     && (cd i686-linux     && ../configure "CC=gcc -m32" && make test)
-  - mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure --host=x86_64-w64-mingw32 --build=x86_64-pc-linux-gnu && make test)
-  - mkdir i686-mingw32   && (cd i686-mingw32   && ../configure --host=i686-w64-mingw32   --build=x86_64-pc-linux-gnu && make test)
+  - mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure CC=x86_64-w64-mingw32-gcc && make test)
+  - mkdir i686-mingw32   && (cd i686-mingw32   && ../configure CC=i686-w64-mingw32-gcc && make test)
