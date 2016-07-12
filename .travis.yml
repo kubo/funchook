@@ -1,11 +1,9 @@
 sudo: required
 language: c
-addons:
-  apt:
-    packages:
-    - gcc-multilib
-    - gcc-mingw-w64
-    - wine
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get remove mingw32 mingw32-runtime mingw32-binutils
+  - sudo apt-get install mingw-w64 gcc-multilib wine
 script:
   - ./autogen.sh
   - mkdir x86_64-linux   && cd x86_64-linux   && ../configure && make test
