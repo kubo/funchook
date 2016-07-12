@@ -1,5 +1,13 @@
-/src/i686
-/src/mingw32
-/src/mingw64
-/src/x86_64
+*.dll
+*.lib
+*.o
+*.so
 *~
+/Makefile
+/autom4te.cache
+/config.log
+/config.status
+/configure
+/src/Makefile
+/src/config.h
+/src/config.h.in

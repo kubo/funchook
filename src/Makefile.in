@@ -1,0 +1,48 @@
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+top_builddir = @top_builddir@
+
+DISTORM3_DIR = $(top_srcdir)/distorm
+VPATH = $(DISTORM3_DIR)/src:$(srcdir):$(top_srcdir)/include
+
+CC = @CC@
+CFLAGS = @CFLAGS@ -g -I. -I$(top_srcdir)/include -I$(DISTORM3_DIR)/include
+LIBS = @LIBS@
+LINK_SHARED = @LINK_SHARED@
+
+DUCKHOOK_OBJS = \
+	duckhook.o \
+	duckhook_x86.o \
+	duckhook_@DUCKHOOK_OS@.o
+
+DISTORM3_OBJS = \
+	mnemonics.o \
+	wstring.o \
+	textdefs.o \
+	prefix.o \
+	operands.o \
+	insts.o \
+	instructions.o \
+	distorm.o \
+	decoder.o
+
+OBJS = $(DUCKHOOK_OBJS) $(DISTORM3_OBJS)
+
+all: @LIBDUCKHOOK_SO@
+
+check:
+	cd ../test && $(MAKE) check
+
+@LIBDUCKHOOK_SO@: $(OBJS)
+	$(LINK_SHARED) -o @LIBDUCKHOOK_SO@ $(OBJS) $(LIBS)
+
+duckhook.o: duckhook.c duckhook.h duckhook_internal.h
+duckhook_linux.o: duckhook_linux.c duckhook.h duckhook_internal.h
+duckhook_windows.o: duckhook_windows.c duckhook.h duckhook_internal.h
+duckhook_x86.o: duckhook_x86.c duckhook.h duckhook_internal.h
+
+clean:
+	$(RM) @LIBDUCKHOOK_SO@ $(OBJS)
+
+Makefile config.h: $(srcdir)/Makefile.in $(srcdir)/config.h.in $(top_builddir)/config.status
+	cd $(top_builddir) && ./config.status

@@ -1,0 +1,26 @@
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+top_builddir = @top_builddir@
+
+CC = @CC@
+AS = @CC@ -c
+OBJS = test_main.o @DUCKHOOK_CPU@_test.o
+CFLAGS += -O2 -I$(srcdir)/../include
+LIBS = -lduckhook -Wl,-rpath,$(top_builddir)/src
+
+VPATH = $(srcdir):../src
+
+all: duckhook_test$(EXEEXT)
+
+test: duckhook_test$(EXEEXT)
+	@COPY_DLL_ON_TEST@ cmp -s $(top_builddir)/src/duckhook.dll duckhook.dll || cp $(top_builddir)/src/duckhook.dll duckhook.dll
+	./duckhook_test$(EXEEXT)
+
+duckhook_test$(EXEEXT): $(OBJS) @LIBDUCKHOOK_SO@
+	$(CC) -o duckhook_test$(EXEEXT) $(OBJS) -L$(top_builddir)/src $(LIBS)
+
+clean:
+	$(RM) $(TESTEXE) *.o
+
+Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
+	cd $(top_builddir) && ./config.status
