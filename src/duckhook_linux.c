@@ -169,35 +169,3 @@ void *duckhook_resolve_func(void *func)
     }
     return func;
 }
-
-int duckhook_get_module_region(const uint8_t *addr, uint8_t **start, uint8_t **end)
-{
-    Dl_info dli;
-    ElfW(Ehdr) *ehdr;
-    ElfW(Phdr) *phdr;
-    uint8_t *base = NULL;
-    int i;
-
-    *start = (uint8_t*)-1;
-    *end = 0;
-
-    if (dladdr(addr, &dli) == 0) {
-        return -1;
-    }
-    ehdr = (ElfW(Ehdr) *)dli.dli_fbase;
-    if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
-        return -1;
-    }
-    if (ehdr->e_type == ET_DYN) {
-        base = (uint8_t*)dli.dli_fbase;
-    }
-    phdr = (ElfW(Phdr) *)((size_t)dli.dli_fbase + ehdr->e_phoff);
-
-    for (i = 0; i < ehdr->e_phnum; i++) {
-        if (phdr[i].p_type == PT_LOAD) {
-	    *start = MIN(*start, base + phdr[i].p_vaddr);
-	    *end = MAX(*end, base + phdr[i].p_vaddr + phdr[i].p_memsz);
-	}
-    }
-    return 0;
-}

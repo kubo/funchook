@@ -56,7 +56,9 @@ typedef struct {
 } rip_relative_t;
 
 typedef struct {
+    rip_displacement_t *rip_disp;
     const uint8_t *src;
+    const uint8_t *dst_base;
     uint8_t *dst;
     rip_relative_t disp;
     rip_relative_t imm;
@@ -91,7 +93,7 @@ int duckhook_write_jump64(uint8_t *src, const uint8_t *dst)
     return 0;
 }
 
-static int within_32bit_relative(const uint8_t *src, const uint8_t *dst)
+int duckhook_within_32bit_relative(const uint8_t *src, const uint8_t *dst)
 {
     int64_t diff = (int64_t)(dst - src);
     return (INT32_MIN <= diff && diff <= INT32_MAX);
@@ -99,12 +101,12 @@ static int within_32bit_relative(const uint8_t *src, const uint8_t *dst)
 
 int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst)
 {
-    return within_32bit_relative(src + 5, dst);
+    return duckhook_within_32bit_relative(src + 5, dst);
 }
 
 #endif
 
-int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
+int duckhook_make_trampoline(rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline)
 {
     make_trampoline_context_t ctx;
     _DInst dis[MAX_INSN_CHECK_SIZE];
@@ -113,8 +115,10 @@ int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
     _DecodeResult decres;
     int i;
 
+    memset(disp, 0, sizeof(*disp));
+    ctx.rip_disp = disp;
     ctx.src = func;
-    ctx.dst = trampoline;
+    ctx.dst_base = ctx.dst = trampoline;
 
     ci.codeOffset = (_OffsetType)(size_t)func;
     ci.code = func;
@@ -150,7 +154,10 @@ int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline)
             ctx.dst += di->size;
         }
         if (ctx.src - func >= JUMP32_SIZE) {
-            duckhook_write_jump32(ctx.dst, ctx.src, ctx.dst);
+            ctx.dst[0] = 0xe9; /* unconditional jump */
+            disp[0].dst_addr = ctx.src;
+            disp[0].src_addr_offset = (ctx.dst - ctx.dst_base) + 5;
+            disp[0].pos_offset = (ctx.dst - ctx.dst_base) + 1;
             while (i < di_cnt) {
                 get_rip_relative(&ctx, &dis[i]);
                 if (func <= ctx.imm.addr && ctx.imm.addr < func + JUMP32_SIZE) {
@@ -450,23 +457,16 @@ static void get_rip_relative(make_trampoline_context_t *ctx, const _DInst *di)
 static int handle_rip_relative(make_trampoline_context_t *ctx, rip_relative_t *rr, const _DInst *di)
 {
     if (rr->size == 32) {
-        int32_t *pos = (int32_t*)(ctx->dst + rr->offset);
-#ifdef CPU_X86_64
-        if (!within_32bit_relative(ctx->dst + di->size, (uint8_t*)rr->addr)) {
-            /* out of 32-bit relative addressing.
-             * reach here if code_mem_get() returns incorrect address.
-             */
-            return -1;
-        }
-#endif
-        if (*pos != (uint32_t)rr->raddr) {
+        if (*(int32_t*)(ctx->dst + rr->offset) != (uint32_t)rr->raddr) {
             /* sanity check.
              * reach here if opsiz and/or disp_offset are incorrectly
              * estimated.
              */
             return -1;
         }
-        *pos += ctx->src - ctx->dst;
+        ctx->rip_disp[1].dst_addr = rr->addr;
+        ctx->rip_disp[1].src_addr_offset = (ctx->dst - ctx->dst_base) + di->size;;
+        ctx->rip_disp[1].pos_offset = (ctx->dst - ctx->dst_base) + rr->offset;
     } else if (rr->size != 0) {
         return -1;
     }

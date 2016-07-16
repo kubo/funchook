@@ -65,19 +65,30 @@ struct duckhook {
 static size_t mem_size;
 static size_t num_entries;
 
-static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr);
+static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr, rip_displacement_t *disp);
 
 #ifdef CPU_X86_64
 
-static int buffer_avail(duckhook_buffer_t *buffer, uint8_t *mod_start, uint8_t *mod_end)
+static int buffer_avail(duckhook_buffer_t *buf, uint8_t *addr, rip_displacement_t *disp)
 {
-    return duckhook_jump32_avail(mod_end, (uint8_t*)buffer) &&
-        duckhook_jump32_avail(mod_start, (uint8_t*)buffer + mem_size);
+    duckhook_entry_t *entry = &buf->entries[buf->used];
+
+    if (!duckhook_jump32_avail(addr, entry->trampoline)) {
+        return 0;
+    }
+    if (!duckhook_within_32bit_relative(entry->trampoline + disp[0].src_addr_offset, disp[0].dst_addr)) {
+        return 0;
+    }
+    if (disp[1].dst_addr != 0 &&
+        !duckhook_within_32bit_relative(entry->trampoline + disp[1].src_addr_offset, disp[1].dst_addr)) {
+        return 0;
+    }
+    return 1;
 }
 
 #else
 
-#define buffer_avail(buffer, mod_start, mod_end) (1)
+#define buffer_avail(buffer, addr, disp) (1)
 
 #endif
 
@@ -92,24 +103,27 @@ duckhook_t *duckhook_create(void)
 
 void *duckhook_prepare(duckhook_t *duckhook, void *func, void *new_func)
 {
+    uint8_t trampoline[TRAMPOLINE_SIZE] = {0,};
+    rip_displacement_t disp[2];
     duckhook_buffer_t *buf;
     duckhook_entry_t *entry;
+    uint8_t *src_addr;
 
     if (duckhook->installed) {
         return NULL;
     }
-
-    buf = get_buffer(duckhook, (uint8_t*)func);
+    if (duckhook_make_trampoline(disp, func, trampoline) != 0) {
+        return NULL;
+    }
+    buf = get_buffer(duckhook, func, disp);
     if (buf == NULL) {
         return NULL;
     }
     entry = &buf->entries[buf->used];
+    /* fill members */
     entry->func = duckhook_resolve_func(func);
     entry->new_func = new_func;
-
-    if (duckhook_make_trampoline(func, entry->trampoline) != 0) {
-        return NULL;
-    }
+    memcpy(entry->trampoline, trampoline, TRAMPOLINE_SIZE);
     memcpy(entry->old_code, func, JUMP32_SIZE);
 #ifdef CPU_X86_64
     if (duckhook_jump32_avail(func, new_func)) {
@@ -121,6 +135,14 @@ void *duckhook_prepare(duckhook_t *duckhook, void *func, void *new_func)
 #else
     duckhook_write_jump32(func, new_func, entry->new_code);
 #endif
+    /* fix rip-relative offsets */
+    src_addr = entry->trampoline + disp[0].src_addr_offset;
+    *(uint32_t*)(entry->trampoline + disp[0].pos_offset) = (disp[0].dst_addr - src_addr);
+    if (disp[1].dst_addr != 0) {
+        src_addr = entry->trampoline + disp[1].src_addr_offset;
+        *(uint32_t*)(entry->trampoline + disp[1].pos_offset) = (disp[1].dst_addr - src_addr);
+    }
+
     buf->used++;
     return (void*)entry->trampoline;
 }
@@ -198,20 +220,12 @@ int duckhook_destroy(duckhook_t *duckhook)
     return 0;
 }
 
-static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr)
+static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr, rip_displacement_t *disp)
 {
     duckhook_buffer_t *buf;
-#ifdef CPU_X86_64
-    uint8_t *mod_start, *mod_end;
-    if (duckhook_get_module_region(addr, &mod_start, &mod_end) != 0) {
-        return NULL;
-    }
-#else
-    addr = NULL; /* no need to check the address. */
-#endif
 
     for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
-        if (buf->used < num_entries && buffer_avail(buf, mod_start, mod_end)) {
+        if (buf->used < num_entries && buffer_avail(buf, addr, disp)) {
             return buf;
         }
     }
@@ -219,11 +233,11 @@ static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr)
     if (buf == (void*)-1) {
         return NULL;
     }
-    if (!buffer_avail(buf, mod_start, mod_end)) {
+    buf->used = 0;
+    if (!buffer_avail(buf, addr, disp)) {
         return NULL;
     }
     buf->next = duckhook->buffer;
-    buf->used = 0;
     duckhook->buffer = buf;
     return buf;
 }

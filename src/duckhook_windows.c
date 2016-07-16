@@ -110,25 +110,3 @@ void *duckhook_resolve_func(void *func)
 {
     return func;
 }
-
-int duckhook_get_module_region(const uint8_t *addr, uint8_t **start, uint8_t **end)
-{
-    MEMORY_BASIC_INFORMATION mbi;
-    IMAGE_DOS_HEADER *dhdr;
-    IMAGE_NT_HEADERS *nthdr;
-
-    if (VirtualQuery(addr, &mbi, sizeof(mbi)) == 0) {
-        return -1;
-    }
-    dhdr = (IMAGE_DOS_HEADER *)mbi.AllocationBase;
-    if (dhdr->e_magic != IMAGE_DOS_SIGNATURE) {
-        return -1;
-    }
-    nthdr = (IMAGE_NT_HEADERS *)((size_t)mbi.AllocationBase + dhdr->e_lfanew);
-    if (nthdr->Signature != IMAGE_NT_SIGNATURE) {
-        return -1;
-    }
-    *start = (uint8_t*)mbi.AllocationBase;
-    *end = *start + nthdr->OptionalHeader.SizeOfImage;
-    return 0;
-}

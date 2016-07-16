@@ -64,6 +64,12 @@ typedef struct {
 #endif
 } mem_state_t;
 
+typedef struct {
+    const uint8_t *dst_addr;
+    char src_addr_offset;
+    char pos_offset;
+} rip_displacement_t;
+
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
 size_t duckhook_mem_size();
@@ -77,17 +83,15 @@ int duckhook_unprotect_end(const mem_state_t *mstate);
 
 void *duckhook_resolve_func(void *func);
 
-int duckhook_get_module_region(const uint8_t *addr, uint8_t **start, uint8_t **end);
-
 /* Functions in duckhook_x86.c */
 
 int duckhook_write_jump32(const uint8_t *src, const uint8_t *dst, uint8_t *out);
 #ifdef CPU_X86_64
 int duckhook_write_jump64(uint8_t *src, const uint8_t *dst);
+int duckhook_within_32bit_relative(const uint8_t *src, const uint8_t *dst);
 int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst);
 #endif
 
-int duckhook_make_trampoline(const uint8_t *func, uint8_t *trampoline);
-
+int duckhook_make_trampoline(rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline);
 
 #endif
