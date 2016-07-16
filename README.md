@@ -5,13 +5,14 @@ Note: This is unstable. Some functions may be changed.
 
 This library depends on [diStorm3][].
 
+[![Build Status](https://travis-ci.org/kubo/duckhook.svg?branch=master)](https://travis-ci.org/kubo/duckhook)
+
 TODO
 ----
 
 * write documents.
 * add a function to get the error reason when `duckhook_prepare` returns NULL.
 * add a function to debug duckhook itself.
-* add tests.
 
 Supported Platform
 -----------------
