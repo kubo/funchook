@@ -5,7 +5,7 @@ AC_GNU_SOURCE
 AC_CANONICAL_HOST
 
 if test "$GCC"; then
-   CFLAGS="$CFLAGS -Wall"
+   CFLAGS="$CFLAGS -Wall -fvisibility=hidden"
 fi
 
 if test "$EXEEXT"; then
@@ -18,7 +18,7 @@ else
   DUCKHOOK_OS=linux
   LIBDUCKHOOK_SO=libduckhook.so
   CFLAGS="$CFLAGS -fPIC"
-  LINK_SHARED="\$(CC) -shared -Wl,--version-script,\$(srcdir)/duckhook.map"
+  LINK_SHARED="\$(CC) -shared"
   COPY_DLL_ON_TEST='#'
   LIBS="-ldl"
 fi
