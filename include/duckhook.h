@@ -91,4 +91,6 @@ DUCKHOOK_EXPORT int duckhook_uninstall(duckhook_t *duckhook, int flags);
  */
 DUCKHOOK_EXPORT int duckhook_destroy(duckhook_t *duckhook);
 
+DUCKHOOK_EXPORT int duckhook_set_debug_file(const char *name);
+
 #endif

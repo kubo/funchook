@@ -45,17 +45,21 @@ static size_t page_size;
 
 size_t duckhook_mem_size()
 {
-    page_size = sysconf(_SC_PAGE_SIZE);;
+    page_size = sysconf(_SC_PAGE_SIZE);
+    duckhook_log("  page_size=%"SIZE_T_FMT"u\n", page_size);
     return page_size;
 }
 
 void *duckhook_mem_alloc(void *hint)
 {
+    void *addr;
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
     if ((size_t)hint < INT_MAX) {
         flags |= MAP_32BIT;
     }
-    return mmap(hint, page_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+    addr = mmap(hint, page_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+    duckhook_log("  allocate memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
+    return addr;
 }
 
 int duckhook_mem_free(void *mem)
@@ -113,6 +117,12 @@ void *duckhook_resolve_func(void *func)
     if (dladdr(func, &dli) == 0) {
         return NULL;
     }
+    duckhook_log("  func %p(%s+0x%"SIZE_T_FMT"x) in module %s(base %p)\n",
+                 func,
+                 dli.dli_sname ? dli.dli_sname : dli.dli_fname,
+                 dli.dli_sname ? ((size_t)func - (size_t)dli.dli_saddr) :
+                 ((size_t)func - (size_t)dli.dli_fbase),
+                 dli.dli_fname, dli.dli_fbase);
     ehdr = (ElfW(Ehdr) *)dli.dli_fbase;
     if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
         return NULL;
@@ -161,6 +171,8 @@ void *duckhook_resolve_func(void *func)
                 fn = dlsym(RTLD_NEXT, strtab + symtab->st_name);
             }
             if (fn != NULL) {
+                duckhook_log("  change func address from %p to %p\n",
+                             func, fn);
                 func = fn;
             }
             break;

@@ -39,6 +39,24 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
+#ifdef WIN32
+#ifdef _WIN64
+#define SIZE_T_FMT "I64"
+#else
+#define SIZE_T_FMT ""
+#endif /* _WIN64 */
+#else /* WIN32 */
+#if defined(__LP64__) || defined(_LP64)
+#define SIZE_T_FMT "l"
+#else
+#define SIZE_T_FMT ""
+#endif /* defined(__LP64__) || defined(_LP64) */
+#endif /* WIN32 */
+
+#ifndef __GNUC__
+#define __attribute__(arg)
+#endif
+
 #define ROUND_DOWN(num, unit) ((num) & ~((unit) - 1))
 #define ROUND_UP(num, unit) (((num) + (unit) - 1) & ~((unit) - 1))
 
@@ -69,6 +87,9 @@ typedef struct {
     char src_addr_offset;
     char pos_offset;
 } rip_displacement_t;
+
+/* Functions in duckhook.c */
+void duckhook_log(const char *fmt, ...) __attribute__((__format__ (__printf__, 1, 2)));
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
