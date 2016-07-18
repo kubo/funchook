@@ -53,11 +53,36 @@ size_t duckhook_mem_size()
 void *duckhook_mem_alloc(void *hint)
 {
     void *addr;
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-    if ((size_t)hint < INT_MAX) {
-        flags |= MAP_32BIT;
+#ifdef CPU_X86_64
+    FILE *fp = fopen("/proc/self/maps", "r");
+    char buf[PATH_MAX];
+    size_t prev_end = 0;
+    void *old_hint = hint;
+
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        size_t start, end;
+        duckhook_log("  process maps: %s", buf);
+        if (sscanf(buf, "%"SIZE_T_FMT"x-%"SIZE_T_FMT"x", &start, &end) == 2) {
+            if (prev_end == 0) {
+                if (end >= (size_t)hint) {
+                    prev_end = end;
+                }
+            } else {
+                if (start - prev_end >= 3 * page_size) {
+                    hint = (void*)(prev_end + page_size);
+                    duckhook_log("  change hint address from %p to %p\n",
+                                 old_hint, hint);
+                    break;
+                }
+                prev_end = end;
+            }
+        }
     }
-    addr = mmap(hint, page_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+    fclose(fp);
+#else
+    hint = NULL;
+#endif
+    addr = mmap(hint, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     duckhook_log("  allocate memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
     return addr;
 }
@@ -104,6 +129,7 @@ int duckhook_unprotect_end(const mem_state_t *mstate)
 
 void *duckhook_resolve_func(void *func)
 {
+#ifdef __GLIBC__
     Dl_info dli;
     const ElfW(Ehdr) *ehdr;
     struct link_map *lmap;
@@ -115,7 +141,8 @@ void *duckhook_resolve_func(void *func)
     int i;
 
     if (dladdr(func, &dli) == 0) {
-        return NULL;
+        duckhook_log("  func %p is not in a module. Use it anyway.\n", func);
+        return func;
     }
     duckhook_log("  func %p(%s+0x%"SIZE_T_FMT"x) in module %s(base %p)\n",
                  func,
@@ -125,7 +152,8 @@ void *duckhook_resolve_func(void *func)
                  dli.dli_fname, dli.dli_fbase);
     ehdr = (ElfW(Ehdr) *)dli.dli_fbase;
     if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
-        return NULL;
+        duckhook_log("  not a valid ELF module %s.\n", dli.dli_fname);
+        return func;
     }
     switch (ehdr->e_type) {
     case ET_EXEC:
@@ -138,12 +166,15 @@ void *duckhook_resolve_func(void *func)
             }
         }
         if (lmap == NULL) {
-            return NULL;
+            duckhook_log("  could not find link_map\n");
+            return func;
         }
         break;
     default:
-        return NULL;
+        duckhook_log("  ELF type is neither ET_EXEC nor ET_DYN.\n");
+        return func;
     }
+    duckhook_log("  link_map=%p\n", lmap);
     dyn = lmap->l_ld;
 
     for (i = 0; dyn[i].d_tag != DT_NULL; i++) {
@@ -179,5 +210,6 @@ void *duckhook_resolve_func(void *func)
         }
         symtab++;
     }
+#endif
     return func;
 }

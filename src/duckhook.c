@@ -203,7 +203,7 @@ static duckhook_t *duckhook_create_internal(void)
 static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func)
 {
     uint8_t trampoline[TRAMPOLINE_SIZE] = {0,};
-    rip_displacement_t disp[2];
+    rip_displacement_t disp[2] = {0,};
     duckhook_buffer_t *buf;
     duckhook_entry_t *entry;
     uint8_t *src_addr;
@@ -212,6 +212,7 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
         duckhook_log("  already installed\n");
         return NULL;
     }
+    func = duckhook_resolve_func(func);
     if (duckhook_make_trampoline(disp, func, trampoline) != 0) {
         duckhook_log("  failed to make trampoline\n");
         return NULL;
@@ -223,7 +224,7 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
     }
     entry = &buf->entries[buf->used];
     /* fill members */
-    entry->func = duckhook_resolve_func(func);
+    entry->func = func;
     entry->new_func = new_func;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_SIZE);
     memcpy(entry->old_code, func, JUMP32_SIZE);
