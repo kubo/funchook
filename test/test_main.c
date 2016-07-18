@@ -5,6 +5,8 @@
 
 typedef int (*int_func_t)(void);
 
+extern void reset_retval(void);
+extern int get_val_in_shared_library(void);
 extern int x86_test_jump(void);
 extern int x86_test_call_get_pc_thunk_ax(void);
 extern int x86_test_call_get_pc_thunk_bx(void);
@@ -16,7 +18,15 @@ extern int x86_test_call_get_pc_thunk_bp(void);
 extern int x86_test_error_jump1(void);
 extern int x86_test_error_jump2(void);
 
+#ifdef WIN32
+extern void set_int_val(int val);
+
+__declspec(dllexport) int int_val = 0xbaceba11;
+#else
+#define set_int_val(val) do {} while(0)
 int int_val = 0xbaceba11;
+#endif
+
 
 static int test_cnt;
 static int error_cnt;
@@ -46,6 +56,7 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     printf("[%d] test_duckhook_int: %s\n", test_cnt, func_str);
 
     expected = ++int_val;
+    set_int_val(int_val);
     reset_retval();
     result = func();
     if (result != int_val) {
@@ -63,6 +74,7 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
 
     hook_is_called = 0;
     expected = ++int_val;
+    set_int_val(int_val);
     reset_retval();
     result = func();
     if (hook_is_called == 0) {
@@ -79,6 +91,7 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     duckhook_uninstall(duckhook, 0);
 
     expected = ++int_val;
+    set_int_val(int_val);
     reset_retval();
     result = func();
     if (expected != result) {
@@ -109,7 +122,10 @@ void test_duckhook_expect_error(int_func_t func, const char *func_str, int line)
 
 int main()
 {
+    duckhook_set_debug_file("debug.log");
+
     TEST_DUCKHOOK_INT(get_val);
+    TEST_DUCKHOOK_INT(get_val_in_shared_library);
 
 #if defined __i386 || defined  _M_I386
     TEST_DUCKHOOK_INT(x86_test_jump);
@@ -129,8 +145,9 @@ int main()
 
     if (error_cnt == 0) {
         printf("all %d tests are passed.\n", test_cnt);
+        return 0;
     } else {
         printf("%d of %d tests are failed.\n", error_cnt, test_cnt);
+        return 1;
     }
-    return 0;
 }

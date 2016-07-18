@@ -5,23 +5,29 @@ top_builddir = @top_builddir@
 CC = @CC@
 AS = @CC@ -c
 OBJS = test_main.o @DUCKHOOK_CPU@_test.o
-CFLAGS += -O2 -I$(srcdir)/../include
-LIBS = -lduckhook -Wl,-rpath,$(top_builddir)/src
+CFLAGS += -O2 -g -I$(srcdir)/../include
+PIC_CFLAGS = @PIC_CFLAGS@
+LIBS = -L$(top_builddir)/src -lduckhook -Wl,-rpath,$(top_builddir)/src -L. -lduckhook_test -Wl,-rpath,.
+LINK_SHARED = @LINK_SHARED@
 EXEEXT = @EXEEXT@
+@IF_WIN32@ OUT_IMPLIB = -Wl,--out-implib,duckhook_test.lib
 
 VPATH = $(srcdir):../src
 
 all: duckhook_test$(EXEEXT)
 
 test: duckhook_test$(EXEEXT)
-	@COPY_DLL_ON_TEST@ cmp -s $(top_builddir)/src/duckhook.dll duckhook.dll || cp $(top_builddir)/src/duckhook.dll duckhook.dll
+	@IF_WIN32@ cmp -s $(top_builddir)/src/duckhook.dll duckhook.dll || cp $(top_builddir)/src/duckhook.dll duckhook.dll
 	./duckhook_test$(EXEEXT)
 
-duckhook_test$(EXEEXT): $(OBJS) @LIBDUCKHOOK_SO@
-	$(CC) -o duckhook_test$(EXEEXT) $(OBJS) -L$(top_builddir)/src $(LIBS)
+duckhook_test$(EXEEXT): $(OBJS) @LIBDUCKHOOK_SO@ libduckhook_test.so
+	$(CC) -o duckhook_test$(EXEEXT) $(OBJS) $(LIBS)
+
+libduckhook_test.so: $(srcdir)/libduckhook_test.c
+	$(LINK_SHARED) $(PIC_CFLAGS) $(CFLAGS) -o libduckhook_test.so $(srcdir)/libduckhook_test.c $(OUT_IMPLIB)
 
 clean:
-	$(RM) $(TESTEXE) *.o
+	$(RM) $(TESTEXE) *.o libduckhook_test.so
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status

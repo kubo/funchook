@@ -6,7 +6,7 @@ DISTORM3_DIR = $(top_srcdir)/distorm
 VPATH = $(DISTORM3_DIR)/src:$(srcdir):$(top_srcdir)/include
 
 CC = @CC@
-CFLAGS = @CFLAGS@ -g -I. -I$(top_srcdir)/include -I$(DISTORM3_DIR)/include
+CFLAGS = @CFLAGS@ @PIC_CFLAGS@ -g -I. -I$(top_srcdir)/include -I$(DISTORM3_DIR)/include
 LIBS = @LIBS@
 LINK_SHARED = @LINK_SHARED@
 
