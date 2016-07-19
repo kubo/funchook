@@ -61,7 +61,7 @@ void *duckhook_mem_alloc(void *hint)
 
     while (fgets(buf, sizeof(buf), fp) != NULL) {
         size_t start, end;
-        duckhook_log("  process maps: %s", buf);
+        duckhook_log("  process map: %s", buf);
         if (sscanf(buf, "%"SIZE_T_FMT"x-%"SIZE_T_FMT"x", &start, &end) == 2) {
             if (prev_end == 0) {
                 if (end >= (size_t)hint) {
@@ -83,22 +83,34 @@ void *duckhook_mem_alloc(void *hint)
     hint = NULL;
 #endif
     addr = mmap(hint, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    duckhook_log("  allocate memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
+    duckhook_log("  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
     return addr;
 }
 
 int duckhook_mem_free(void *mem)
 {
-    return munmap(mem, page_size);
+    int rv = munmap(mem, page_size);
+    duckhook_log("  %sdeallocate page %p (size=%"SIZE_T_FMT"u)\n",
+                 (rv == 0) ? "" : "failed to ",
+                 mem,  page_size);
+    return rv;
 }
 
 int duckhook_mem_protect(void *addr)
 {
-    return mprotect(addr, page_size, PROT_READ | PROT_EXEC);
+    int rv = mprotect(addr, page_size, PROT_READ | PROT_EXEC);
+    duckhook_log("  %sprotect page %p (size=%"SIZE_T_FMT"u)\n",
+                 (rv == 0) ? "" : "failed to ",
+                 addr, page_size);
+    return rv;
 }
 int duckhook_mem_unprotect(void *addr)
 {
-    return mprotect(addr, page_size, PROT_READ | PROT_WRITE);
+    int rv = mprotect(addr, page_size, PROT_READ | PROT_WRITE);
+    duckhook_log("  %sunprotect page %p (size=%"SIZE_T_FMT"u)\n",
+                 (rv == 0) ? "" : "failed to ",
+                 addr, page_size);
+    return rv;
 }
 
 int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
@@ -112,19 +124,33 @@ int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
     mstate->addr = (void*)saddr;
     mstate->size = len;
     if (prot_rw) {
-        return mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
+        rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
+        duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
+                     (rv == 0) ? "" : "failed to ",
+                     mstate->addr, mstate->size, start, len);
+        return rv;
     }
     rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE | PROT_EXEC);
+    duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write,exec) <- %p (size=%"SIZE_T_FMT"u)\n",
+                 (rv == 0) ? "" : "failed to ",
+                 mstate->addr, mstate->size, start, len);
     if (rv == -1 && errno == EACCES) {
         prot_rw = 1;
         rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
+        duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
+                     (rv == 0) ? "" : "failed to ",
+                     mstate->addr, mstate->size);
     }
     return rv;
 }
 
 int duckhook_unprotect_end(const mem_state_t *mstate)
 {
-    return mprotect(mstate->addr, mstate->size, PROT_READ | PROT_EXEC);
+    int rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_EXEC);
+    duckhook_log("  %sprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
+                 (rv == 0) ? "" : "failed to ",
+                 mstate->addr, mstate->size);
+    return rv;
 }
 
 void *duckhook_resolve_func(void *func)
