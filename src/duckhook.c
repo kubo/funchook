@@ -63,9 +63,10 @@ struct duckhook {
     duckhook_buffer_t *buffer;
 };
 
+char *duckhook_debug_file;
+
 static size_t mem_size;
 static size_t num_entries;
-static char *debug_file;
 
 static duckhook_t *duckhook_create_internal(void);
 static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func);
@@ -161,13 +162,13 @@ int duckhook_destroy(duckhook_t *duckhook)
 
 int duckhook_set_debug_file(const char *name)
 {
-    if (debug_file != NULL) {
-        free(debug_file);
-        debug_file = NULL;
+    if (duckhook_debug_file != NULL) {
+        free(duckhook_debug_file);
+        duckhook_debug_file = NULL;
     }
     if (name != NULL) {
-        debug_file = strdup(name);
-        if (debug_file == NULL) {
+        duckhook_debug_file = strdup(name);
+        if (duckhook_debug_file == NULL) {
             return -1;
         }
     }
@@ -176,8 +177,8 @@ int duckhook_set_debug_file(const char *name)
 
 void duckhook_log(const char *fmt, ...)
 {
-    if (debug_file != NULL) {
-        FILE *fp = fopen(debug_file, "a");
+    if (duckhook_debug_file != NULL) {
+        FILE *fp = fopen(duckhook_debug_file, "a");
 
         if (fp != NULL) {
             va_list ap;

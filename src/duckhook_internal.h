@@ -89,6 +89,7 @@ typedef struct {
 } rip_displacement_t;
 
 /* Functions in duckhook.c */
+extern char *duckhook_debug_file;
 void duckhook_log(const char *fmt, ...) __attribute__((__format__ (__printf__, 1, 2)));
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */

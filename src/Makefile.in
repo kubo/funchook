@@ -10,6 +10,8 @@ CFLAGS = @CFLAGS@ @PIC_CFLAGS@ -g -I. -I$(top_srcdir)/include -I$(DISTORM3_DIR)/
 LIBS = @LIBS@
 LINK_SHARED = @LINK_SHARED@
 
+@IF_WIN32@ LIBS += -lpsapi
+
 DUCKHOOK_OBJS = \
 	duckhook.o \
 	duckhook_x86.o \
