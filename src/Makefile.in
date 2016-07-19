@@ -41,6 +41,10 @@ duckhook_linux.o: duckhook_linux.c duckhook.h duckhook_internal.h
 duckhook_windows.o: duckhook_windows.c duckhook.h duckhook_internal.h
 duckhook_x86.o: duckhook_x86.c duckhook.h duckhook_internal.h
 
+# suppress warning: missing braces around initializer [-Wmissing-braces]
+insts.o: insts.c
+	$(CC) $(CFLAGS) -c -o insts.o $(DISTORM3_DIR)/src/insts.c -Wno-missing-braces
+
 clean:
 	$(RM) @LIBDUCKHOOK_SO@ $(OBJS)
 
