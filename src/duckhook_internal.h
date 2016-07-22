@@ -42,14 +42,18 @@
 #ifdef WIN32
 #ifdef _WIN64
 #define SIZE_T_FMT "I64"
+#define SIZE_T_WIDTH "16"
 #else
 #define SIZE_T_FMT ""
+#define SIZE_T_WIDTH "8"
 #endif /* _WIN64 */
 #else /* WIN32 */
 #if defined(__LP64__) || defined(_LP64)
 #define SIZE_T_FMT "l"
+#define SIZE_T_WIDTH "16"
 #else
 #define SIZE_T_FMT ""
+#define SIZE_T_WIDTH "8"
 #endif /* defined(__LP64__) || defined(_LP64) */
 #endif /* WIN32 */
 
@@ -59,6 +63,10 @@
 
 #define ROUND_DOWN(num, unit) ((num) & ~((unit) - 1))
 #define ROUND_UP(num, unit) (((num) + (unit) - 1) & ~((unit) - 1))
+
+#ifndef DUCKHOOK_H
+typedef struct duckhook duckhook_t;
+#endif
 
 #if defined _M_AMD64 || defined __x86_64__
 #define CPU_X86_64
@@ -90,20 +98,20 @@ typedef struct {
 
 /* Functions in duckhook.c */
 extern char *duckhook_debug_file;
-void duckhook_log(const char *fmt, ...) __attribute__((__format__ (__printf__, 1, 2)));
+void duckhook_log(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
-size_t duckhook_mem_size();
-void *duckhook_mem_alloc(void *hint);
-int duckhook_mem_free(void *mem);
-int duckhook_mem_protect(void *addr);
-int duckhook_mem_unprotect(void *addr);
+size_t duckhook_mem_size(duckhook_t *duckhook);
+void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint);
+int duckhook_mem_free(duckhook_t *duckhook, void *mem);
+int duckhook_mem_protect(duckhook_t *duckhook, void *addr);
+int duckhook_mem_unprotect(duckhook_t *duckhook, void *addr);
 
-int duckhook_unprotect_begin(mem_state_t *mstate, void *addr, size_t len);
-int duckhook_unprotect_end(const mem_state_t *mstate);
+int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *addr, size_t len);
+int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate);
 
-void *duckhook_resolve_func(void *func);
+void *duckhook_resolve_func(duckhook_t *duckhook, void *func);
 
 /* Functions in duckhook_x86.c */
 

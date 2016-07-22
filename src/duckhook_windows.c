@@ -49,7 +49,7 @@ static page_list_t page_list = {
     &page_list,
 };
 
-size_t duckhook_mem_size()
+size_t duckhook_mem_size(duckhook_t *duckhook)
 {
     SYSTEM_INFO si;
 
@@ -63,7 +63,7 @@ size_t duckhook_mem_size()
 /* Reserve 64K bytes (allocation_unit) and use the first
  * 4K bytes (1 page) as the control page.
  */
-static page_list_t *alloc_page_info(void *hint)
+static page_list_t *alloc_page_info(duckhook_t *duckhook, void *hint)
 {
     void *addr;
     page_list_t *pl;
@@ -72,10 +72,10 @@ static page_list_t *alloc_page_info(void *hint)
     while (1) {
         MEMORY_BASIC_INFORMATION mbi;
         if (VirtualQuery(hint, &mbi, sizeof(mbi)) == 0) {
-            duckhook_log("  Virtual Query %p failed\n", hint);
+            duckhook_log(duckhook, "  Virtual Query %p failed\n", hint);
             return NULL;
         }
-        duckhook_log("  process map: %016I64x-%016I64x %s\n",
+        duckhook_log(duckhook, "  process map: %016I64x-%016I64x %s\n",
                      (size_t)mbi.BaseAddress, (size_t)mbi.BaseAddress + mbi.RegionSize,
                      (mbi.State == MEM_FREE) ? "free" : "used");
         if (mbi.State == MEM_FREE) {
@@ -84,7 +84,7 @@ static page_list_t *alloc_page_info(void *hint)
             if (diff >= 0) {
                 if (mbi.RegionSize - diff >= allocation_unit) {
                     hint = (void*)addr;
-                    duckhook_log("  change hint address from %p to %p\n",
+                    duckhook_log(duckhook, "  change hint address from %p to %p\n",
                                  old_hint, hint);
                     break;
                 }
@@ -96,12 +96,12 @@ static page_list_t *alloc_page_info(void *hint)
     hint = NULL;
 #endif
     pl = VirtualAlloc(hint, allocation_unit, MEM_RESERVE, PAGE_NOACCESS);
-    duckhook_log("  reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", pl, hint, allocation_unit);
+    duckhook_log(duckhook, "  reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", pl, hint, allocation_unit);
     if (pl == NULL) {
         return NULL;
     }
     addr = VirtualAlloc(pl, page_size, MEM_COMMIT, PAGE_READWRITE);
-    duckhook_log("  commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, pl, page_size);
+    duckhook_log(duckhook, "  commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, pl, page_size);
     if (addr == NULL) {
         VirtualFree(pl, 0, MEM_RELEASE);
         return NULL;
@@ -116,7 +116,7 @@ static page_list_t *alloc_page_info(void *hint)
 /*
  * Get one page from page_list, commit it and return it.
  */
-void *duckhook_mem_alloc(void *hint)
+void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
 {
     page_list_t *pl;
     int i;
@@ -136,7 +136,7 @@ void *duckhook_mem_alloc(void *hint)
     }
     if (pl == &page_list) {
         /* no page_list is available. */
-        pl = alloc_page_info(hint);
+        pl = alloc_page_info(duckhook, hint);
         if (pl == NULL) {
             return (void*)-1;
         }
@@ -147,7 +147,7 @@ void *duckhook_mem_alloc(void *hint)
             void *addr = VirtualAlloc(mem, page_size, MEM_COMMIT, PAGE_READWRITE);
             pl->used[i] = 1;
             pl->num_used++;
-            duckhook_log("  %scommit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u)\n",
+            duckhook_log(duckhook, "  %scommit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u)\n",
                          (mem == addr) ? "" : "failed to ",
                          mem, pl, pl->num_used, i, page_size);
             return addr;
@@ -159,14 +159,14 @@ void *duckhook_mem_alloc(void *hint)
 /*
  * Back to one page to page_list.
  */
-int duckhook_mem_free(void *mem)
+int duckhook_mem_free(duckhook_t *duckhook, void *mem)
 {
     page_list_t *pl = (page_list_t *)((size_t)mem & ~(allocation_unit - 1));
     size_t idx = ((size_t)mem - (size_t)pl) / page_size - 1;
     BOOL ok;
 
     ok = VirtualFree(mem, page_size, MEM_DECOMMIT);
-    duckhook_log("  %sdecommit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sdecommit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u)\n",
                  ok ? "" : "failed to ",
                  mem, pl, pl->num_used, idx, page_size);
     if (!ok) {
@@ -181,31 +181,31 @@ int duckhook_mem_free(void *mem)
     pl->next->prev = pl->prev;
     pl->prev->next = pl->next;
     ok = VirtualFree(pl, 0, MEM_RELEASE);
-    duckhook_log("  %srelease memory %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %srelease memory %p (size=%"SIZE_T_FMT"u)\n",
                  ok ? "" : "failed to ",
                  pl, allocation_unit);
     return ok ? 0 : -1;
 }
 
-int duckhook_mem_protect(void *addr)
+int duckhook_mem_protect(duckhook_t *duckhook, void *addr)
 {
     BOOL ok = VirtualProtect(addr, page_size, PAGE_EXECUTE_READ, NULL);
-    duckhook_log("  %sprotect page %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
+    duckhook_log(duckhook, "  %sprotect page %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
                  ok ? "" : "failed to ",
                  addr, page_size);
     return ok ? 0 : -1;
 }
 
-int duckhook_mem_unprotect(void *addr)
+int duckhook_mem_unprotect(duckhook_t *duckhook, void *addr)
 {
     BOOL ok = VirtualProtect(addr, page_size, PAGE_READWRITE, NULL);
-    duckhook_log("  %sunprotect page %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
+    duckhook_log(duckhook, "  %sunprotect page %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
                  ok ? "" : "failed to ",
                  addr, page_size);
     return ok ? 0 : -1;
 }
 
-int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
+int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *start, size_t len)
 {
     size_t saddr = ROUND_DOWN((size_t)start, page_size);
     BOOL ok;
@@ -214,28 +214,28 @@ int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
     mstate->size = len + (size_t)start - saddr;
     mstate->size = ROUND_UP(mstate->size, page_size);
     ok = VirtualProtect(mstate->addr, mstate->size, PAGE_EXECUTE_READWRITE, &mstate->protect);
-    duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u) <- %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sunprotect memory %p (size=%"SIZE_T_FMT"u) <- %p (size=%"SIZE_T_FMT"u)\n",
                  ok ? "" : "failed to ",
                  mstate->addr, mstate->size, start, len);
     return ok ? 0 : -1;
 }
 
-int duckhook_unprotect_end(const mem_state_t *mstate)
+int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
 {
     BOOL ok = VirtualProtect(mstate->addr, mstate->size, mstate->protect, NULL);
-    duckhook_log("  %sprotect memory %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sprotect memory %p (size=%"SIZE_T_FMT"u)\n",
                  ok ? "" : "failed to ",
                  mstate->addr, mstate->size);
     return ok ? 0 : -1;
 }
 
-void *duckhook_resolve_func(void *func)
+void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
 {
     if (duckhook_debug_file != NULL) {
         char path[PATH_MAX];
         DWORD len = GetMappedFileNameA(GetCurrentProcess(), func, path, sizeof(path));
         if (len > 0) {
-            duckhook_log("  func %p is in %.*s\n", func, (int)len, path);
+            duckhook_log(duckhook, "  func %p is in %.*s\n", func, (int)len, path);
         }
     }
     return func;

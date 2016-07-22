@@ -61,6 +61,7 @@ typedef struct duckhook_buffer {
 struct duckhook {
     int installed;
     duckhook_buffer_t *buffer;
+    FILE *logfp;
 };
 
 char *duckhook_debug_file;
@@ -68,6 +69,8 @@ char *duckhook_debug_file;
 static size_t mem_size;
 static size_t num_entries;
 
+static void duckhook_logv(duckhook_t *duckhook, const char *fmt, va_list ap);
+static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...);
 static duckhook_t *duckhook_create_internal(void);
 static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func);
 static int duckhook_install_internal(duckhook_t *duckhook, int flags);
@@ -77,27 +80,27 @@ static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr, rip_di
 
 #ifdef CPU_X86_64
 
-static int buffer_avail(duckhook_buffer_t *buf, uint8_t *addr, rip_displacement_t *disp)
+static int buffer_avail(duckhook_t *duckhook, duckhook_buffer_t *buf, uint8_t *addr, rip_displacement_t *disp)
 {
     duckhook_entry_t *entry = &buf->entries[buf->used];
     const uint8_t *src;
     const uint8_t *dst;
 
     if (!duckhook_jump32_avail(addr, entry->trampoline)) {
-        duckhook_log("  could not jump function %p to trampoline %p\n", addr, entry->trampoline);
+        duckhook_log(duckhook, "  could not jump function %p to trampoline %p\n", addr, entry->trampoline);
         return 0;
     }
     src = entry->trampoline + disp[0].src_addr_offset;
     dst = disp[0].dst_addr;
     if (!duckhook_within_32bit_relative(src, dst)) {
-        duckhook_log("  could not jump trampoline %p to function %p\n",
+        duckhook_log(duckhook, "  could not jump trampoline %p to function %p\n",
                      src, dst);
         return 0;
     }
     src = entry->trampoline + disp[1].src_addr_offset;
     dst = disp[1].dst_addr;
     if (dst != 0 && !duckhook_within_32bit_relative(src, dst)) {
-        duckhook_log("  could not relative address from %p to %p\n",
+        duckhook_log(duckhook, "  could not relative address from %p to %p\n",
                      src, dst);
         return 0;
     }
@@ -106,17 +109,17 @@ static int buffer_avail(duckhook_buffer_t *buf, uint8_t *addr, rip_displacement_
 
 #else
 
-#define buffer_avail(buffer, addr, disp) (1)
+#define buffer_avail(duckhook, buffer, addr, disp) (1)
 
 #endif
 
 duckhook_t *duckhook_create(void)
 {
-    duckhook_t *duckhook;
+    duckhook_t *duckhook = NULL;
 
-    duckhook_log("Enter duckhook_create()\n");
+    duckhook_log(duckhook, "Enter duckhook_create()\n");
     duckhook = duckhook_create_internal();
-    duckhook_log("Leave duckhook_create() => %p\n", duckhook);
+    duckhook_log_end(duckhook, "Leave duckhook_create() => %p\n", duckhook);
     return duckhook;
 }
 
@@ -124,9 +127,9 @@ void *duckhook_prepare(duckhook_t *duckhook, void *func, void *new_func)
 {
     void *rv;
 
-    duckhook_log("Enter duckhook_prepare(%p, %p, %p)\n", duckhook, func, new_func);
+    duckhook_log(duckhook, "Enter duckhook_prepare(%p, %p, %p)\n", duckhook, func, new_func);
     rv = duckhook_prepare_internal(duckhook, func, new_func);
-    duckhook_log("Leave duckhook_prepare() => %p\n", rv);
+    duckhook_log_end(duckhook, "Leave duckhook_prepare() => %p\n", rv);
     return rv;
 }
 
@@ -134,9 +137,9 @@ int duckhook_install(duckhook_t *duckhook, int flags)
 {
     int rv;
 
-    duckhook_log("Enter duckhook_install(%p, 0x%x)\n", duckhook, flags);
+    duckhook_log(duckhook, "Enter duckhook_install(%p, 0x%x)\n", duckhook, flags);
     rv = duckhook_install_internal(duckhook, flags);
-    duckhook_log("Leave duckhook_install() => %d\n", rv);
+    duckhook_log_end(duckhook, "Leave duckhook_install() => %d\n", rv);
     return rv;
 }
 
@@ -144,9 +147,9 @@ int duckhook_uninstall(duckhook_t *duckhook, int flags)
 {
     int rv;
 
-    duckhook_log("Enter duckhook_uninstall(%p, 0x%x)\n", duckhook, flags);
+    duckhook_log(duckhook, "Enter duckhook_uninstall(%p, 0x%x)\n", duckhook, flags);
     rv = duckhook_uninstall_internal(duckhook, flags);
-    duckhook_log("Leave duckhook_uninstall() => %d\n", rv);
+    duckhook_log_end(NULL, "Leave duckhook_uninstall() => %d\n", rv);
     return rv;
 }
 
@@ -154,9 +157,9 @@ int duckhook_destroy(duckhook_t *duckhook)
 {
     int rv;
 
-    duckhook_log("Enter duckhook_destroy(%p)\n", duckhook);
+    duckhook_log(duckhook, "Enter duckhook_destroy(%p)\n", duckhook);
     rv = duckhook_destroy_internal(duckhook);
-    duckhook_log("Leave duckhook_destroy() => %d\n", rv);
+    duckhook_log_end(rv == 0 ? NULL : duckhook, "Leave duckhook_destroy() => %d\n", rv);
     return rv;
 }
 
@@ -175,52 +178,81 @@ int duckhook_set_debug_file(const char *name)
     return 0;
 }
 
-void duckhook_log(const char *fmt, ...)
+void duckhook_log(duckhook_t *duckhook, const char *fmt, ...)
 {
-    if (duckhook_debug_file != NULL) {
-        FILE *fp = fopen(duckhook_debug_file, "a");
+    va_list ap;
+    va_start(ap, fmt);
+    duckhook_logv(duckhook, fmt, ap);
+    va_end(ap);
+}
 
-        if (fp != NULL) {
-            va_list ap;
+static void duckhook_logv(duckhook_t *duckhook, const char *fmt, va_list ap)
+{
+    FILE *fp;
+    if (duckhook_debug_file == NULL) {
+        return;
+    }
+    if (duckhook == NULL) {
+        fp = fopen(duckhook_debug_file, "a");
+    } else if (duckhook->logfp == NULL) {
+        fp = duckhook->logfp = fopen(duckhook_debug_file, "a");
+    } else {
+        fp = duckhook->logfp;
+    }
+    if (fp == NULL) {
+        return;
+    }
+    vfprintf(fp, fmt, ap);
+    if (duckhook == NULL) {
+        fclose(fp);
+    } else {
+        fflush(fp);
+    }
+}
 
-            va_start(ap, fmt);
-            vfprintf(fp, fmt, ap);
-            va_end(ap);
-            fclose(fp);
-        }
+static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    duckhook_logv(duckhook, fmt, ap);
+    va_end(ap);
+    if (duckhook != NULL && duckhook->logfp != NULL) {
+        fclose(duckhook->logfp);
+        duckhook->logfp = NULL;
     }
 }
 
 static duckhook_t *duckhook_create_internal(void)
 {
+    duckhook_t *duckhook = calloc(1, sizeof(duckhook_t));
     if (mem_size == 0) {
-        mem_size = duckhook_mem_size();
+        mem_size = duckhook_mem_size(duckhook);
         num_entries = (mem_size - offsetof(duckhook_buffer_t, entries)) / sizeof(duckhook_entry_t);
-        duckhook_log("  num_entries_in_page=%"SIZE_T_FMT"u\n", num_entries);
+        duckhook_log(duckhook, "  num_entries_in_page=%"SIZE_T_FMT"u\n", num_entries);
     }
-    return calloc(1, sizeof(duckhook_t));
+    return duckhook;
 }
 
 static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func)
 {
-    uint8_t trampoline[TRAMPOLINE_SIZE] = {0,};
+    uint8_t trampoline[TRAMPOLINE_SIZE];
     rip_displacement_t disp[2] = {0,};
     duckhook_buffer_t *buf;
     duckhook_entry_t *entry;
     uint8_t *src_addr;
 
     if (duckhook->installed) {
-        duckhook_log("  already installed\n");
+        duckhook_log(duckhook, "  already installed\n");
         return NULL;
     }
-    func = duckhook_resolve_func(func);
+    func = duckhook_resolve_func(duckhook, func);
     if (duckhook_make_trampoline(disp, func, trampoline) != 0) {
-        duckhook_log("  failed to make trampoline\n");
+        duckhook_log(duckhook, "  failed to make trampoline\n");
         return NULL;
     }
     buf = get_buffer(duckhook, func, disp);
     if (buf == NULL) {
-        duckhook_log("  failed to get buffer\n");
+        duckhook_log(duckhook, "  failed to get buffer\n");
         return NULL;
     }
     entry = &buf->entries[buf->used];
@@ -262,17 +294,17 @@ static int duckhook_install_internal(duckhook_t *duckhook, int flags)
     for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
         int i;
 
-        duckhook_mem_protect(buf);
+        duckhook_mem_protect(duckhook, buf);
 
         for (i = 0; i < buf->used; i++) {
             duckhook_entry_t *entry = &buf->entries[i];
             mem_state_t mstate;
 
-            if (duckhook_unprotect_begin(&mstate, entry->func, JUMP32_SIZE) != 0) {
+            if (duckhook_unprotect_begin(duckhook, &mstate, entry->func, JUMP32_SIZE) != 0) {
                 return -1;
             }
             memcpy(entry->func, entry->new_code, JUMP32_SIZE);
-            duckhook_unprotect_end(&mstate);
+            duckhook_unprotect_end(duckhook, &mstate);
         }
     }
     duckhook->installed = 1;
@@ -294,13 +326,13 @@ static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
             duckhook_entry_t *entry = &buf->entries[i];
             mem_state_t mstate;
 
-            if (duckhook_unprotect_begin(&mstate, entry->func, JUMP32_SIZE) != 0) {
+            if (duckhook_unprotect_begin(duckhook, &mstate, entry->func, JUMP32_SIZE) != 0) {
                 return -1;
             }
             memcpy(entry->func, entry->old_code, JUMP32_SIZE);
-            duckhook_unprotect_end(&mstate);
+            duckhook_unprotect_end(duckhook, &mstate);
         }
-        duckhook_mem_unprotect(buf);
+        duckhook_mem_unprotect(duckhook, buf);
     }
     duckhook->installed = 0;
     return 0;
@@ -318,7 +350,10 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
     }
     for (buf = duckhook->buffer; buf != NULL; buf = buf_next) {
         buf_next = buf->next;
-        duckhook_mem_free(buf);
+        duckhook_mem_free(duckhook, buf);
+    }
+    if (duckhook->logfp != NULL) {
+        fclose(duckhook->logfp);
     }
     free(duckhook);
     return 0;
@@ -329,16 +364,16 @@ static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr, rip_di
     duckhook_buffer_t *buf;
 
     for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
-        if (buf->used < num_entries && buffer_avail(buf, addr, disp)) {
+        if (buf->used < num_entries && buffer_avail(duckhook, buf, addr, disp)) {
             return buf;
         }
     }
-    buf = (duckhook_buffer_t *)duckhook_mem_alloc(addr);
+    buf = (duckhook_buffer_t *)duckhook_mem_alloc(duckhook, addr);
     if (buf == (void*)-1) {
         return NULL;
     }
     buf->used = 0;
-    if (!buffer_avail(buf, addr, disp)) {
+    if (!buffer_avail(duckhook, buf, addr, disp)) {
         return NULL;
     }
     buf->next = duckhook->buffer;

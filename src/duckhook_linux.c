@@ -43,14 +43,14 @@
 
 static size_t page_size;
 
-size_t duckhook_mem_size()
+size_t duckhook_mem_size(duckhook_t *duckhook)
 {
     page_size = sysconf(_SC_PAGE_SIZE);
-    duckhook_log("  page_size=%"SIZE_T_FMT"u\n", page_size);
+    duckhook_log(duckhook, "  page_size=%"SIZE_T_FMT"u\n", page_size);
     return page_size;
 }
 
-void *duckhook_mem_alloc(void *hint)
+void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
 {
     void *addr;
 #ifdef CPU_X86_64
@@ -61,7 +61,7 @@ void *duckhook_mem_alloc(void *hint)
 
     while (fgets(buf, sizeof(buf), fp) != NULL) {
         size_t start, end;
-        duckhook_log("  process map: %s", buf);
+        duckhook_log(duckhook, "  process map: %s", buf);
         if (sscanf(buf, "%"SIZE_T_FMT"x-%"SIZE_T_FMT"x", &start, &end) == 2) {
             if (prev_end == 0) {
                 if (end >= (size_t)hint) {
@@ -70,7 +70,7 @@ void *duckhook_mem_alloc(void *hint)
             } else {
                 if (start - prev_end >= 3 * page_size) {
                     hint = (void*)(prev_end + page_size);
-                    duckhook_log("  change hint address from %p to %p\n",
+                    duckhook_log(duckhook, "  change hint address from %p to %p\n",
                                  old_hint, hint);
                     break;
                 }
@@ -83,37 +83,37 @@ void *duckhook_mem_alloc(void *hint)
     hint = NULL;
 #endif
     addr = mmap(hint, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    duckhook_log("  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
+    duckhook_log(duckhook, "  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
     return addr;
 }
 
-int duckhook_mem_free(void *mem)
+int duckhook_mem_free(duckhook_t *duckhook, void *mem)
 {
     int rv = munmap(mem, page_size);
-    duckhook_log("  %sdeallocate page %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sdeallocate page %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
                  mem,  page_size);
     return rv;
 }
 
-int duckhook_mem_protect(void *addr)
+int duckhook_mem_protect(duckhook_t *duckhook, void *addr)
 {
     int rv = mprotect(addr, page_size, PROT_READ | PROT_EXEC);
-    duckhook_log("  %sprotect page %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sprotect page %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
                  addr, page_size);
     return rv;
 }
-int duckhook_mem_unprotect(void *addr)
+int duckhook_mem_unprotect(duckhook_t *duckhook, void *addr)
 {
     int rv = mprotect(addr, page_size, PROT_READ | PROT_WRITE);
-    duckhook_log("  %sunprotect page %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sunprotect page %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
                  addr, page_size);
     return rv;
 }
 
-int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
+int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *start, size_t len)
 {
     static int prot_rw = 0;
     size_t saddr = ROUND_DOWN((size_t)start, page_size);
@@ -125,35 +125,35 @@ int duckhook_unprotect_begin(mem_state_t *mstate, void *start, size_t len)
     mstate->size = len;
     if (prot_rw) {
         rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
-        duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
+        duckhook_log(duckhook, "  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
                      (rv == 0) ? "" : "failed to ",
                      mstate->addr, mstate->size, start, len);
         return rv;
     }
     rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE | PROT_EXEC);
-    duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write,exec) <- %p (size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write,exec) <- %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
                  mstate->addr, mstate->size, start, len);
     if (rv == -1 && errno == EACCES) {
         prot_rw = 1;
         rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
-        duckhook_log("  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
+        duckhook_log(duckhook, "  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
                      (rv == 0) ? "" : "failed to ",
                      mstate->addr, mstate->size);
     }
     return rv;
 }
 
-int duckhook_unprotect_end(const mem_state_t *mstate)
+int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
 {
     int rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_EXEC);
-    duckhook_log("  %sprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
+    duckhook_log(duckhook, "  %sprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
                  (rv == 0) ? "" : "failed to ",
                  mstate->addr, mstate->size);
     return rv;
 }
 
-void *duckhook_resolve_func(void *func)
+void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
 {
 #ifdef __GLIBC__
     Dl_info dli;
@@ -167,10 +167,10 @@ void *duckhook_resolve_func(void *func)
     int i;
 
     if (dladdr(func, &dli) == 0) {
-        duckhook_log("  func %p is not in a module. Use it anyway.\n", func);
+        duckhook_log(duckhook, "  func %p is not in a module. Use it anyway.\n", func);
         return func;
     }
-    duckhook_log("  func %p(%s+0x%"SIZE_T_FMT"x) in module %s(base %p)\n",
+    duckhook_log(duckhook, "  func %p(%s+0x%"SIZE_T_FMT"x) in module %s(base %p)\n",
                  func,
                  dli.dli_sname ? dli.dli_sname : dli.dli_fname,
                  dli.dli_sname ? ((size_t)func - (size_t)dli.dli_saddr) :
@@ -178,7 +178,7 @@ void *duckhook_resolve_func(void *func)
                  dli.dli_fname, dli.dli_fbase);
     ehdr = (ElfW(Ehdr) *)dli.dli_fbase;
     if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
-        duckhook_log("  not a valid ELF module %s.\n", dli.dli_fname);
+        duckhook_log(duckhook, "  not a valid ELF module %s.\n", dli.dli_fname);
         return func;
     }
     switch (ehdr->e_type) {
@@ -192,15 +192,15 @@ void *duckhook_resolve_func(void *func)
             }
         }
         if (lmap == NULL) {
-            duckhook_log("  could not find link_map\n");
+            duckhook_log(duckhook, "  could not find link_map\n");
             return func;
         }
         break;
     default:
-        duckhook_log("  ELF type is neither ET_EXEC nor ET_DYN.\n");
+        duckhook_log(duckhook, "  ELF type is neither ET_EXEC nor ET_DYN.\n");
         return func;
     }
-    duckhook_log("  link_map=%p\n", lmap);
+    duckhook_log(duckhook, "  link_map=%p\n", lmap);
     dyn = lmap->l_ld;
 
     for (i = 0; dyn[i].d_tag != DT_NULL; i++) {
@@ -228,7 +228,7 @@ void *duckhook_resolve_func(void *func)
                 fn = dlsym(RTLD_NEXT, strtab + symtab->st_name);
             }
             if (fn != NULL) {
-                duckhook_log("  change func address from %p to %p\n",
+                duckhook_log(duckhook, "  change func address from %p to %p\n",
                              func, fn);
                 func = fn;
             }
