@@ -100,7 +100,7 @@ static int buffer_avail(duckhook_t *duckhook, duckhook_buffer_t *buf, uint8_t *a
     src = entry->trampoline + disp[1].src_addr_offset;
     dst = disp[1].dst_addr;
     if (dst != 0 && !duckhook_within_32bit_relative(src, dst)) {
-        duckhook_log(duckhook, "  could not relative address from %p to %p\n",
+        duckhook_log(duckhook, "  could not make 32-bit relative address from %p to %p\n",
                      src, dst);
         return 0;
     }
@@ -246,7 +246,7 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
         return NULL;
     }
     func = duckhook_resolve_func(duckhook, func);
-    if (duckhook_make_trampoline(disp, func, trampoline) != 0) {
+    if (duckhook_make_trampoline(duckhook, disp, func, trampoline) != 0) {
         duckhook_log(duckhook, "  failed to make trampoline\n");
         return NULL;
     }
@@ -263,13 +263,14 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
     memcpy(entry->old_code, func, JUMP32_SIZE);
 #ifdef CPU_X86_64
     if (duckhook_jump32_avail(func, new_func)) {
-        duckhook_write_jump32(func, new_func, entry->new_code);
+        duckhook_write_jump32(duckhook, func, new_func, entry->new_code);
+        entry->transit[0] = 0;
     } else {
-        duckhook_write_jump32(func, entry->transit, entry->new_code);
-        duckhook_write_jump64(entry->transit, new_func);
+        duckhook_write_jump32(duckhook, func, entry->transit, entry->new_code);
+        duckhook_write_jump64(duckhook, entry->transit, new_func);
     }
 #else
-    duckhook_write_jump32(func, new_func, entry->new_code);
+    duckhook_write_jump32(duckhook, func, new_func, entry->new_code);
 #endif
     /* fix rip-relative offsets */
     src_addr = entry->trampoline + disp[0].src_addr_offset;
@@ -278,6 +279,7 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
         src_addr = entry->trampoline + disp[1].src_addr_offset;
         *(uint32_t*)(entry->trampoline + disp[1].pos_offset) = (disp[1].dst_addr - src_addr);
     }
+    duckhook_log_trampoline(duckhook, entry->trampoline);
 
     buf->used++;
     return (void*)entry->trampoline;

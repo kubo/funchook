@@ -115,13 +115,14 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func);
 
 /* Functions in duckhook_x86.c */
 
-int duckhook_write_jump32(const uint8_t *src, const uint8_t *dst, uint8_t *out);
+int duckhook_write_jump32(duckhook_t *duckhook, const uint8_t *src, const uint8_t *dst, uint8_t *out);
 #ifdef CPU_X86_64
-int duckhook_write_jump64(uint8_t *src, const uint8_t *dst);
+int duckhook_write_jump64(duckhook_t *duckhook, uint8_t *src, const uint8_t *dst);
 int duckhook_within_32bit_relative(const uint8_t *src, const uint8_t *dst);
 int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst);
 #endif
 
-int duckhook_make_trampoline(rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline);
+int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline);
+void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline);
 
 #endif
