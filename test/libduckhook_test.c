@@ -1,4 +1,4 @@
-#ifdef WIN32
+#if defined(WIN32) || defined(__APPLE__)
 static int int_val;
 void set_int_val(int val)
 {

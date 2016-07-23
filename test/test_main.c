@@ -18,12 +18,15 @@ extern int x86_test_call_get_pc_thunk_bp(void);
 extern int x86_test_error_jump1(void);
 extern int x86_test_error_jump2(void);
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__APPLE__)
 extern void set_int_val(int val);
-
-__declspec(dllexport) int int_val = 0xbaceba11;
 #else
 #define set_int_val(val) do {} while(0)
+#endif
+
+#if defined(WIN32)
+__declspec(dllexport) int int_val = 0xbaceba11;
+#else
 int int_val = 0xbaceba11;
 #endif
 

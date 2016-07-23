@@ -37,8 +37,13 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <dlfcn.h>
+#ifdef __linux
 #include <elf.h>
 #include <link.h>
+#endif
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
 #include "duckhook_internal.h"
 
 static size_t page_size;
@@ -54,6 +59,7 @@ void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
 {
     void *addr;
 #ifdef CPU_X86_64
+#if defined(__linux)
     FILE *fp = fopen("/proc/self/maps", "r");
     char buf[PATH_MAX];
     size_t prev_end = 0;
@@ -61,24 +67,54 @@ void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
 
     while (fgets(buf, sizeof(buf), fp) != NULL) {
         size_t start, end;
-        duckhook_log(duckhook, "  process map: %s", buf);
         if (sscanf(buf, "%"SIZE_T_FMT"x-%"SIZE_T_FMT"x", &start, &end) == 2) {
             if (prev_end == 0) {
                 if (end >= (size_t)hint) {
                     prev_end = end;
                 }
             } else {
-                if (start - prev_end >= 3 * page_size) {
-                    hint = (void*)(prev_end + page_size);
-                    duckhook_log(duckhook, "  change hint address from %p to %p\n",
+                if (start - prev_end >= page_size) {
+                    hint = (void*)(prev_end);
+                    duckhook_log(duckhook, "  -- change hint address from %p to %p\n",
                                  old_hint, hint);
-                    break;
+                } else {
+                    prev_end = end;
                 }
-                prev_end = end;
             }
+        }
+        duckhook_log(duckhook, "  process map: %s", buf);
+        if (hint != old_hint) {
+            break;
         }
     }
     fclose(fp);
+#elif defined(__APPLE__)
+    mach_port_t task = mach_task_self();
+    vm_size_t size;
+    vm_address_t start = (vm_address_t)hint;
+    vm_region_basic_info_data_64_t info;
+    mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+    memory_object_name_t object = 0;
+    size_t prev_end = ((size_t)-1) - page_size;
+    void *old_hint = hint;
+
+    while (vm_region_64(task, &start, &size, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &info_count, &object) == KERN_SUCCESS) {
+        size_t end = start + size;
+        if (prev_end + page_size <= start) {
+            hint = (void*)(prev_end);
+            duckhook_log(duckhook, "  -- change hint address from %p to %p\n",
+                         old_hint, hint);
+        }
+        duckhook_log(duckhook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+                     start, end);
+        if (hint != old_hint) {
+            break;
+        }
+        start = prev_end = end;
+    }
+#else
+#error unsupported OS
+#endif
 #else
     hint = NULL;
 #endif

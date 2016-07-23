@@ -15,12 +15,20 @@ if test "$EXEEXT"; then
   LINK_SHARED="\$(CC) -shared -Wl,--out-implib,duckhook.lib"
   IF_WIN32=
 else
-  DUCKHOOK_OS=linux
-  LIBDUCKHOOK_SO=libduckhook.so
+  DUCKHOOK_OS=unix
   PIC_CFLAGS="-fPIC"
   LINK_SHARED="\$(CC) -shared"
   IF_WIN32='#'
-  LIBS="-ldl"
+  case "$host_os" in
+  linux*)
+    LIBDUCKHOOK_SO=libduckhook.so
+    LIBS="-ldl"
+    ;;
+  darwin*)
+    LIBDUCKHOOK_SO=libduckhook.dylib
+    LIBS="-install_name @rpath/libduckhook.dylib"
+    ;;
+  esac
 fi
 
 AC_SUBST(DUCKHOOK_OS)

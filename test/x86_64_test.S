@@ -1,3 +1,6 @@
+#ifdef __APPLE__
+#define reset_retval _reset_retval
+#endif
 	.text
 
 	.p2align 4,,15

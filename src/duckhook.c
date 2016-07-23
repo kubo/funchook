@@ -236,7 +236,7 @@ static duckhook_t *duckhook_create_internal(void)
 static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func)
 {
     uint8_t trampoline[TRAMPOLINE_SIZE];
-    rip_displacement_t disp[2] = {0,};
+    rip_displacement_t disp[2] = {{0,},{0,}};
     duckhook_buffer_t *buf;
     duckhook_entry_t *entry;
     uint8_t *src_addr;
