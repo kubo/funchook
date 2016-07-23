@@ -24,7 +24,12 @@ x86_test_jump:
 x86_test_error_jump1:
 	jmp	label_1 /* jump whose size is not 32-bit */
 label_1:
+#ifdef __PIE__
+	addl	$_GLOBAL_OFFSET_TABLE_, %eax
+	mov	int_val@GOT(%eax), %eax
+#else
 	mov	int_val, %eax
+#endif
 	ret
 
 	.p2align 4,,15
@@ -37,7 +42,12 @@ label_2:
 	nop
 	nop
 	jnz	label_2 /* jump to hot-patched region */
+#ifdef __PIE__
+	addl	$_GLOBAL_OFFSET_TABLE_, %eax
+	mov	int_val@GOT(%eax), %eax
+#else
 	mov	int_val, %eax
+#endif
 	ret
 
 #ifndef _WIN32

@@ -17,8 +17,8 @@ TODO
 Supported Platform
 -----------------
 
-* Linux x86_64
-* Linux 32-bit
+* Linux x86_64 (both glibc and musl libc)
+* Linux x86 (both glibc and musl libc)
 * Windows x64 (*1)
 * Windows 32-bit (*1)
 
