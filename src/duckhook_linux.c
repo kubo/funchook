@@ -119,10 +119,9 @@ int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *st
     size_t saddr = ROUND_DOWN((size_t)start, page_size);
     int rv;
 
-    len += (size_t)start - saddr;
-    len = ROUND_UP(len, page_size);
     mstate->addr = (void*)saddr;
-    mstate->size = len;
+    mstate->size = len + (size_t)start - saddr;
+    mstate->size = ROUND_UP(mstate->size, page_size);
     if (prot_rw) {
         rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
         duckhook_log(duckhook, "  %sunprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
