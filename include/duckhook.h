@@ -51,7 +51,7 @@ typedef struct duckhook duckhook_t;
 /**
  * Create a duckhook handle
  *
- * @return allocated duckhook handle.
+ * @return allocated duckhook handle. NULL when out-of-memory.
  */
 DUCKHOOK_EXPORT duckhook_t *duckhook_create(void);
 
@@ -59,11 +59,11 @@ DUCKHOOK_EXPORT duckhook_t *duckhook_create(void);
  * Prepare hooking
  *
  * @param duckhook     a duckhook handle created by duckhook_create()
- * @param target_func  function pointer to be intercepted
+ * @param target_func  function pointer to be intercepted. The pointer to trampoline function is set on success.
  * @param hook_func    function pointer which is called istead of target_func
- * @return             trampoline function which is used in hook_func to call the original target_func
+ * @return             0 on success, -1 on error
  */
-DUCKHOOK_EXPORT void *duckhook_prepare(duckhook_t *duckhook, void *target_func, void *hook_func);
+DUCKHOOK_EXPORT int duckhook_prepare(duckhook_t *duckhook, void **target_func, void *hook_func);
 
 /**
  * Install hooks prepared by duckhook_prepare().
@@ -91,6 +91,12 @@ DUCKHOOK_EXPORT int duckhook_uninstall(duckhook_t *duckhook, int flags);
  */
 DUCKHOOK_EXPORT int duckhook_destroy(duckhook_t *duckhook);
 
+/**
+ * Set log file name to debug duckhook itself.
+ *
+ * @param name         log file name
+ * @return             0 on success, -1 on error.
+ */
 DUCKHOOK_EXPORT int duckhook_set_debug_file(const char *name);
 
 #endif

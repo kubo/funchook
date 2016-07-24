@@ -40,15 +40,15 @@ Example
 -------
 
 ```c
-static ssize_t (*send_orig)(int sockfd, const void *buf, size_t len, int flags);
-static ssize_t (*recv_orig)(int sockfd, void *buf, size_t len, int flags);
+static ssize_t (*send_func)(int sockfd, const void *buf, size_t len, int flags);
+static ssize_t (*recv_func)(int sockfd, void *buf, size_t len, int flags);
 
 static ssize_t send_hook(int sockfd, const void *buf, size_t len, int flags);
 {
     ssize_t rv;
 
     ... do your task: logging, etc. ...
-    rv = send_orig(sockfd, buf, len, flags); /* call the original send(). */
+    rv = send_func(sockfd, buf, len, flags); /* call the original send(). */
     ... do your task: logging, checking the return value, etc. ...
     return rv;
 }
@@ -58,7 +58,7 @@ static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags);
     ssize_t rv;
 
     ... do your task: logging, etc. ...
-    rv = recv_orig(sockfd, buf, len, flags); /* call the original recv(). */
+    rv = recv_func(sockfd, buf, len, flags); /* call the original recv(). */
     ... do your task: logging, checking received data, etc. ...
     return rv;
 }
@@ -66,20 +66,23 @@ static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags);
 int install_hooks()
 {
     duckhook_t *duckhook = duckhook_create();
+    int rv;
 
     /* Prepare hooking.
      * The return value is used to call the original send function
      * in send_hook.
      */
-    send_orig = duckhook_prepare(duckhook, send, send_hook);
-    if (send_orig == NULL) {
+    send_func = send;
+    rv = duckhook_prepare(duckhook, (void**)&send_func, send_hook);
+    if (rv != 0) {
        /* error */
        ...
     }
 
     /* ditto */
-    recv_orig = duckhook_prepare(duckhook, recv, recv_hook);
-    if (recv_orig == NULL) {
+    recv_func = recv;
+    rv = duckhook_prepare(duckhook, (void**)&recv_func, recv_hook);
+    if (rv != 0) {
        /* error */
        ...
     }
@@ -87,7 +90,7 @@ int install_hooks()
     /* Install hooks.
      * The first 5-byte code of send() and recv() are changed respectively.
      */
-    int rv = duckhook_install(duckhook, 0);
+    rv = duckhook_install(duckhook, 0);
     if (rv != 0) {
        /* error */
        ...

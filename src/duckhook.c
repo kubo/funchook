@@ -42,8 +42,8 @@
 #include "duckhook_internal.h"
 
 typedef struct duckhook_entry {
-    void *func;
-    void *new_func;
+    void *target_func;
+    void *hook_func;
     uint8_t trampoline[TRAMPOLINE_SIZE];
     uint8_t old_code[JUMP32_SIZE];
     uint8_t new_code[JUMP32_SIZE];
@@ -72,7 +72,7 @@ static size_t num_entries;
 static void duckhook_logv(duckhook_t *duckhook, const char *fmt, va_list ap);
 static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...);
 static duckhook_t *duckhook_create_internal(void);
-static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func);
+static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, void *hook_func);
 static int duckhook_install_internal(duckhook_t *duckhook, int flags);
 static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags);
 static int duckhook_destroy_internal(duckhook_t *duckhook);
@@ -123,13 +123,15 @@ duckhook_t *duckhook_create(void)
     return duckhook;
 }
 
-void *duckhook_prepare(duckhook_t *duckhook, void *func, void *new_func)
+int duckhook_prepare(duckhook_t *duckhook, void **target_func, void *hook_func)
 {
-    void *rv;
+    int rv;
+    void *orig_func;
 
-    duckhook_log(duckhook, "Enter duckhook_prepare(%p, %p, %p)\n", duckhook, func, new_func);
-    rv = duckhook_prepare_internal(duckhook, func, new_func);
-    duckhook_log_end(duckhook, "Leave duckhook_prepare() => %p\n", rv);
+    duckhook_log(duckhook, "Enter duckhook_prepare(%p, %p, %p)\n", duckhook, target_func, hook_func);
+    orig_func = *target_func;
+    rv = duckhook_prepare_internal(duckhook, target_func, hook_func);
+    duckhook_log_end(duckhook, "Leave duckhook_prepare(..., [%p->%p],...) => %d\n", orig_func, *target_func, rv);
     return rv;
 }
 
@@ -233,8 +235,9 @@ static duckhook_t *duckhook_create_internal(void)
     return duckhook;
 }
 
-static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *new_func)
+static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, void *hook_func)
 {
+    void *func = *target_func;
     uint8_t trampoline[TRAMPOLINE_SIZE];
     rip_displacement_t disp[2] = {{0,},{0,}};
     duckhook_buffer_t *buf;
@@ -243,34 +246,34 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
 
     if (duckhook->installed) {
         duckhook_log(duckhook, "  already installed\n");
-        return NULL;
+        return -1;
     }
     func = duckhook_resolve_func(duckhook, func);
     if (duckhook_make_trampoline(duckhook, disp, func, trampoline) != 0) {
         duckhook_log(duckhook, "  failed to make trampoline\n");
-        return NULL;
+        return -1;
     }
     buf = get_buffer(duckhook, func, disp);
     if (buf == NULL) {
         duckhook_log(duckhook, "  failed to get buffer\n");
-        return NULL;
+        return -1;
     }
     entry = &buf->entries[buf->used];
     /* fill members */
-    entry->func = func;
-    entry->new_func = new_func;
+    entry->target_func = func;
+    entry->hook_func = hook_func;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_SIZE);
     memcpy(entry->old_code, func, JUMP32_SIZE);
 #ifdef CPU_X86_64
-    if (duckhook_jump32_avail(func, new_func)) {
-        duckhook_write_jump32(duckhook, func, new_func, entry->new_code);
+    if (duckhook_jump32_avail(func, hook_func)) {
+        duckhook_write_jump32(duckhook, func, hook_func, entry->new_code);
         entry->transit[0] = 0;
     } else {
         duckhook_write_jump32(duckhook, func, entry->transit, entry->new_code);
-        duckhook_write_jump64(duckhook, entry->transit, new_func);
+        duckhook_write_jump64(duckhook, entry->transit, hook_func);
     }
 #else
-    duckhook_write_jump32(duckhook, func, new_func, entry->new_code);
+    duckhook_write_jump32(duckhook, func, hook_func, entry->new_code);
 #endif
     /* fix rip-relative offsets */
     src_addr = entry->trampoline + disp[0].src_addr_offset;
@@ -282,7 +285,8 @@ static void *duckhook_prepare_internal(duckhook_t *duckhook, void *func, void *n
     duckhook_log_trampoline(duckhook, entry->trampoline);
 
     buf->used++;
-    return (void*)entry->trampoline;
+    *target_func = (void*)entry->trampoline;
+    return 0;
 }
 
 static int duckhook_install_internal(duckhook_t *duckhook, int flags)
@@ -302,10 +306,10 @@ static int duckhook_install_internal(duckhook_t *duckhook, int flags)
             duckhook_entry_t *entry = &buf->entries[i];
             mem_state_t mstate;
 
-            if (duckhook_unprotect_begin(duckhook, &mstate, entry->func, JUMP32_SIZE) != 0) {
+            if (duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE) != 0) {
                 return -1;
             }
-            memcpy(entry->func, entry->new_code, JUMP32_SIZE);
+            memcpy(entry->target_func, entry->new_code, JUMP32_SIZE);
             duckhook_unprotect_end(duckhook, &mstate);
         }
     }
@@ -328,10 +332,10 @@ static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
             duckhook_entry_t *entry = &buf->entries[i];
             mem_state_t mstate;
 
-            if (duckhook_unprotect_begin(duckhook, &mstate, entry->func, JUMP32_SIZE) != 0) {
+            if (duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE) != 0) {
                 return -1;
             }
-            memcpy(entry->func, entry->old_code, JUMP32_SIZE);
+            memcpy(entry->target_func, entry->old_code, JUMP32_SIZE);
             duckhook_unprotect_end(duckhook, &mstate);
         }
         duckhook_mem_unprotect(duckhook, buf);

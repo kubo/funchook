@@ -54,6 +54,7 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     duckhook_t *duckhook = duckhook_create();
     int result;
     int expected;
+    int rv;
 
     test_cnt++;
     printf("[%d] test_duckhook_int: %s\n", test_cnt, func_str);
@@ -67,8 +68,9 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
 	error_cnt++;
 	return;
     }
-    orig_func = duckhook_prepare(duckhook, func, hook_func);
-    if (orig_func == NULL) {
+    orig_func = func;
+    rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
+    if (rv != 0) {
         printf("ERROR at line %d: failed to hook %s.\n", line, func_str);
 	error_cnt++;
 	return;
@@ -110,12 +112,14 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
 void test_duckhook_expect_error(int_func_t func, const char *func_str, int line)
 {
     duckhook_t *duckhook = duckhook_create();
+    int rv;
 
     test_cnt++;
     printf("[%d] test_duckhook_expect_error: %s\n", test_cnt, func_str);
 
-    orig_func = duckhook_prepare(duckhook, func, hook_func);
-    if (orig_func != NULL) {
+    orig_func = func;
+    rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
+    if (rv != 0) {
         printf("ERROR at line %d: hooking must fail but succeeded.\n", line);
 	error_cnt++;
 	return;
