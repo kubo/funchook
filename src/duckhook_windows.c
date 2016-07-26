@@ -49,7 +49,7 @@ static page_list_t page_list = {
     &page_list,
 };
 
-size_t duckhook_mem_size(duckhook_t *duckhook)
+size_t duckhook_page_size(duckhook_t *duckhook)
 {
     SYSTEM_INFO si;
 
@@ -116,7 +116,7 @@ static page_list_t *alloc_page_info(duckhook_t *duckhook, void *hint)
 /*
  * Get one page from page_list, commit it and return it.
  */
-void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
+duckhook_page_t *duckhook_page_alloc(duckhook_t *duckhook, void *hint)
 {
     page_list_t *pl;
     int i;
@@ -159,16 +159,16 @@ void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
 /*
  * Back to one page to page_list.
  */
-int duckhook_mem_free(duckhook_t *duckhook, void *mem)
+int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    page_list_t *pl = (page_list_t *)((size_t)mem & ~(allocation_unit - 1));
-    size_t idx = ((size_t)mem - (size_t)pl) / page_size - 1;
+    page_list_t *pl = (page_list_t *)((size_t)page & ~(allocation_unit - 1));
+    size_t idx = ((size_t)page - (size_t)pl) / page_size - 1;
     BOOL ok;
 
-    ok = VirtualFree(mem, page_size, MEM_DECOMMIT);
+    ok = VirtualFree(page, page_size, MEM_DECOMMIT);
     duckhook_log(duckhook, "  %sdecommit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u)\n",
                  ok ? "" : "failed to ",
-                 mem, pl, pl->num_used, idx, page_size);
+                 page, pl, pl->num_used, idx, page_size);
     if (!ok) {
         return -1;
     }
@@ -187,21 +187,21 @@ int duckhook_mem_free(duckhook_t *duckhook, void *mem)
     return ok ? 0 : -1;
 }
 
-int duckhook_mem_protect(duckhook_t *duckhook, void *addr)
+int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    BOOL ok = VirtualProtect(addr, page_size, PAGE_EXECUTE_READ, NULL);
+    BOOL ok = VirtualProtect(page, page_size, PAGE_EXECUTE_READ, NULL);
     duckhook_log(duckhook, "  %sprotect page %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
                  ok ? "" : "failed to ",
-                 addr, page_size);
+                 page, page_size);
     return ok ? 0 : -1;
 }
 
-int duckhook_mem_unprotect(duckhook_t *duckhook, void *addr)
+int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    BOOL ok = VirtualProtect(addr, page_size, PAGE_READWRITE, NULL);
+    BOOL ok = VirtualProtect(page, page_size, PAGE_READWRITE, NULL);
     duckhook_log(duckhook, "  %sunprotect page %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
                  ok ? "" : "failed to ",
-                 addr, page_size);
+                 page, page_size);
     return ok ? 0 : -1;
 }
 

@@ -48,14 +48,14 @@
 
 static size_t page_size;
 
-size_t duckhook_mem_size(duckhook_t *duckhook)
+size_t duckhook_page_size(duckhook_t *duckhook)
 {
     page_size = sysconf(_SC_PAGE_SIZE);
     duckhook_log(duckhook, "  page_size=%"SIZE_T_FMT"u\n", page_size);
     return page_size;
 }
 
-void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
+duckhook_page_t *duckhook_page_alloc(duckhook_t *duckhook, void *hint)
 {
     void *addr;
 #ifdef CPU_X86_64
@@ -123,29 +123,29 @@ void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint)
     return addr;
 }
 
-int duckhook_mem_free(duckhook_t *duckhook, void *mem)
+int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    int rv = munmap(mem, page_size);
+    int rv = munmap(page, page_size);
     duckhook_log(duckhook, "  %sdeallocate page %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
-                 mem,  page_size);
+                 page,  page_size);
     return rv;
 }
 
-int duckhook_mem_protect(duckhook_t *duckhook, void *addr)
+int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    int rv = mprotect(addr, page_size, PROT_READ | PROT_EXEC);
+    int rv = mprotect(page, page_size, PROT_READ | PROT_EXEC);
     duckhook_log(duckhook, "  %sprotect page %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
-                 addr, page_size);
+                 page, page_size);
     return rv;
 }
-int duckhook_mem_unprotect(duckhook_t *duckhook, void *addr)
+int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    int rv = mprotect(addr, page_size, PROT_READ | PROT_WRITE);
+    int rv = mprotect(page, page_size, PROT_READ | PROT_WRITE);
     duckhook_log(duckhook, "  %sunprotect page %p (size=%"SIZE_T_FMT"u)\n",
                  (rv == 0) ? "" : "failed to ",
-                 addr, page_size);
+                 page, page_size);
     return rv;
 }
 

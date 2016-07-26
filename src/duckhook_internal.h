@@ -93,18 +93,25 @@ typedef struct {
     char pos_offset;
 } rip_displacement_t;
 
+typedef struct duckhook_page duckhook_page_t;
+
 /* Functions in duckhook.c */
 extern char *duckhook_debug_file;
+#ifdef CPU_X86_64
+int duckhook_page_avail(duckhook_t *duckhook, duckhook_page_t *page, int idx, uint8_t *addr, rip_displacement_t *disp);
+#else
+#define duckhook_page_avail(duckhook, page, idx, addr, disp) (1)
+#endif
 void duckhook_log(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
-size_t duckhook_mem_size(duckhook_t *duckhook);
-void *duckhook_mem_alloc(duckhook_t *duckhook, void *hint);
-int duckhook_mem_free(duckhook_t *duckhook, void *mem);
-int duckhook_mem_protect(duckhook_t *duckhook, void *addr);
-int duckhook_mem_unprotect(duckhook_t *duckhook, void *addr);
+size_t duckhook_page_size(duckhook_t *duckhook);
+duckhook_page_t *duckhook_page_alloc(duckhook_t *duckhook, void *hint);
+int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page);
+int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page);
+int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page);
 
 int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *addr, size_t len);
 int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate);

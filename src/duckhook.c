@@ -54,15 +54,15 @@ typedef struct duckhook_entry {
 #endif
 } duckhook_entry_t;
 
-typedef struct duckhook_buffer {
-    struct duckhook_buffer *next;
+typedef struct duckhook_page {
+    struct duckhook_page *next;
     uint16_t used;
     duckhook_entry_t entries[1];
-} duckhook_buffer_t;
+} duckhook_page_t;
 
 struct duckhook {
     int installed;
-    duckhook_buffer_t *buffer;
+    duckhook_page_t *page_list;
     FILE *logfp;
     char error_message[DUCKHOOK_MAX_ERROR_MESSAGE_LEN];
 };
@@ -70,7 +70,7 @@ struct duckhook {
 char *duckhook_debug_file;
 
 static size_t mem_size;
-static size_t num_entries;
+static size_t num_entries_in_page;
 
 static void duckhook_logv(duckhook_t *duckhook, int set_error, const char *fmt, va_list ap);
 static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...);
@@ -79,13 +79,13 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
 static int duckhook_install_internal(duckhook_t *duckhook, int flags);
 static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags);
 static int duckhook_destroy_internal(duckhook_t *duckhook);
-static int get_buffer(duckhook_t *duckhook, duckhook_buffer_t **bufp, uint8_t *addr, rip_displacement_t *disp);
+static int get_page(duckhook_t *duckhook, duckhook_page_t **page_p, uint8_t *addr, rip_displacement_t *disp);
 
 #ifdef CPU_X86_64
 
-static int buffer_avail(duckhook_t *duckhook, duckhook_buffer_t *buf, uint8_t *addr, rip_displacement_t *disp)
+int duckhook_page_avail(duckhook_t *duckhook, duckhook_page_t *page, int idx, uint8_t *addr, rip_displacement_t *disp)
 {
-    duckhook_entry_t *entry = &buf->entries[buf->used];
+    duckhook_entry_t *entry = &page->entries[idx];
     const uint8_t *src;
     const uint8_t *dst;
 
@@ -109,10 +109,6 @@ static int buffer_avail(duckhook_t *duckhook, duckhook_buffer_t *buf, uint8_t *a
     }
     return 1;
 }
-
-#else
-
-#define buffer_avail(duckhook, buffer, addr, disp) (1)
 
 #endif
 
@@ -253,9 +249,9 @@ static duckhook_t *duckhook_create_internal(void)
 {
     duckhook_t *duckhook = calloc(1, sizeof(duckhook_t));
     if (mem_size == 0) {
-        mem_size = duckhook_mem_size(duckhook);
-        num_entries = (mem_size - offsetof(duckhook_buffer_t, entries)) / sizeof(duckhook_entry_t);
-        duckhook_log(duckhook, "  num_entries_in_page=%"SIZE_T_FMT"u\n", num_entries);
+        mem_size = duckhook_page_size(duckhook);
+        num_entries_in_page = (mem_size - offsetof(duckhook_page_t, entries)) / sizeof(duckhook_entry_t);
+        duckhook_log(duckhook, "  num_entries_in_page=%"SIZE_T_FMT"u\n", num_entries_in_page);
     }
     return duckhook;
 }
@@ -265,7 +261,7 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
     void *func = *target_func;
     uint8_t trampoline[TRAMPOLINE_SIZE];
     rip_displacement_t disp[2] = {{0,},{0,}};
-    duckhook_buffer_t *buf = NULL;
+    duckhook_page_t *page = NULL;
     duckhook_entry_t *entry;
     uint8_t *src_addr;
     int rv;
@@ -280,12 +276,12 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
         duckhook_log(duckhook, "  failed to make trampoline\n");
         return rv;
     }
-    rv = get_buffer(duckhook, &buf, func, disp);
+    rv = get_page(duckhook, &page, func, disp);
     if (rv != 0) {
-        duckhook_log(duckhook, "  failed to get buffer\n");
+        duckhook_log(duckhook, "  failed to get page\n");
         return rv;
     }
-    entry = &buf->entries[buf->used];
+    entry = &page->entries[page->used];
     /* fill members */
     entry->target_func = func;
     entry->hook_func = hook_func;
@@ -311,26 +307,26 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
     }
     duckhook_log_trampoline(duckhook, entry->trampoline);
 
-    buf->used++;
+    page->used++;
     *target_func = (void*)entry->trampoline;
     return 0;
 }
 
 static int duckhook_install_internal(duckhook_t *duckhook, int flags)
 {
-    duckhook_buffer_t *buf;
+    duckhook_page_t *page;
 
     if (duckhook->installed) {
         return -1;
     }
 
-    for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
+    for (page = duckhook->page_list; page != NULL; page = page->next) {
         int i;
 
-        duckhook_mem_protect(duckhook, buf);
+        duckhook_page_protect(duckhook, page);
 
-        for (i = 0; i < buf->used; i++) {
-            duckhook_entry_t *entry = &buf->entries[i];
+        for (i = 0; i < page->used; i++) {
+            duckhook_entry_t *entry = &page->entries[i];
             mem_state_t mstate;
 
             if (duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE) != 0) {
@@ -346,17 +342,17 @@ static int duckhook_install_internal(duckhook_t *duckhook, int flags)
 
 static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
 {
-    duckhook_buffer_t *buf;
+    duckhook_page_t *page;
 
     if (!duckhook->installed) {
         return -1;
     }
 
-    for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
+    for (page = duckhook->page_list; page != NULL; page = page->next) {
         int i;
 
-        for (i = 0; i < buf->used; i++) {
-            duckhook_entry_t *entry = &buf->entries[i];
+        for (i = 0; i < page->used; i++) {
+            duckhook_entry_t *entry = &page->entries[i];
             mem_state_t mstate;
 
             if (duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE) != 0) {
@@ -365,7 +361,7 @@ static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
             memcpy(entry->target_func, entry->old_code, JUMP32_SIZE);
             duckhook_unprotect_end(duckhook, &mstate);
         }
-        duckhook_mem_unprotect(duckhook, buf);
+        duckhook_page_unprotect(duckhook, page);
     }
     duckhook->installed = 0;
     return 0;
@@ -373,7 +369,7 @@ static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
 
 static int duckhook_destroy_internal(duckhook_t *duckhook)
 {
-    duckhook_buffer_t *buf, *buf_next;
+    duckhook_page_t *page, *page_next;
 
     if (duckhook == NULL) {
        return -1;
@@ -381,9 +377,9 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
     if (duckhook->installed) {
         return -1;
     }
-    for (buf = duckhook->buffer; buf != NULL; buf = buf_next) {
-        buf_next = buf->next;
-        duckhook_mem_free(duckhook, buf);
+    for (page = duckhook->page_list; page != NULL; page = page_next) {
+        page_next = page->next;
+        duckhook_page_free(duckhook, page);
     }
     if (duckhook->logfp != NULL) {
         fclose(duckhook->logfp);
@@ -392,27 +388,27 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
     return 0;
 }
 
-static int get_buffer(duckhook_t *duckhook, duckhook_buffer_t **bufp, uint8_t *addr, rip_displacement_t *disp)
+static int get_page(duckhook_t *duckhook, duckhook_page_t **page_p, uint8_t *addr, rip_displacement_t *disp)
 {
-    duckhook_buffer_t *buf;
+    duckhook_page_t *page;
 
-    for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
-        if (buf->used < num_entries && buffer_avail(duckhook, buf, addr, disp)) {
-            /* Reuse allocated buffer. */
-            *bufp = buf;
+    for (page = duckhook->page_list; page != NULL; page = page->next) {
+        if (page->used < num_entries_in_page && duckhook_page_avail(duckhook, page, page->used, addr, disp)) {
+            /* Reuse allocated page. */
+            *page_p = page;
             return 0;
         }
     }
-    buf = (duckhook_buffer_t *)duckhook_mem_alloc(duckhook, addr);
-    if (buf == (void*)-1) {
+    page = duckhook_page_alloc(duckhook, addr);
+    if (page == (void*)-1) {
         return -1; /* FIXME */
     }
-    buf->used = 0;
-    if (!buffer_avail(duckhook, buf, addr, disp)) {
+    page->used = 0;
+    if (!duckhook_page_avail(duckhook, page, 0, addr, disp)) {
         return -1; /* FIXME */
     }
-    buf->next = duckhook->buffer;
-    duckhook->buffer = buf;
-    *bufp = buf;
+    page->next = duckhook->page_list;
+    duckhook->page_list = page;
+    *page_p = page;
     return 0;
 }
