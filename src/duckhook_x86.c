@@ -111,6 +111,7 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     unsigned int di_cnt = 0;
     _CodeInfo ci;
     _DecodeResult decres;
+    int rv;
     int i;
 
     memset(trampoline, NOP_INSTRUCTION, TRAMPOLINE_SIZE);
@@ -130,8 +131,8 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     ci.features = DF_STOP_ON_RET;
     decres = distorm_decompose64(&ci, dis, MAX_INSN_CHECK_SIZE, &di_cnt);
     if (decres != DECRES_SUCCESS) {
-        duckhook_log(duckhook, "  disassemble error\n");
-        return -1;
+        duckhook_set_error_message(duckhook, "Disassemble Error: %d", decres);
+        return DUCKHOOK_ERROR_DISASSEMBLY;
     }
     duckhook_log(duckhook, "  Original Instructions:\n");
     for (i = 0; i < di_cnt; i++) {
@@ -146,11 +147,13 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
         } else {
             memcpy(ctx.dst, ctx.src, di->size);
             get_rip_relative(&ctx, &rel_disp, &rel_imm, di);
-            if (handle_rip_relative(&ctx, &rel_disp, di) != 0) {
-                return -1;
+            rv = handle_rip_relative(&ctx, &rel_disp, di);
+            if (rv != 0) {
+                return rv;
             }
-            if (handle_rip_relative(&ctx, &rel_imm, di) != 0) {
-                return -1;
+            rv = handle_rip_relative(&ctx, &rel_imm, di);
+            if (rv != 0) {
+                return rv;
             }
             ctx.src += di->size;
             ctx.dst += di->size;
@@ -166,8 +169,8 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
                 get_rip_relative(&ctx, &rel_disp, &rel_imm, di);
                 if (func <= rel_imm.addr && rel_imm.addr < func + JUMP32_SIZE) {
                     /* jump to the hot-patched region. */
-                    duckhook_log(duckhook, "  ERROR: Instruction jumping to the hot-patched region\n");
-                    return -1;
+                    duckhook_set_error_message(duckhook, "instruction jumping back to the hot-patched region was found");
+                    return DUCKHOOK_ERROR_FOUND_BACK_JUMP;
                 }
             }
             return 0;
@@ -176,8 +179,8 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     /* too short function. Check whether NOP instructions continue. */
     while (ctx.src - func < JUMP32_SIZE) {
         if (*ctx.src != NOP_INSTRUCTION) {
-            duckhook_log(duckhook, "  ERROR: Too short instructions\n");
-            return -1;
+            duckhook_set_error_message(duckhook, "Too short instructions");
+            return DUCKHOOK_ERROR_TOO_SHORT_INSTRUCTIONS;
         }
         ctx.src++;
     }
@@ -539,16 +542,16 @@ static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relativ
              * reach here if opsiz and/or disp_offset are incorrectly
              * estimated.
              */
-            duckhook_log(ctx->duckhook, "  Invalid ip-relative offset %d. The value at the offset should be %08x but %08x\n",
+            duckhook_set_error_message(ctx->duckhook, "Invalid ip-relative offset %d. The value at the offset should be %08x but %08x",
                          rel->offset, (uint32_t)rel->raddr, *(int32_t*)(ctx->dst + rel->offset));
-            return -1;
+            return DUCKHOOK_ERROR_IP_RELATIVE_OFFSET;
         }
         ctx->rip_disp[1].dst_addr = rel->addr;
         ctx->rip_disp[1].src_addr_offset = (ctx->dst - ctx->dst_base) + di->size;;
         ctx->rip_disp[1].pos_offset = (ctx->dst - ctx->dst_base) + rel->offset;
     } else if (rel->size != 0) {
-        duckhook_log(ctx->duckhook, "  Could not fix ip-relative address. The size is not 32.\n");
-        return -1;
+        duckhook_set_error_message(ctx->duckhook, "Could not fix ip-relative address. The size is not 32.");
+        return DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE;
     }
     return 0;
 }

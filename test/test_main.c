@@ -108,8 +108,8 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     duckhook_destroy(duckhook);
 }
 
-#define TEST_DUCKHOOK_EXPECT_ERROR(func) test_duckhook_expect_error(func, #func, __LINE__)
-void test_duckhook_expect_error(int_func_t func, const char *func_str, int line)
+#define TEST_DUCKHOOK_EXPECT_ERROR(func, errcode) test_duckhook_expect_error(func, errcode, #func, __LINE__)
+void test_duckhook_expect_error(int_func_t func, int errcode, const char *func_str, int line)
 {
     duckhook_t *duckhook = duckhook_create();
     int rv;
@@ -119,10 +119,9 @@ void test_duckhook_expect_error(int_func_t func, const char *func_str, int line)
 
     orig_func = func;
     rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
-    if (rv != 0) {
-        printf("ERROR at line %d: hooking must fail but succeeded.\n", line);
+    if (rv != errcode) {
+        printf("ERROR at line %d: hooking must fail with %d but %d.\n", line, errcode, rv);
 	error_cnt++;
-	return;
     }
     duckhook_destroy(duckhook);
 }
@@ -136,8 +135,8 @@ int main()
 
 #if defined __i386 || defined  _M_I386
     TEST_DUCKHOOK_INT(x86_test_jump);
-    TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump1);
-    TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump2);
+    TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump1, DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
+    TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump2, DUCKHOOK_ERROR_FOUND_BACK_JUMP);
 
 #ifndef WIN32
     TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_ax);

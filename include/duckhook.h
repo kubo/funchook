@@ -48,6 +48,15 @@
 
 typedef struct duckhook duckhook_t;
 
+#define DUCKHOOK_ERROR_SUCCESS                 0
+#define DUCKHOOK_ERROR_OUT_OF_MEMORY           1
+#define DUCKHOOK_ERROR_ALREADY_INSTALLED       2
+#define DUCKHOOK_ERROR_DISASSEMBLY             3
+#define DUCKHOOK_ERROR_IP_RELATIVE_OFFSET      4
+#define DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE  5
+#define DUCKHOOK_ERROR_FOUND_BACK_JUMP         6
+#define DUCKHOOK_ERROR_TOO_SHORT_INSTRUCTIONS  7
+
 /**
  * Create a duckhook handle
  *
@@ -61,7 +70,7 @@ DUCKHOOK_EXPORT duckhook_t *duckhook_create(void);
  * @param duckhook     a duckhook handle created by duckhook_create()
  * @param target_func  function pointer to be intercepted. The pointer to trampoline function is set on success.
  * @param hook_func    function pointer which is called istead of target_func
- * @return             0 on success, -1 on error
+ * @return             error code. one of DUCKHOOK_ERROR_*.
  */
 DUCKHOOK_EXPORT int duckhook_prepare(duckhook_t *duckhook, void **target_func, void *hook_func);
 
@@ -70,7 +79,7 @@ DUCKHOOK_EXPORT int duckhook_prepare(duckhook_t *duckhook, void **target_func, v
  *
  * @param duckhook     a duckhook handle created by duckhook_create()
  * @param flags        reserved. Set zero.
- * @return             0 on success, -1 on error
+ * @return             error code. one of DUCKHOOK_ERROR_*.
  */
 DUCKHOOK_EXPORT int duckhook_install(duckhook_t *duckhook, int flags);
 
@@ -79,7 +88,7 @@ DUCKHOOK_EXPORT int duckhook_install(duckhook_t *duckhook, int flags);
  *
  * @param duckhook     a duckhook handle created by duckhook_create()
  * @param flags        reserved. Set zero.
- * @return             0 on success, -1 on error
+ * @return             error code. one of DUCKHOOK_ERROR_*.
  */
 DUCKHOOK_EXPORT int duckhook_uninstall(duckhook_t *duckhook, int flags);
 
@@ -87,15 +96,23 @@ DUCKHOOK_EXPORT int duckhook_uninstall(duckhook_t *duckhook, int flags);
  * Destroy a duckhook handle
  *
  * @param duckhook     a duckhook handle created by duckhook_create()
- * @return             0 on success, -1 on error
+ * @return             error code. one of DUCKHOOK_ERROR_*.
  */
 DUCKHOOK_EXPORT int duckhook_destroy(duckhook_t *duckhook);
+
+/**
+ * Get error message
+ *
+ * @param duckhook     a duckhook handle created by duckhook_create()
+ * @return             error code. one of DUCKHOOK_ERROR_*.
+ */
+DUCKHOOK_EXPORT const char *duckhook_error_message(duckhook_t *duckhook);
 
 /**
  * Set log file name to debug duckhook itself.
  *
  * @param name         log file name
- * @return             0 on success, -1 on error.
+ * @return             error code. one of DUCKHOOK_ERROR_*.
  */
 DUCKHOOK_EXPORT int duckhook_set_debug_file(const char *name);
 

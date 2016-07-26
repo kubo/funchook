@@ -41,6 +41,8 @@
 #include "duckhook.h"
 #include "duckhook_internal.h"
 
+#define DUCKHOOK_MAX_ERROR_MESSAGE_LEN 200
+
 typedef struct duckhook_entry {
     void *target_func;
     void *hook_func;
@@ -62,6 +64,7 @@ struct duckhook {
     int installed;
     duckhook_buffer_t *buffer;
     FILE *logfp;
+    char error_message[DUCKHOOK_MAX_ERROR_MESSAGE_LEN];
 };
 
 char *duckhook_debug_file;
@@ -69,14 +72,14 @@ char *duckhook_debug_file;
 static size_t mem_size;
 static size_t num_entries;
 
-static void duckhook_logv(duckhook_t *duckhook, const char *fmt, va_list ap);
+static void duckhook_logv(duckhook_t *duckhook, int set_error, const char *fmt, va_list ap);
 static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...);
 static duckhook_t *duckhook_create_internal(void);
 static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, void *hook_func);
 static int duckhook_install_internal(duckhook_t *duckhook, int flags);
 static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags);
 static int duckhook_destroy_internal(duckhook_t *duckhook);
-static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr, rip_displacement_t *disp);
+static int get_buffer(duckhook_t *duckhook, duckhook_buffer_t **bufp, uint8_t *addr, rip_displacement_t *disp);
 
 #ifdef CPU_X86_64
 
@@ -184,11 +187,27 @@ void duckhook_log(duckhook_t *duckhook, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    duckhook_logv(duckhook, fmt, ap);
+    duckhook_logv(duckhook, 0, fmt, ap);
     va_end(ap);
 }
 
-static void duckhook_logv(duckhook_t *duckhook, const char *fmt, va_list ap)
+void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...)
+{
+    va_list ap;
+    int rv;
+
+    va_start(ap, fmt);
+    rv = vsnprintf(duckhook->error_message, DUCKHOOK_MAX_ERROR_MESSAGE_LEN, fmt, ap);
+    if (rv == -1 || rv >= DUCKHOOK_MAX_ERROR_MESSAGE_LEN) {
+        duckhook->error_message[DUCKHOOK_MAX_ERROR_MESSAGE_LEN - 1] = '\0';
+    }
+    va_end(ap);
+    va_start(ap, fmt);
+    duckhook_logv(duckhook, 1, fmt, ap);
+    va_end(ap);
+}
+
+static void duckhook_logv(duckhook_t *duckhook, int set_error, const char *fmt, va_list ap)
 {
     FILE *fp;
     if (duckhook_debug_file == NULL) {
@@ -204,7 +223,13 @@ static void duckhook_logv(duckhook_t *duckhook, const char *fmt, va_list ap)
     if (fp == NULL) {
         return;
     }
+    if (set_error) {
+        fputs("  ", fp);
+    }
     vfprintf(fp, fmt, ap);
+    if (set_error) {
+        fputc('\n', fp);
+    }
     if (duckhook == NULL) {
         fclose(fp);
     } else {
@@ -216,7 +241,7 @@ static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    duckhook_logv(duckhook, fmt, ap);
+    duckhook_logv(duckhook, 0, fmt, ap);
     va_end(ap);
     if (duckhook != NULL && duckhook->logfp != NULL) {
         fclose(duckhook->logfp);
@@ -240,23 +265,25 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
     void *func = *target_func;
     uint8_t trampoline[TRAMPOLINE_SIZE];
     rip_displacement_t disp[2] = {{0,},{0,}};
-    duckhook_buffer_t *buf;
+    duckhook_buffer_t *buf = NULL;
     duckhook_entry_t *entry;
     uint8_t *src_addr;
+    int rv;
 
     if (duckhook->installed) {
-        duckhook_log(duckhook, "  already installed\n");
-        return -1;
+        duckhook_set_error_message(duckhook, "Could not modify already-installed duckhook handle.");
+        return DUCKHOOK_ERROR_ALREADY_INSTALLED;
     }
     func = duckhook_resolve_func(duckhook, func);
-    if (duckhook_make_trampoline(duckhook, disp, func, trampoline) != 0) {
+    rv = duckhook_make_trampoline(duckhook, disp, func, trampoline);
+    if (rv != 0) {
         duckhook_log(duckhook, "  failed to make trampoline\n");
-        return -1;
+        return rv;
     }
-    buf = get_buffer(duckhook, func, disp);
-    if (buf == NULL) {
+    rv = get_buffer(duckhook, &buf, func, disp);
+    if (rv != 0) {
         duckhook_log(duckhook, "  failed to get buffer\n");
-        return -1;
+        return rv;
     }
     entry = &buf->entries[buf->used];
     /* fill members */
@@ -365,24 +392,27 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
     return 0;
 }
 
-static duckhook_buffer_t *get_buffer(duckhook_t *duckhook, uint8_t *addr, rip_displacement_t *disp)
+static int get_buffer(duckhook_t *duckhook, duckhook_buffer_t **bufp, uint8_t *addr, rip_displacement_t *disp)
 {
     duckhook_buffer_t *buf;
 
     for (buf = duckhook->buffer; buf != NULL; buf = buf->next) {
         if (buf->used < num_entries && buffer_avail(duckhook, buf, addr, disp)) {
-            return buf;
+            /* Reuse allocated buffer. */
+            *bufp = buf;
+            return 0;
         }
     }
     buf = (duckhook_buffer_t *)duckhook_mem_alloc(duckhook, addr);
     if (buf == (void*)-1) {
-        return NULL;
+        return -1; /* FIXME */
     }
     buf->used = 0;
     if (!buffer_avail(duckhook, buf, addr, disp)) {
-        return NULL;
+        return -1; /* FIXME */
     }
     buf->next = duckhook->buffer;
     duckhook->buffer = buf;
-    return buf;
+    *bufp = buf;
+    return 0;
 }

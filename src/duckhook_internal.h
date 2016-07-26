@@ -30,6 +30,7 @@
  */
 #ifndef DUCKHOOK_INTERNAL_H
 #define DUCKHOOK_INTERNAL_H 1
+#include "duckhook.h"
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -64,10 +65,6 @@
 #define ROUND_DOWN(num, unit) ((num) & ~((unit) - 1))
 #define ROUND_UP(num, unit) (((num) + (unit) - 1) & ~((unit) - 1))
 
-#ifndef DUCKHOOK_H
-typedef struct duckhook duckhook_t;
-#endif
-
 #if defined _M_AMD64 || defined __x86_64__
 #define CPU_X86_64
 #endif
@@ -99,6 +96,7 @@ typedef struct {
 /* Functions in duckhook.c */
 extern char *duckhook_debug_file;
 void duckhook_log(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
+void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
