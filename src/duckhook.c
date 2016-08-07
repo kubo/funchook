@@ -79,7 +79,7 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
 static int duckhook_install_internal(duckhook_t *duckhook, int flags);
 static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags);
 static int duckhook_destroy_internal(duckhook_t *duckhook);
-static int get_page(duckhook_t *duckhook, duckhook_page_t **page_p, uint8_t *addr, rip_displacement_t *disp);
+static int get_page(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *addr, rip_displacement_t *disp);
 
 #ifdef CPU_X86_64
 
@@ -388,27 +388,25 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
     return 0;
 }
 
-static int get_page(duckhook_t *duckhook, duckhook_page_t **page_p, uint8_t *addr, rip_displacement_t *disp)
+static int get_page(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *addr, rip_displacement_t *disp)
 {
     duckhook_page_t *page;
+    int rv;
 
     for (page = duckhook->page_list; page != NULL; page = page->next) {
         if (page->used < num_entries_in_page && duckhook_page_avail(duckhook, page, page->used, addr, disp)) {
             /* Reuse allocated page. */
-            *page_p = page;
+            *page_out = page;
             return 0;
         }
     }
-    page = duckhook_page_alloc(duckhook, addr);
-    if (page == (void*)-1) {
-        return -1; /* FIXME */
+    rv = duckhook_page_alloc(duckhook, &page, addr, disp);
+    if (rv != 0) {
+        return rv;
     }
     page->used = 0;
-    if (!duckhook_page_avail(duckhook, page, 0, addr, disp)) {
-        return -1; /* FIXME */
-    }
     page->next = duckhook->page_list;
     duckhook->page_list = page;
-    *page_p = page;
+    *page_out = page;
     return 0;
 }

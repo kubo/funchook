@@ -55,72 +55,121 @@ size_t duckhook_page_size(duckhook_t *duckhook)
     return page_size;
 }
 
-duckhook_page_t *duckhook_page_alloc(duckhook_t *duckhook, void *hint)
-{
-    void *addr;
 #ifdef CPU_X86_64
+
+static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_out)
+{
 #if defined(__linux)
     FILE *fp = fopen("/proc/self/maps", "r");
     char buf[PATH_MAX];
     size_t prev_end = 0;
-    void *old_hint = hint;
+
+    if (fp == NULL) {
+        duckhook_set_error_message(duckhook, "Failed to open /proc/self/maps (%s)",
+                                   duckhook_strerror(errno, buf, sizeof(buf)));
+        return DUCKHOOK_ERROR_INTERNAL_ERROR;
+    }
 
     while (fgets(buf, sizeof(buf), fp) != NULL) {
         size_t start, end;
         if (sscanf(buf, "%"SIZE_T_FMT"x-%"SIZE_T_FMT"x", &start, &end) == 2) {
             if (prev_end == 0) {
-                if (end >= (size_t)hint) {
+                if (end >= (size_t)func_addr) {
                     prev_end = end;
                 }
             } else {
                 if (start - prev_end >= page_size) {
-                    hint = (void*)(prev_end);
-                    duckhook_log(duckhook, "  -- change hint address from %p to %p\n",
-                                 old_hint, hint);
+                    *addr_out = (void*)(prev_end);
+                    duckhook_log(duckhook, "  -- Use address %p for function %p\n",
+                                 *addr_out, func_addr);
+                    duckhook_log(duckhook, "  process map: %s", buf);
+                    fclose(fp);
+                    return 0;
                 } else {
                     prev_end = end;
                 }
             }
         }
         duckhook_log(duckhook, "  process map: %s", buf);
-        if (hint != old_hint) {
-            break;
-        }
     }
     fclose(fp);
+    duckhook_set_error_message(duckhook, "Could not find a free region after %p",
+                               func_addr);
+    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
 #elif defined(__APPLE__)
     mach_port_t task = mach_task_self();
     vm_size_t size;
-    vm_address_t start = (vm_address_t)hint;
+    vm_address_t start = (vm_address_t)func_addr;
     vm_region_basic_info_data_64_t info;
     mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
     memory_object_name_t object = 0;
     size_t prev_end = ((size_t)-1) - page_size;
-    void *old_hint = hint;
 
     while (vm_region_64(task, &start, &size, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &info_count, &object) == KERN_SUCCESS) {
         size_t end = start + size;
         if (prev_end + page_size <= start) {
-            hint = (void*)(prev_end);
-            duckhook_log(duckhook, "  -- change hint address from %p to %p\n",
-                         old_hint, hint);
+            *addr_out = (void*)(prev_end);
+            duckhook_log(duckhook, "  -- Use address %p for function %p\n",
+                         *addr_out, func_addr);
+            duckhook_log(duckhook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+                         start, end);
+            return 0;
         }
         duckhook_log(duckhook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                      start, end);
-        if (hint != old_hint) {
-            break;
-        }
         start = prev_end = end;
     }
+    duckhook_set_error_message(duckhook, "Could not find a free region after %p",
+                               func_addr);
+    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
 #else
 #error unsupported OS
 #endif
+}
+
+#endif /* CPU_X86_64 */
+
+int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
+{
+#ifdef CPU_X86_64
+    int loop_cnt;
+
+    for (loop_cnt = 0; loop_cnt < 3; loop_cnt++) {
+        void *target;
+        int rv = get_free_address(duckhook, func, &target);
+
+        if (rv != 0) {
+            return rv;
+        }
+        *page_out = mmap(target, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (*page_out == target) {
+            duckhook_log(duckhook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+            return 0;
+        }
+        if (*page_out == MAP_FAILED) {
+            char errbuf[64];
+
+            duckhook_set_error_message(duckhook, "mmap failed(addr=%p): %s", target,
+                                       duckhook_strerror(errno, errbuf, sizeof(errbuf)));
+            return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+        }
+        duckhook_log(duckhook, "  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", *page_out, target, page_size);
+        /* other thread might allocate memory at the target address. */
+        munmap(*page_out, page_size);
+    }
+    duckhook_set_error_message(duckhook, "Failed to allocate memory in unused regions");
+    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
 #else
-    hint = NULL;
+    *page_out = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (*page_out == MAP_FAILED) {
+        char errbuf[64];
+
+        duckhook_set_error_message(duckhook, "mmap failed: %s", duckhook_strerror(errno, errbuf, sizeof(errbuf)));
+        return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+    }
+    duckhook_log(duckhook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+    return 0;
 #endif
-    addr = mmap(hint, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    duckhook_log(duckhook, "  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, hint, page_size);
-    return addr;
 }
 
 int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page)
@@ -273,4 +322,18 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
     }
 #endif
     return func;
+}
+
+char *duckhook_strerror(int errnum, char *buf, size_t buflen)
+{
+#if (!defined(__linux)) || (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+    /* XSI-compliant strerror_r */
+    if (strerror_r(errnum, buf, buflen) != 0) {
+        snprintf(buf, buflen, "Unknown error %d", errnum);
+    }
+    return buf;
+#else
+    /* GNU-specific strerror_r */
+    return strerror_r(errnum, buf, buflen);
+#endif
 }

@@ -48,6 +48,7 @@
 
 typedef struct duckhook duckhook_t;
 
+#define DUCKHOOK_ERROR_INTERNAL_ERROR         -1
 #define DUCKHOOK_ERROR_SUCCESS                 0
 #define DUCKHOOK_ERROR_OUT_OF_MEMORY           1
 #define DUCKHOOK_ERROR_ALREADY_INSTALLED       2
@@ -56,6 +57,7 @@ typedef struct duckhook duckhook_t;
 #define DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE  5
 #define DUCKHOOK_ERROR_FOUND_BACK_JUMP         6
 #define DUCKHOOK_ERROR_TOO_SHORT_INSTRUCTIONS  7
+#define DUCKHOOK_ERROR_MEMORY_ALLOCATION       9
 
 /**
  * Create a duckhook handle

@@ -108,7 +108,7 @@ void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...) __at
 /* Functions in duckhook_linux.c & duckhook_windows.c */
 
 size_t duckhook_page_size(duckhook_t *duckhook);
-duckhook_page_t *duckhook_page_alloc(duckhook_t *duckhook, void *hint);
+int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp);
 int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page);
 int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page);
 int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page);
@@ -117,6 +117,7 @@ int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *ad
 int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate);
 
 void *duckhook_resolve_func(duckhook_t *duckhook, void *func);
+char *duckhook_strerror(int errnum, char *buf, size_t buflen);
 
 /* Functions in duckhook_x86.c */
 

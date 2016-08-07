@@ -63,7 +63,7 @@ size_t duckhook_page_size(duckhook_t *duckhook)
 /* Reserve 64K bytes (allocation_unit) and use the first
  * 4K bytes (1 page) as the control page.
  */
-static page_list_t *alloc_page_info(duckhook_t *duckhook, void *hint)
+static int alloc_page_info(duckhook_t *duckhook, page_list_t **pl_out, void *hint)
 {
     void *addr;
     page_list_t *pl;
@@ -72,8 +72,9 @@ static page_list_t *alloc_page_info(duckhook_t *duckhook, void *hint)
     while (1) {
         MEMORY_BASIC_INFORMATION mbi;
         if (VirtualQuery(hint, &mbi, sizeof(mbi)) == 0) {
-            duckhook_log(duckhook, "  Virtual Query %p failed\n", hint);
-            return NULL;
+            duckhook_set_error_message(duckhook, "Virtual Query Error: addr=%p, error=%lu\n",
+                                       hint, GetLastError());
+            return DUCKHOOK_ERROR_INTERNAL_ERROR;
         }
         duckhook_log(duckhook, "  process map: %016I64x-%016I64x %s\n",
                      (size_t)mbi.BaseAddress, (size_t)mbi.BaseAddress + mbi.RegionSize,
@@ -96,64 +97,67 @@ static page_list_t *alloc_page_info(duckhook_t *duckhook, void *hint)
     hint = NULL;
 #endif
     pl = VirtualAlloc(hint, allocation_unit, MEM_RESERVE, PAGE_NOACCESS);
-    duckhook_log(duckhook, "  reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", pl, hint, allocation_unit);
     if (pl == NULL) {
-        return NULL;
+        duckhook_set_error_message(duckhook, "Failed to reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u, errro=%lu)\n",
+                                   pl, hint, allocation_unit, GetLastError());
+        return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
     }
+    duckhook_log(duckhook, "  reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", pl, hint, allocation_unit);
     addr = VirtualAlloc(pl, page_size, MEM_COMMIT, PAGE_READWRITE);
-    duckhook_log(duckhook, "  commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, pl, page_size);
     if (addr == NULL) {
+        duckhook_set_error_message(duckhook, "Failed to commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u)\n",
+                                   addr, pl, page_size);
         VirtualFree(pl, 0, MEM_RELEASE);
-        return NULL;
+        return DUCKHOOK_ERROR_INTERNAL_ERROR;
     }
+    duckhook_log(duckhook, "  commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, pl, page_size);
     pl->next = page_list.next;
     pl->prev = &page_list;
     page_list.next->prev = pl;
     page_list.next = pl;
-    return pl;
+    *pl_out = pl;
+    return 0;
 }
 
 /*
  * Get one page from page_list, commit it and return it.
  */
-duckhook_page_t *duckhook_page_alloc(duckhook_t *duckhook, void *hint)
+int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
 {
     page_list_t *pl;
+    duckhook_page_t *page;
     int i;
 
     for (pl = page_list.next; pl != &page_list; pl = pl->next) {
-#ifdef CPU_X86_64
-        int64_t diff = (int64_t)pl - (int64_t)hint;
-        if (diff > INT_MIN / 2 || INT_MAX / 2 < diff) {
-            /* too far */
-            continue;
-        }
-#endif
-        if (pl->num_used < max_num_pages) {
-            /* use a page in this page_list */
-            break;
+        for (i = 0; i < max_num_pages; i++) {
+            if (!pl->used[i]) {
+                page = (duckhook_page_t *)((size_t)pl + (i + 1) * page_size);
+                if (duckhook_page_avail(duckhook, page, 0, func, disp)) {
+                    break;
+                }
+            }
         }
     }
     if (pl == &page_list) {
         /* no page_list is available. */
-        pl = alloc_page_info(duckhook, hint);
-        if (pl == NULL) {
-            return (void*)-1;
+        int rv = alloc_page_info(duckhook, &pl, func);
+        if (rv != 0) {
+            return rv;
         }
+        i = 0;
+        page = (duckhook_page_t *)((size_t)pl + page_size);
     }
-    for (i = 0; i < max_num_pages; i++) {
-        if (!pl->used[i]) {
-            void *mem = (void*)((size_t)pl + (i + 1) * page_size);
-            void *addr = VirtualAlloc(mem, page_size, MEM_COMMIT, PAGE_READWRITE);
-            pl->used[i] = 1;
-            pl->num_used++;
-            duckhook_log(duckhook, "  %scommit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u)\n",
-                         (mem == addr) ? "" : "failed to ",
-                         mem, pl, pl->num_used, i, page_size);
-            return addr;
-        }
+    if (VirtualAlloc(page, page_size, MEM_COMMIT, PAGE_READWRITE) == NULL) {
+        duckhook_set_error_message(duckhook, "Failed to commit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u, error=%lu)",
+                                   page, pl, pl->num_used, i, page_size, GetLastError());
+        return DUCKHOOK_ERROR_INTERNAL_ERROR;
     }
-    return (void *)-1;
+    pl->used[i] = 1;
+    pl->num_used++;
+    duckhook_log(duckhook, "  commit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u)\n",
+                 page, pl, pl->num_used, i, page_size);
+    *page_out = page;
+    return 0;
 }
 
 /*
