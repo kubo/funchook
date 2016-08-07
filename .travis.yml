@@ -1,12 +1,17 @@
 sudo: required
+matrix:
+  include:
+    - os: linux
+    - os: osx
 language: c
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get remove mingw32 mingw32-runtime mingw32-binutils
-  - sudo apt-get install mingw-w64 gcc-multilib wine
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get remove mingw32 mingw32-runtime mingw32-binutils; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install mingw-w64 gcc-multilib wine; fi
 script:
   - ./autogen.sh
-  - mkdir x86_64-linux   && (cd x86_64-linux   && ../configure && make test)
-  - mkdir i686-linux     && (cd i686-linux     && ../configure "CC=gcc -m32" && make test)
-  - mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure CC=x86_64-w64-mingw32-gcc && make test)
-  - mkdir i686-mingw32   && (cd i686-mingw32   && ../configure CC=i686-w64-mingw32-gcc && make test)
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-linux   && (cd x86_64-linux   && ../configure && make test); fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-linux     && (cd i686-linux     && ../configure "CC=gcc -m32" && make test); fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure CC=x86_64-w64-mingw32-gcc && make test); fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-mingw32   && (cd i686-mingw32   && ../configure CC=i686-w64-mingw32-gcc && make test); fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir x86_64-darwin  && (cd x86_64-darwin  && ../configure && make test); fi
