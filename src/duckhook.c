@@ -54,11 +54,11 @@ typedef struct duckhook_entry {
 #endif
 } duckhook_entry_t;
 
-typedef struct duckhook_page {
+struct duckhook_page {
     struct duckhook_page *next;
     uint16_t used;
     duckhook_entry_t entries[1];
-} duckhook_page_t;
+};
 
 struct duckhook {
     int installed;

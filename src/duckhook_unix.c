@@ -46,6 +46,10 @@
 #endif
 #include "duckhook_internal.h"
 
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+
 static size_t page_size;
 
 size_t duckhook_page_size(duckhook_t *duckhook)
