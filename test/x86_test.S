@@ -225,7 +225,7 @@ L_call_and_pop_eax:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_eax(%eax), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %eax
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %eax
 	movl	int_val@GOT(%eax), %eax
 #endif
 	movl	(%eax), %eax
@@ -241,7 +241,7 @@ L_call_and_pop_ebx:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_ebx(%ebx), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %ebx
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %ebx
 	movl	int_val@GOT(%ebx), %eax
 #endif
 	movl	(%eax), %eax
@@ -257,7 +257,7 @@ L_call_and_pop_ecx:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_ecx(%ecx), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %ecx
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %ecx
 	movl	int_val@GOT(%ecx), %eax
 #endif
 	movl	(%eax), %eax
@@ -272,7 +272,7 @@ L_call_and_pop_edx:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_edx(%edx), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %edx
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %edx
 	movl	int_val@GOT(%edx), %eax
 #endif
 	movl	(%eax), %eax
@@ -288,7 +288,7 @@ L_call_and_pop_esi:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_esi(%esi), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %esi
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %esi
 	movl	int_val@GOT(%esi), %eax
 #endif
 	movl	(%eax), %eax
@@ -305,7 +305,7 @@ L_call_and_pop_edi:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_edi(%edi), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %edi
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %edi
 	movl	int_val@GOT(%edi), %eax
 #endif
 	movl	(%eax), %eax
@@ -322,7 +322,7 @@ L_call_and_pop_ebp:
 #ifdef __APPLE__
 	movl	L_int_val$non_lazy_ptr-L_call_and_pop_ebp(%ebp), %eax
 #else
-	addl	$_GLOBAL_OFFSET_TABLE_-1, %ebp
+	addl	$_GLOBAL_OFFSET_TABLE_+1, %ebp
 	movl	int_val@GOT(%ebp), %eax
 #endif
 	movl	(%eax), %eax
