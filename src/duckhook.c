@@ -300,10 +300,10 @@ static int duckhook_prepare_internal(duckhook_t *duckhook, void **target_func, v
 #endif
     /* fix rip-relative offsets */
     src_addr = entry->trampoline + disp[0].src_addr_offset;
-    *(uint32_t*)(entry->trampoline + disp[0].pos_offset) = (disp[0].dst_addr - src_addr);
+    *(uint32_t*)(entry->trampoline + disp[0].pos_offset) = (uint32_t)(disp[0].dst_addr - src_addr);
     if (disp[1].dst_addr != 0) {
         src_addr = entry->trampoline + disp[1].src_addr_offset;
-        *(uint32_t*)(entry->trampoline + disp[1].pos_offset) = (disp[1].dst_addr - src_addr);
+        *(uint32_t*)(entry->trampoline + disp[1].pos_offset) = (uint32_t)(disp[1].dst_addr - src_addr);
     }
     duckhook_log_trampoline(duckhook, entry->trampoline);
 

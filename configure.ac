@@ -19,7 +19,7 @@ AC_SUBST(DUCKHOOK_CPU)
 if test "$EXEEXT"; then
   DUCKHOOK_OS=windows
   LIBDUCKHOOK_SO=duckhook.dll
-  CFLAGS="$CFLAGS -DBUILD_DUCKHOOK_DLL"
+  CFLAGS="$CFLAGS -DDUCKHOOK_EXPORTS"
   LINK_SHARED="\$(CC) -shared -Wl,--out-implib,duckhook.lib"
   IF_WIN32=
 else

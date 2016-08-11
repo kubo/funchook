@@ -5,7 +5,7 @@
 
 typedef int (*int_func_t)(void);
 
-extern void reset_retval(void);
+extern int reset_retval(void);
 extern int get_val_in_shared_library(void);
 extern int x86_test_jump(void);
 extern int x86_test_call_get_pc_thunk_ax(void);
@@ -31,6 +31,13 @@ extern void set_int_val(int val);
 #define set_int_val(val) do {} while(0)
 #endif
 
+#ifdef _MSC_VER
+int reset_retval()
+{
+    return 0;
+}
+#endif
+
 #if defined(WIN32)
 __declspec(dllexport) int int_val = 0xbaceba11;
 #else
@@ -43,7 +50,7 @@ static int error_cnt;
 static int hook_is_called;
 static int_func_t orig_func;
 
-int get_val()
+int get_val(void)
 {
     return int_val;
 }
@@ -140,6 +147,7 @@ int main()
     TEST_DUCKHOOK_INT(get_val);
     TEST_DUCKHOOK_INT(get_val_in_shared_library);
 
+#ifndef _MSC_VER
 #if defined __i386 || defined  _M_I386
     TEST_DUCKHOOK_INT(x86_test_jump);
     TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump1, DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
@@ -161,6 +169,8 @@ int main()
     TEST_DUCKHOOK_INT(x86_test_call_and_pop_edi);
     TEST_DUCKHOOK_INT(x86_test_call_and_pop_ebp);
 #endif
+#endif
+
 #endif
 
     if (error_cnt == 0) {

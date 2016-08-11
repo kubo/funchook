@@ -35,11 +35,11 @@
  * or libduckhook.so. Others are invisible.
  */
 #ifdef WIN32
-#ifdef BUILD_DUCKHOOK_DLL
+#ifdef DUCKHOOK_EXPORTS
 #define DUCKHOOK_EXPORT __declspec(dllexport)
-#else /* BUILD_DUCKHOOK_DLL */
+#else /* DUCKHOOK_EXPORTS */
 #define DUCKHOOK_EXPORT __declspec(dllimport)
-#endif /* BUILD_DUCKHOOK_DLL */
+#endif /* DUCKHOOK_EXPORTS */
 #elif defined(__GNUC__)
 #define DUCKHOOK_EXPORT __attribute__((visibility("default")))
 #else

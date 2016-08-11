@@ -93,8 +93,8 @@ typedef struct {
 
 typedef struct {
     const uint8_t *dst_addr;
-    char src_addr_offset;
-    char pos_offset;
+    intptr_t src_addr_offset;
+    intptr_t pos_offset;
 } rip_displacement_t;
 
 typedef struct duckhook_page duckhook_page_t;

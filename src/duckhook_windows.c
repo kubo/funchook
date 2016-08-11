@@ -81,7 +81,7 @@ static int alloc_page_info(duckhook_t *duckhook, page_list_t **pl_out, void *hin
                      (mbi.State == MEM_FREE) ? "free" : "used");
         if (mbi.State == MEM_FREE) {
             size_t addr = ROUND_UP((size_t)mbi.BaseAddress, allocation_unit);
-            int diff = addr - (size_t)mbi.BaseAddress;
+            intptr_t diff = addr - (size_t)mbi.BaseAddress;
             if (diff >= 0) {
                 if (mbi.RegionSize - diff >= allocation_unit) {
                     hint = (void*)addr;
@@ -125,8 +125,8 @@ static int alloc_page_info(duckhook_t *duckhook, page_list_t **pl_out, void *hin
 int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
 {
     page_list_t *pl;
-    duckhook_page_t *page;
-    int i;
+    duckhook_page_t *page = NULL;
+    size_t i;
 
     for (pl = page_list.next; pl != &page_list; pl = pl->next) {
         for (i = 0; i < max_num_pages; i++) {
@@ -138,7 +138,7 @@ int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_
             }
         }
     }
-    if (pl == &page_list) {
+    if (page == NULL) {
         /* no page_list is available. */
         int rv = alloc_page_info(duckhook, &pl, func);
         if (rv != 0) {
@@ -147,7 +147,7 @@ int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_
         i = 0;
         page = (duckhook_page_t *)((size_t)pl + page_size);
     }
-    if (VirtualAlloc(page, page_size, MEM_COMMIT, PAGE_READWRITE) == NULL) {
+    if (VirtualAlloc(page, page_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE) == NULL) {
         duckhook_set_error_message(duckhook, "Failed to commit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u, error=%lu)",
                                    page, pl, pl->num_used, i, page_size, GetLastError());
         return DUCKHOOK_ERROR_INTERNAL_ERROR;
@@ -236,7 +236,7 @@ int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
 void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
 {
     if (duckhook_debug_file != NULL) {
-        char path[PATH_MAX];
+        char path[MAX_PATH];
         DWORD len = GetMappedFileNameA(GetCurrentProcess(), func, path, sizeof(path));
         if (len > 0) {
             duckhook_log(duckhook, "  func %p is in %.*s\n", func, (int)len, path);

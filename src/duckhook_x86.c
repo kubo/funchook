@@ -116,7 +116,7 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     _CodeInfo ci;
     _DecodeResult decres;
     int rv;
-    int i;
+    unsigned int i;
 
     memset(trampoline, NOP_INSTRUCTION, TRAMPOLINE_SIZE);
     ctx.duckhook = duckhook;
@@ -200,7 +200,7 @@ void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline)
     unsigned int di_cnt = 0;
     _CodeInfo ci;
     _DecodeResult decres;
-    int i;
+    unsigned int i;
 
     if (duckhook_debug_file == NULL) {
         return;
@@ -390,7 +390,7 @@ static void get_rip_relative(const make_trampoline_context_t *ctx, rip_relative_
             break;
         case O_PC:
             rel_imm->addr = (uint8_t*)(size_t)(di->addr + di->size + di->imm.addr);
-            rel_imm->raddr = di->imm.addr;
+            rel_imm->raddr = (intptr_t)di->imm.addr;
             rel_imm->size = op->size;
             imm_offset = opsiz;
             opsiz += op->size / 8;
@@ -398,7 +398,7 @@ static void get_rip_relative(const make_trampoline_context_t *ctx, rip_relative_
         case O_SMEM:
             if (di->dispSize != 0 && op->index == R_RIP) {
                 rel_disp->addr = (uint8_t*)(size_t)(di->addr + di->size + di->disp);
-                rel_disp->raddr = di->disp;
+                rel_disp->raddr = (intptr_t)di->disp;
                 rel_disp->size = di->dispSize;
                 disp_offset = opsiz;
             }
