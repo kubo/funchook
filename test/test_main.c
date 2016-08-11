@@ -15,6 +15,13 @@ extern int x86_test_call_get_pc_thunk_dx(void);
 extern int x86_test_call_get_pc_thunk_si(void);
 extern int x86_test_call_get_pc_thunk_di(void);
 extern int x86_test_call_get_pc_thunk_bp(void);
+extern int x86_test_call_and_pop_eax(void);
+extern int x86_test_call_and_pop_ebx(void);
+extern int x86_test_call_and_pop_ecx(void);
+extern int x86_test_call_and_pop_edx(void);
+extern int x86_test_call_and_pop_esi(void);
+extern int x86_test_call_and_pop_edi(void);
+extern int x86_test_call_and_pop_ebp(void);
 extern int x86_test_error_jump1(void);
 extern int x86_test_error_jump2(void);
 
@@ -146,6 +153,13 @@ int main()
     TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_si);
     TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_di);
     TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_bp);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_eax);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_ebx);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_ecx);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_edx);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_esi);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_edi);
+    TEST_DUCKHOOK_INT(x86_test_call_and_pop_ebp);
 #endif
 #endif
 

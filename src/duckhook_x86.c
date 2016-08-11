@@ -31,6 +31,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <distorm.h>
 #include <mnemonics.h>
@@ -57,11 +58,14 @@ typedef struct {
 
 #define NOP_INSTRUCTION 0x90
 
-#if defined(__linux) && defined(__i386)
+#if defined(__i386)
 static int handle_x86_get_pc_thunk(make_trampoline_context_t *ctx, const _DInst *di);
+static int handle_x86_get_pc_by_call_and_pop(make_trampoline_context_t *ctx, const _DInst *di);
 #else
 #define handle_x86_get_pc_thunk(ctx, di) (0)
+#define handle_x86_get_pc_by_call_and_pop(ctx, di) (0)
 #endif
+
 static void log_instruction(duckhook_t *duckhook, const _CodeInfo *ci, const _DInst *dis);
 static void get_rip_relative(const make_trampoline_context_t *ctx, rip_relative_t *rel_disp, rip_relative_t *rel_imm, const _DInst *di);
 static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relative_t *rel, const _DInst *di);
@@ -144,6 +148,9 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
 
         if (handle_x86_get_pc_thunk(&ctx, di)) {
             ;
+        } else if (handle_x86_get_pc_by_call_and_pop(&ctx, di)) {
+            di = &dis[++i];
+            log_instruction(duckhook, &ci, di);
         } else {
             memcpy(ctx.dst, ctx.src, di->size);
             get_rip_relative(&ctx, &rel_disp, &rel_imm, di);
@@ -292,6 +299,64 @@ fixed:
     ctx->dst += 5;
     ctx->src += 5;
     return 1;
+}
+#endif
+
+#ifndef handle_x86_get_pc_by_call_and_pop
+static int handle_x86_get_pc_by_call_and_pop(make_trampoline_context_t *ctx, const _DInst *di)
+{
+    uint32_t eip = 0;
+    const char *reg_name = NULL;
+
+    if (*ctx->src == 0xe8 && *(uint32_t*)(ctx->src + 1) == 0) {
+        eip = (uint32_t)(di->addr + 5);
+        switch (*(ctx->src + 5)) {
+        case 0x58: /* pop %eax */
+            reg_name = "EAX";
+            *ctx->dst = 0xb8; /* movl di->addr + 5, %eax */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        case 0x5b: /* pop %ebx */
+            reg_name = "EBX";
+            *ctx->dst = 0xbb; /* movl di->addr + 5, %ebx */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        case 0x59: /* pop %ecx */
+            reg_name = "ECX";
+            *ctx->dst = 0xb9; /* movl di->addr + 5, %ecx */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        case 0x5a: /* pop %edx */
+            reg_name = "EDX";
+            *ctx->dst = 0xba; /* movl di->addr + 5, %edx */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        case 0x5e: /* pop %esi */
+            reg_name = "ESI";
+            *ctx->dst = 0xbe; /* movl di->addr + 5, %esi */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        case 0x5f: /* pop %edi */
+            reg_name = "EDI";
+            *ctx->dst = 0xbf; /* movl di->addr + 5, %edi */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        case 0x5d: /* pop %ebp */
+            reg_name = "EBP";
+            *ctx->dst = 0xbd; /* movl di->addr + 5, %ebp */
+            *(uint32_t*)(ctx->dst + 1) = eip;
+            goto fixed;
+        }
+    }
+    return 0;
+
+fixed:
+    duckhook_log(ctx->duckhook, "      use 'MOV %s, 0x%x' instead of 'CALL 0x%x; POP %s'\n",
+                 reg_name, eip, eip, reg_name);
+    ctx->dst += 5;
+    ctx->src += 6;
+    return 1;
+
 }
 #endif
 

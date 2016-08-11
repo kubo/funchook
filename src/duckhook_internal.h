@@ -53,7 +53,11 @@
 #define SIZE_T_FMT "l"
 #define SIZE_T_WIDTH "16"
 #else
+#ifdef __APPLE__
+#define SIZE_T_FMT "z"
+#else
 #define SIZE_T_FMT ""
+#endif
 #define SIZE_T_WIDTH "8"
 #endif /* defined(__LP64__) || defined(_LP64) */
 #endif /* WIN32 */

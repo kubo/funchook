@@ -15,3 +15,4 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure CC=x86_64-w64-mingw32-gcc && make test); fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-mingw32   && (cd i686-mingw32   && ../configure CC=i686-w64-mingw32-gcc && make test); fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir x86_64-darwin  && (cd x86_64-darwin  && ../configure && make test); fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir i686-darwin    && (cd i686-darwin    && ../configure "CC=cc -m32" && make test); fi

@@ -8,6 +8,14 @@ if test "$GCC"; then
    CFLAGS="$CFLAGS -Wall -fvisibility=hidden"
 fi
 
+AC_CHECK_SIZEOF(void*)
+if test "$ac_cv_sizeof_voidp" = 4; then
+  DUCKHOOK_CPU=x86
+else
+  DUCKHOOK_CPU=x86_64
+fi
+AC_SUBST(DUCKHOOK_CPU)
+
 if test "$EXEEXT"; then
   DUCKHOOK_OS=windows
   LIBDUCKHOOK_SO=duckhook.dll
@@ -36,15 +44,6 @@ AC_SUBST(LIBDUCKHOOK_SO)
 AC_SUBST(LINK_SHARED)
 AC_SUBST(PIC_CFLAGS)
 AC_SUBST(IF_WIN32)
-
-AC_CHECK_SIZEOF(void*)
-
-if test "$ac_cv_sizeof_voidp" = 4; then
-  DUCKHOOK_CPU=x86
-else
-  DUCKHOOK_CPU=x86_64
-fi
-AC_SUBST(DUCKHOOK_CPU)
 
 AC_CONFIG_HEADERS([src/config.h])
 

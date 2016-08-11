@@ -19,7 +19,8 @@ Supported Platform
 
 * Linux x86_64 (both glibc and musl libc)
 * Linux x86 (both glibc and musl libc)
-* OS X x86_64 (tested on 10.11 El Capitan)
+* OS X x86_64
+* OS X x86
 * Windows x64 (*1)
 * Windows 32-bit (*1)
 
