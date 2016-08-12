@@ -10,7 +10,9 @@ PIC_CFLAGS = @PIC_CFLAGS@
 LIBS = -L$(top_builddir)/src -lduckhook -Wl,-rpath,$(top_builddir)/src -L. -lduckhook_test -Wl,-rpath,.
 LINK_SHARED = @LINK_SHARED@
 EXEEXT = @EXEEXT@
+DLLTOOL = $(CC:gcc=dlltool)
 @IF_WIN32@ OUT_IMPLIB = -Wl,--out-implib,duckhook_test.lib
+@IF_WIN32@ DUCKHOOK_TEST_LIB = duckhook_test_exe.lib
 
 VPATH = $(srcdir):../src
 
@@ -23,11 +25,17 @@ test: duckhook_test$(EXEEXT)
 duckhook_test$(EXEEXT): $(OBJS) @LIBDUCKHOOK_SO@ libduckhook_test.so
 	$(CC) -o duckhook_test$(EXEEXT) $(OBJS) $(LIBS)
 
-libduckhook_test.so: $(srcdir)/libduckhook_test.c
-	$(LINK_SHARED) $(PIC_CFLAGS) $(CFLAGS) -o libduckhook_test.so $(srcdir)/libduckhook_test.c $(OUT_IMPLIB)
+libduckhook_test.so: $(srcdir)/libduckhook_test.c $(DUCKHOOK_TEST_LIB)
+	$(LINK_SHARED) $(PIC_CFLAGS) $(CFLAGS) -o libduckhook_test.so $(srcdir)/libduckhook_test.c $(OUT_IMPLIB) $(DUCKHOOK_TEST_LIB)
 
 clean:
 	$(RM) $(TESTEXE) *.o libduckhook_test.so
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status
+
+duckhook_test_exe.lib:
+	echo "LIBRARY duckhook_test.exe" > duckhook_test_exe.def
+	echo "EXPORTS" >> duckhook_test_exe.def
+	echo "get_val_in_exe" >> duckhook_test_exe.def
+	$(DLLTOOL) -d duckhook_test_exe.def -l duckhook_test_exe.lib

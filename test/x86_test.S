@@ -1,5 +1,5 @@
 #if defined(_WIN32) || defined(__APPLE__)
-#define get_val _get_val
+#define get_val_in_exe _get_val_in_exe
 #define int_val _int_val
 #define reset_retval _reset_retval
 #define x86_test_jump _x86_test_jump
@@ -31,7 +31,7 @@ reset_retval:
 	.p2align 4,,15
 	.globl	x86_test_jump
 x86_test_jump:
-	jmp	get_val
+	jmp	get_val_in_exe
 
 	.p2align 4,,15
 	.globl	x86_test_error_jump1

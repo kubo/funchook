@@ -3,10 +3,19 @@
 #include <stdio.h>
 #include <duckhook.h>
 
+#ifdef WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
 typedef int (*int_func_t)(void);
 
 extern int reset_retval(void);
-extern int get_val_in_shared_library(void);
+DLLEXPORT int get_val_in_exe(void);
+extern int get_val_in_dll(void);
+extern int get_val_in_exe_from_dll(void);
+extern int get_val_in_dll_from_dll(void);
 extern int x86_test_jump(void);
 extern int x86_test_call_get_pc_thunk_ax(void);
 extern int x86_test_call_get_pc_thunk_bx(void);
@@ -50,7 +59,7 @@ static int error_cnt;
 static int hook_is_called;
 static int_func_t orig_func;
 
-int get_val(void)
+int get_val_in_exe(void)
 {
     return int_val;
 }
@@ -61,9 +70,10 @@ static int hook_func(void)
     return orig_func();
 }
 
-#define TEST_DUCKHOOK_INT(func) test_duckhook_int(func, #func,  __LINE__)
+#define TEST_DUCKHOOK_INT(func) test_duckhook_int(func, #func, NULL, NULL)
+#define TEST_DUCKHOOK_INT2(func, func2) test_duckhook_int(func, #func, func2, #func2)
 
-void test_duckhook_int(int_func_t func, const char *func_str, int line)
+void test_duckhook_int(int_func_t func, const char *func_str, int_func_t func2, const char *func2_str)
 {
     duckhook_t *duckhook = duckhook_create();
     int result;
@@ -71,23 +81,36 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     int rv;
 
     test_cnt++;
-    printf("[%d] test_duckhook_int: %s\n", test_cnt, func_str);
+    if (func2 == NULL) {
+        printf("[%d] test_duckhook_int: %s\n", test_cnt, func_str);
+    } else {
+        printf("[%d] test_duckhook_int: %s and %s\n", test_cnt, func_str, func2_str);
+    }
 
     expected = ++int_val;
     set_int_val(int_val);
     reset_retval();
     result = func();
-    if (result != int_val) {
-        printf("ERROR at line %d: expected %d but %d before hooking.\n", line, expected, result);
-	error_cnt++;
-	return;
+    if (expected != result) {
+        printf("ERROR: %s should return %d but %d before hooking.\n", func_str, expected, result);
+        error_cnt++;
+        return;
+    }
+    if (func2 != NULL) {
+        reset_retval();
+        result = func2();
+        if (expected != result) {
+            printf("ERROR: %s should return %d but %d before hooking.\n", func2_str, expected, result);
+            error_cnt++;
+            return;
+        }
     }
     orig_func = func;
     rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
     if (rv != 0) {
-        printf("ERROR at line %d: failed to hook %s.\n", line, func_str);
-	error_cnt++;
-	return;
+        printf("ERROR: failed to hook %s.\n", func_str);
+        error_cnt++;
+        return;
     }
     duckhook_install(duckhook, 0);
 
@@ -97,14 +120,29 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     reset_retval();
     result = func();
     if (hook_is_called == 0) {
-        printf("ERROR at line %d: hook_func is not called.\n", line);
-	error_cnt++;
-	return;
+        printf("ERROR: hook_func is not called by %s.\n", func_str);
+        error_cnt++;
+        return;
     }
     if (expected != result) {
-        printf("ERROR at line %d: expected %d but %d after hooking.\n", line, expected, result);
-	error_cnt++;
-	return;
+        printf("ERROR: %s should return %d but %d after hooking.\n", func_str, expected, result);
+        error_cnt++;
+        return;
+    }
+    if (func2 != NULL) {
+        hook_is_called = 0;
+        reset_retval();
+        result = func2();
+        if (hook_is_called == 0) {
+            printf("ERROR: hook_func is not called by %s.\n", func2_str);
+            error_cnt++;
+            return;
+        }
+        if (expected != result) {
+            printf("ERROR: %s should return %d but %d after hooking.\n", func2_str, expected, result);
+            error_cnt++;
+            return;
+        }
     }
 
     duckhook_uninstall(duckhook, 0);
@@ -114,9 +152,18 @@ void test_duckhook_int(int_func_t func, const char *func_str, int line)
     reset_retval();
     result = func();
     if (expected != result) {
-        printf("ERROR at line %d: expected %d but %d after hook is removed.\n", line, expected, result);
-	error_cnt++;
-	return;
+        printf("ERROR: %s should return %d but %d after hook is removed.\n", func_str, expected, result);
+        error_cnt++;
+        return;
+    }
+    if (func2 != NULL) {
+        reset_retval();
+        result = func2();
+        if (expected != result) {
+            printf("ERROR: %s should return %d but %d after hook is removed.\n", func2_str, expected, result);
+            error_cnt++;
+            return;
+        }
     }
 
     duckhook_destroy(duckhook);
@@ -135,7 +182,7 @@ void test_duckhook_expect_error(int_func_t func, int errcode, const char *func_s
     rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
     if (rv != errcode) {
         printf("ERROR at line %d: hooking must fail with %d but %d.\n", line, errcode, rv);
-	error_cnt++;
+        error_cnt++;
     }
     duckhook_destroy(duckhook);
 }
@@ -144,8 +191,8 @@ int main()
 {
     duckhook_set_debug_file("debug.log");
 
-    TEST_DUCKHOOK_INT(get_val);
-    TEST_DUCKHOOK_INT(get_val_in_shared_library);
+    TEST_DUCKHOOK_INT2(get_val_in_exe, get_val_in_exe_from_dll);
+    TEST_DUCKHOOK_INT2(get_val_in_dll, get_val_in_dll_from_dll);
 
 #ifndef _MSC_VER
 #if defined __i386 || defined  _M_I386
