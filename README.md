@@ -1,30 +1,27 @@
 Duckhook - an API hook library
 ==============================
 
-Note: This is unstable. Some functions may be changed.
-
 This library depends on [diStorm3][].
 
-[![Build Status](https://travis-ci.org/kubo/duckhook.svg?branch=master)](https://travis-ci.org/kubo/duckhook)
+[![Build Status](https://travis-ci.org/kubo/duckhook.svg?branch=master)](https://travis-ci.org/kubo/duckhook) [![Build status](https://ci.appveyor.com/api/projects/status/aqn59yiyy0vst5kg/branch/master?svg=true)](https://ci.appveyor.com/project/kubo/duckhook/branch/master)
 
 TODO
 ----
 
 * write documents.
-* add a function to get the error reason when `duckhook_prepare` returns NULL.
-* add a function to debug duckhook itself.
 
 Supported Platform
 -----------------
 
-* Linux x86_64 (both glibc and musl libc)
-* Linux x86 (both glibc and musl libc)
-* OS X x86_64
-* OS X x86
-* Windows x64 (*1)
-* Windows 32-bit (*1)
+* Linux x86_64 (*1)
+* Linux x86 (*1)
+* OS X x86_64 (*1)
+* OS X x86 (*1)
+* Windows x64 (*2)
+* Windows 32-bit (*2)
 
-*1 compiled by mingw-w64 and tested on Wine. I haven't tested it on Windows yet.
+*1 tested on [Travis CI](https://travis-ci.org/kubo/duckhook)
+*2 tested on [AppVeyor](https://ci.appveyor.com/project/kubo/duckhook/branch/master)
 
 Compilation
 -----------
