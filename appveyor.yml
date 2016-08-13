@@ -33,3 +33,10 @@ configuration:
 
 build:
   project: win32/duckhook.sln
+
+#---------------------------------#
+#       tests configuration       #
+#---------------------------------#
+
+test_script:
+  - for /f "tokens=*" %a in ('dir duckhook_test.exe /b /s') do %a
