@@ -30,3 +30,6 @@ platform:
 configuration:
   - Debug
   - Release
+
+build:
+  project: win32/duckhook.sln
