@@ -20,7 +20,7 @@ Supported Platform
 * Windows x64 (*2)
 * Windows 32-bit (*2)
 
-*1 tested on [Travis CI](https://travis-ci.org/kubo/duckhook)
+*1 tested on [Travis CI](https://travis-ci.org/kubo/duckhook)  
 *2 tested on [AppVeyor](https://ci.appveyor.com/project/kubo/duckhook/branch/master)
 
 Compilation
@@ -102,10 +102,10 @@ License
 
 GPLv2 or later with a [GPL linking exception][].
 
-You can use Duckhook in any software as long as the software
-doesn't forbid API hooking. However if you modify Duckhook
-itself, the modifed part must be under the GPL with or without
-the linking exception.
+You can use duckhook in any software. Though duckhook is licensed under
+the GPL, it doesn't affect outside of duckhook due to the linking exception.
+Note that if you modify duckhook itself, the modifed part must be released
+under the GPL with or without the linking exception.
 
 [GPL linking exception]: https://en.wikipedia.org/wiki/GPL_linking_exception
 [diStorm3]: https://github.com/gdabah/distorm/
