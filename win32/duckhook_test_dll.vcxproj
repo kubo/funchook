@@ -173,6 +173,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\test\libduckhook_test.c" />
+    <ClCompile Include="..\test\libduckhook_test2.c" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="duckhook_test_exe.def" />

@@ -15,19 +15,7 @@ DLLEXPORT void set_int_val(int val)
 extern int int_val;
 #endif
 
-extern int get_val_in_exe(void);
-
 DLLEXPORT int get_val_in_dll()
 {
     return int_val;
-}
-
-DLLEXPORT int get_val_in_exe_from_dll()
-{
-    return get_val_in_exe();
-}
-
-DLLEXPORT int get_val_in_dll_from_dll()
-{
-    return get_val_in_dll();
 }

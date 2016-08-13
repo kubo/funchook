@@ -148,13 +148,13 @@ int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_
         page = (duckhook_page_t *)((size_t)pl + page_size);
     }
     if (VirtualAlloc(page, page_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE) == NULL) {
-        duckhook_set_error_message(duckhook, "Failed to commit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u, error=%lu)",
+        duckhook_set_error_message(duckhook, "Failed to commit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u, error=%lu)",
                                    page, pl, pl->num_used, i, page_size, GetLastError());
         return DUCKHOOK_ERROR_INTERNAL_ERROR;
     }
     pl->used[i] = 1;
     pl->num_used++;
-    duckhook_log(duckhook, "  commit page %p (base=%p(used=%d), idx=%d, size=%"SIZE_T_FMT"u)\n",
+    duckhook_log(duckhook, "  commit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u)\n",
                  page, pl, pl->num_used, i, page_size);
     *page_out = page;
     return 0;
@@ -233,13 +233,83 @@ int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
     return ok ? 0 : -1;
 }
 
+static IMAGE_IMPORT_DESCRIPTOR *get_image_import_descriptor(HMODULE hMod, DWORD *cnt)
+{
+    IMAGE_DOS_HEADER *doshdr;
+    IMAGE_NT_HEADERS *nthdr;
+    IMAGE_DATA_DIRECTORY *dir;
+
+    if (memcmp(hMod, "MZ", 2) != 0) {
+        return NULL;
+    }
+    doshdr = (IMAGE_DOS_HEADER*)hMod;
+    nthdr = (PIMAGE_NT_HEADERS)((size_t)hMod + doshdr->e_lfanew);
+    dir = &nthdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if (dir->VirtualAddress == 0) {
+        return NULL;
+    }
+    *cnt = dir->Size / sizeof(IMAGE_IMPORT_DESCRIPTOR);
+    return (IMAGE_IMPORT_DESCRIPTOR*)((size_t)hMod + dir->VirtualAddress);
+}
+
 void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
 {
+    char path[MAX_PATH];
+    HMODULE hMod;
+    BOOL ok;
+    IMAGE_IMPORT_DESCRIPTOR *desc_head, *desc;
+    uint8_t *fn = (uint8_t*)func;
+    size_t pos = 0;
+    DWORD cnt;
+
     if (duckhook_debug_file != NULL) {
-        char path[MAX_PATH];
         DWORD len = GetMappedFileNameA(GetCurrentProcess(), func, path, sizeof(path));
         if (len > 0) {
             duckhook_log(duckhook, "  func %p is in %.*s\n", func, (int)len, path);
+        }
+    }
+    if (fn[0] == 0xe9) {
+        fn = (fn + 5) + *(int*)(fn + 1);
+        duckhook_log(duckhook, "  relative jump to %p\n", fn);
+    }
+    if (fn[0] == 0xff && fn[1] == 0x25) {
+#ifdef CPU_X86_64
+        pos = (size_t)(fn + 6) + *(int*)(fn + 2);
+#else
+        pos = *(size_t*)(fn + 2);
+#endif
+        duckhook_log(duckhook, "  indirect jump to addresss at %p\n", (void*)pos);
+    }
+    if (pos == 0) {
+        return func;
+    }
+    ok = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, func, &hMod);
+    if (!ok) {
+        return func;
+    }
+
+    desc_head = get_image_import_descriptor(hMod, &cnt);
+    if (desc_head == NULL) {
+        return func;
+    }
+
+    for (desc = desc_head; desc->Name != 0; desc++) {
+        IMAGE_THUNK_DATA *addr_thunk = (IMAGE_THUNK_DATA*)((char*)hMod + desc->FirstThunk);
+
+        while (addr_thunk->u1.Function != 0) {
+            if (pos == (size_t)&addr_thunk->u1.Function) {
+                func = (void*)addr_thunk->u1.Function;
+                if (duckhook_debug_file != NULL) {
+                    DWORD len = GetMappedFileNameA(GetCurrentProcess(), func, path, sizeof(path));
+                    if (len > 0) {
+                        duckhook_log(duckhook, "  -> func %p in %.*s\n", func, (int)len, path);
+                    } else {
+                        duckhook_log(duckhook, "  -> func %p\n", func);
+                    }
+                }
+                return func;
+            }
+            addr_thunk++;
         }
     }
     return func;

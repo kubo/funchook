@@ -16,6 +16,9 @@ else
 fi
 AC_SUBST(DUCKHOOK_CPU)
 
+IF_WIN32='#'
+IF_OSX='#'
+
 if test "$EXEEXT"; then
   DUCKHOOK_OS=windows
   LIBDUCKHOOK_SO=duckhook.dll
@@ -26,7 +29,6 @@ else
   DUCKHOOK_OS=unix
   PIC_CFLAGS="-fPIC"
   LINK_SHARED="\$(CC) -shared"
-  IF_WIN32='#'
   case "$host_os" in
   linux*)
     LIBDUCKHOOK_SO=libduckhook.so
@@ -34,7 +36,7 @@ else
     ;;
   darwin*)
     LIBDUCKHOOK_SO=libduckhook.dylib
-    LIBS="-install_name @rpath/libduckhook.dylib"
+    IF_OSX=
     ;;
   esac
 fi
@@ -44,6 +46,7 @@ AC_SUBST(LIBDUCKHOOK_SO)
 AC_SUBST(LINK_SHARED)
 AC_SUBST(PIC_CFLAGS)
 AC_SUBST(IF_WIN32)
+AC_SUBST(IF_OSX)
 
 AC_CONFIG_HEADERS([src/config.h])
 

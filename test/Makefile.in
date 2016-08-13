@@ -11,8 +11,10 @@ LIBS = -L$(top_builddir)/src -lduckhook -Wl,-rpath,$(top_builddir)/src -L. -lduc
 LINK_SHARED = @LINK_SHARED@
 EXEEXT = @EXEEXT@
 DLLTOOL = $(CC:gcc=dlltool)
-@IF_WIN32@ OUT_IMPLIB = -Wl,--out-implib,duckhook_test.lib
-@IF_WIN32@ DUCKHOOK_TEST_LIB = duckhook_test_exe.lib
+SO_OBJS = $(srcdir)/libduckhook_test.c $(srcdir)/libduckhook_test2.c
+@IF_WIN32@LDFLAGS += -Wl,--out-implib,duckhook_test.lib
+@IF_WIN32@DUCKHOOK_TEST_LIB = duckhook_test_exe.lib
+@IF_OSX@LDFLAGS += -Wl,-undefined,dynamic_lookup
 
 VPATH = $(srcdir):../src
 
@@ -25,8 +27,8 @@ test: duckhook_test$(EXEEXT)
 duckhook_test$(EXEEXT): $(OBJS) @LIBDUCKHOOK_SO@ libduckhook_test.so
 	$(CC) -o duckhook_test$(EXEEXT) $(OBJS) $(LIBS)
 
-libduckhook_test.so: $(srcdir)/libduckhook_test.c $(DUCKHOOK_TEST_LIB)
-	$(LINK_SHARED) $(PIC_CFLAGS) $(CFLAGS) -o libduckhook_test.so $(srcdir)/libduckhook_test.c $(OUT_IMPLIB) $(DUCKHOOK_TEST_LIB)
+libduckhook_test.so: $(SO_OBJS) $(DUCKHOOK_TEST_LIB)
+	$(LINK_SHARED) $(LDFLAGS) $(PIC_CFLAGS) $(CFLAGS) -o libduckhook_test.so $(SO_OBJS) $(DUCKHOOK_TEST_LIB)
 
 clean:
 	$(RM) $(TESTEXE) *.o libduckhook_test.so

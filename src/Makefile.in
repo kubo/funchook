@@ -10,7 +10,8 @@ CFLAGS = @CFLAGS@ @PIC_CFLAGS@ -g -I. -I$(top_srcdir)/include -I$(DISTORM3_DIR)/
 LIBS = @LIBS@
 LINK_SHARED = @LINK_SHARED@
 
-@IF_WIN32@ LIBS += -lpsapi
+@IF_WIN32@LIBS += -lpsapi
+@IF_OSX@LDFLAGS += -install_name @rpath/libduckhook.dylib
 
 DUCKHOOK_OBJS = \
 	duckhook.o \
@@ -36,7 +37,7 @@ check:
 	cd ../test && $(MAKE) check
 
 @LIBDUCKHOOK_SO@: $(OBJS)
-	$(LINK_SHARED) -o @LIBDUCKHOOK_SO@ $(OBJS) $(LIBS)
+	$(LINK_SHARED) $(LDFLAGS) -o @LIBDUCKHOOK_SO@ $(OBJS) $(LIBS)
 
 duckhook.o: duckhook.c duckhook.h duckhook_internal.h
 duckhook_linux.o: duckhook_linux.c duckhook.h duckhook_internal.h

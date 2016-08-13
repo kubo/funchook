@@ -18,6 +18,9 @@
     <ClCompile Include="..\test\libduckhook_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\libduckhook_test2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="duckhook_test_exe.def">
