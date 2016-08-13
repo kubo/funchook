@@ -10,8 +10,8 @@ TODO
 
 * write documents.
 
-Supported Platform
------------------
+Supported Platforms
+-------------------
 
 * Linux x86_64 (*1)
 * Linux x86 (*1)
@@ -27,11 +27,12 @@ Compilation
 -----------
 
 ```shell
-$ git clone https://github.com/kubo/duckhook.git
-$ git submodule init
-$ git submodule update # clone diStorm3
-$ cd src
+$ git clone --recursive https://github.com/kubo/duckhook.git
+$ cd duckhook
+$ ./autogen.sh
+$ ./configure
 $ make
+$ make test
 ```
 
 Example
