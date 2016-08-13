@@ -147,7 +147,7 @@ int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_
         i = 0;
         page = (duckhook_page_t *)((size_t)pl + page_size);
     }
-    if (VirtualAlloc(page, page_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE) == NULL) {
+    if (VirtualAlloc(page, page_size, MEM_COMMIT, PAGE_READWRITE) == NULL) {
         duckhook_set_error_message(duckhook, "Failed to commit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u, error=%lu)",
                                    page, pl, pl->num_used, i, page_size, GetLastError());
         return DUCKHOOK_ERROR_INTERNAL_ERROR;
@@ -193,7 +193,8 @@ int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page)
 
 int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    BOOL ok = VirtualProtect(page, page_size, PAGE_EXECUTE_READ, NULL);
+    DWORD oldprot;
+    BOOL ok = VirtualProtect(page, page_size, PAGE_EXECUTE_READ, &oldprot);
     duckhook_log(duckhook, "  %sprotect page %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
                  ok ? "" : "failed to ",
                  page, page_size);
@@ -202,7 +203,8 @@ int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page)
 
 int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page)
 {
-    BOOL ok = VirtualProtect(page, page_size, PAGE_READWRITE, NULL);
+    DWORD oldprot;
+    BOOL ok = VirtualProtect(page, page_size, PAGE_READWRITE, &oldprot);
     duckhook_log(duckhook, "  %sunprotect page %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
                  ok ? "" : "failed to ",
                  page, page_size);
@@ -226,7 +228,8 @@ int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *st
 
 int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
 {
-    BOOL ok = VirtualProtect(mstate->addr, mstate->size, mstate->protect, NULL);
+    DWORD oldprot;
+    BOOL ok = VirtualProtect(mstate->addr, mstate->size, mstate->protect, &oldprot);
     duckhook_log(duckhook, "  %sprotect memory %p (size=%"SIZE_T_FMT"u)\n",
                  ok ? "" : "failed to ",
                  mstate->addr, mstate->size);
