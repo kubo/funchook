@@ -317,23 +317,30 @@ static int duckhook_install_internal(duckhook_t *duckhook, int flags)
     duckhook_page_t *page;
 
     if (duckhook->installed) {
-        return -1;
+        return DUCKHOOK_ERROR_ALREADY_INSTALLED;
     }
 
     for (page = duckhook->page_list; page != NULL; page = page->next) {
+        int rv = duckhook_page_protect(duckhook, page);
         int i;
 
-        duckhook_page_protect(duckhook, page);
+        if (rv != 0) {
+            return rv;
+        }
 
         for (i = 0; i < page->used; i++) {
             duckhook_entry_t *entry = &page->entries[i];
             mem_state_t mstate;
+            int rv = duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE);
 
-            if (duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE) != 0) {
-                return -1;
+            if (rv != 0) {
+                return rv;
             }
             memcpy(entry->target_func, entry->new_code, JUMP32_SIZE);
-            duckhook_unprotect_end(duckhook, &mstate);
+            rv = duckhook_unprotect_end(duckhook, &mstate);
+            if (rv != 0) {
+                return rv;
+            }
         }
     }
     duckhook->installed = 1;
@@ -345,7 +352,7 @@ static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
     duckhook_page_t *page;
 
     if (!duckhook->installed) {
-        return -1;
+        return DUCKHOOK_ERROR_NOT_INSTALLED;
     }
 
     for (page = duckhook->page_list; page != NULL; page = page->next) {
@@ -354,12 +361,16 @@ static int duckhook_uninstall_internal(duckhook_t *duckhook, int flags)
         for (i = 0; i < page->used; i++) {
             duckhook_entry_t *entry = &page->entries[i];
             mem_state_t mstate;
+            int rv = duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE);
 
-            if (duckhook_unprotect_begin(duckhook, &mstate, entry->target_func, JUMP32_SIZE) != 0) {
-                return -1;
+            if (rv != 0) {
+                return rv;
             }
             memcpy(entry->target_func, entry->old_code, JUMP32_SIZE);
-            duckhook_unprotect_end(duckhook, &mstate);
+            rv = duckhook_unprotect_end(duckhook, &mstate);
+            if (rv != 0) {
+                return rv;
+            }
         }
         duckhook_page_unprotect(duckhook, page);
     }
@@ -375,7 +386,7 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
        return -1;
     }
     if (duckhook->installed) {
-        return -1;
+        return DUCKHOOK_ERROR_ALREADY_INSTALLED;
     }
     for (page = duckhook->page_list; page != NULL; page = page_next) {
         page_next = page->next;
