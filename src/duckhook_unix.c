@@ -260,7 +260,7 @@ int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
     char errbuf[128];
     int rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_EXEC);
 
-    if (rv != 0) {
+    if (rv == 0) {
         duckhook_log(duckhook, "  protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
                      mstate->addr, mstate->size);
         return 0;
