@@ -73,7 +73,7 @@ static int hook_func(void)
 #define TEST_DUCKHOOK_INT(func) test_duckhook_int(func, #func, NULL, NULL)
 #define TEST_DUCKHOOK_INT2(func, func2) test_duckhook_int(func, #func, func2, #func2)
 
-void test_duckhook_int(int_func_t func, const char *func_str, int_func_t func2, const char *func2_str)
+void test_duckhook_int(volatile int_func_t func, const char *func_str, volatile int_func_t func2, const char *func2_str)
 {
     duckhook_t *duckhook = duckhook_create();
     int result;
