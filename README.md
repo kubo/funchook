@@ -111,12 +111,8 @@ If you modify duckhook itself and release it, the modifed part must be
 open under the GPL with or without the linking exception because duckhook
 itself is under the GPL.
 
-If you use duckhook in GPL'ed software, you need to use [diStorm3][]
-before [May 29, 2016][]. The license of [diStorm3][] was changed from the
-GPLv3 to 4-clause BSD license at that time. However 4-clause BSD license
-is [incompatible with the GPL][GPL-incompatibility].
+[diStorm3][] has been released under 3-clause BSD since Nov 19, 2016. The
+license is compatible with the GPL.
 
 [GPL linking exception]: https://en.wikipedia.org/wiki/GPL_linking_exception
 [diStorm3]: https://github.com/gdabah/distorm/
-[GPL-incompatibility]: https://www.gnu.org/licenses/license-list.html#OriginalBSD
-[May 29, 2016]: https://github.com/gdabah/distorm/commit/938e6ace4afdbc8b7b6f83d03efcd00dd52301e6
