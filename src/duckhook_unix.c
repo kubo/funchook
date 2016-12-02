@@ -385,11 +385,11 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
 const char *duckhook_strerror(int errnum, char *buf, size_t buflen)
 {
 #ifdef __linux
-    if (0 <= errnum && errno < _sys_nerr) {
+    if (0 <= errnum && errnum < _sys_nerr) {
         return _sys_errlist[errnum];
     }
 #else
-    if (0 <= errnum && errno < sys_nerr) {
+    if (0 <= errnum && errnum < sys_nerr) {
         return sys_errlist[errnum];
     }
 #endif
