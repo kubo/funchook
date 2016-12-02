@@ -15,6 +15,7 @@ LINK_SHARED = @LINK_SHARED@
 
 DUCKHOOK_OBJS = \
 	os_func.o \
+	printf_base.o \
 	duckhook.o \
 	duckhook_x86.o \
 	duckhook_@DUCKHOOK_OS@.o
@@ -49,11 +50,13 @@ duckhook.o: duckhook.c $(HEADERS)
 duckhook_linux.o: duckhook_linux.c $(HEADERS)
 duckhook_windows.o: duckhook_windows.c $(HEADERS)
 duckhook_x86.o: duckhook_x86.c $(HEADERS)
-os_func.o: os_func.c os_func.h
+os_func.o: os_func.c os_func.h printf_base.h
+printf_base.o: printf_base.c printf_base.h
+	$(CC) $(CFLAGS) -c -o $@ $< -DPFB_NO_EXTERNAL_FUNC -DPFB_MSVC_FORMAT
 
 # suppress warning: missing braces around initializer [-Wmissing-braces]
 insts.o: insts.c
-	$(CC) $(CFLAGS) -c -o insts.o $(DISTORM3_DIR)/src/insts.c -Wno-missing-braces
+	$(CC) $(CFLAGS) -c -o $@ $< -Wno-missing-braces
 
 clean:
 	$(RM) @LIBDUCKHOOK_SO@ $(OBJS)

@@ -63,8 +63,8 @@ struct duckhook_page {
 struct duckhook {
     int installed;
     duckhook_page_t *page_list;
-    FILE *logfp;
     char error_message[DUCKHOOK_MAX_ERROR_MESSAGE_LEN];
+    duckhook_io_t io;
 };
 
 char *duckhook_debug_file;
@@ -190,13 +190,9 @@ void duckhook_log(duckhook_t *duckhook, const char *fmt, ...)
 void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...)
 {
     va_list ap;
-    int rv;
 
     va_start(ap, fmt);
-    rv = vsnprintf(duckhook->error_message, DUCKHOOK_MAX_ERROR_MESSAGE_LEN, fmt, ap);
-    if (rv == -1 || rv >= DUCKHOOK_MAX_ERROR_MESSAGE_LEN) {
-        duckhook->error_message[DUCKHOOK_MAX_ERROR_MESSAGE_LEN - 1] = '\0';
-    }
+    duckhook_vsnprintf(duckhook->error_message, DUCKHOOK_MAX_ERROR_MESSAGE_LEN, fmt, ap);
     va_end(ap);
     va_start(ap, fmt);
     duckhook_logv(duckhook, 1, fmt, ap);
@@ -205,31 +201,34 @@ void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...)
 
 static void duckhook_logv(duckhook_t *duckhook, int set_error, const char *fmt, va_list ap)
 {
-    FILE *fp;
+    duckhook_io_t iobuf;
+    duckhook_io_t *io = &iobuf;
+
     if (duckhook_debug_file == NULL) {
         return;
     }
     if (duckhook == NULL) {
-        fp = fopen(duckhook_debug_file, "a");
-    } else if (duckhook->logfp == NULL) {
-        fp = duckhook->logfp = fopen(duckhook_debug_file, "a");
+        duckhook_io_open(&iobuf, duckhook_debug_file, DUCKHOOK_IO_APPEND);
+    } else if (duckhook->io.file == INVALID_FILE_HANDLE) {
+        duckhook_io_open(&duckhook->io, duckhook_debug_file, DUCKHOOK_IO_APPEND);
+        io = &duckhook->io;
     } else {
-        fp = duckhook->logfp;
+        io = &duckhook->io;
     }
-    if (fp == NULL) {
+    if (io->file == INVALID_FILE_HANDLE) {
         return;
     }
     if (set_error) {
-        fputs("  ", fp);
+        duckhook_io_puts("  ", io);
     }
-    vfprintf(fp, fmt, ap);
+    duckhook_io_vprintf(io, fmt, ap);
     if (set_error) {
-        fputc('\n', fp);
+        duckhook_io_putc('\n', io);
     }
     if (duckhook == NULL) {
-        fclose(fp);
+        duckhook_io_close(io);
     } else {
-        fflush(fp);
+        duckhook_io_flush(io);
     }
 }
 
@@ -239,15 +238,15 @@ static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...)
     va_start(ap, fmt);
     duckhook_logv(duckhook, 0, fmt, ap);
     va_end(ap);
-    if (duckhook != NULL && duckhook->logfp != NULL) {
-        fclose(duckhook->logfp);
-        duckhook->logfp = NULL;
+    if (duckhook != NULL && duckhook->io.file != INVALID_FILE_HANDLE) {
+        duckhook_io_close(&duckhook->io);
     }
 }
 
 static duckhook_t *duckhook_create_internal(void)
 {
     duckhook_t *duckhook = calloc(1, sizeof(duckhook_t));
+    duckhook->io.file = INVALID_FILE_HANDLE;
     if (mem_size == 0) {
         mem_size = duckhook_page_size(duckhook);
         num_entries_in_page = (mem_size - offsetof(duckhook_page_t, entries)) / sizeof(duckhook_entry_t);
@@ -392,9 +391,7 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
         page_next = page->next;
         duckhook_page_free(duckhook, page);
     }
-    if (duckhook->logfp != NULL) {
-        fclose(duckhook->logfp);
-    }
+    duckhook_io_close(&duckhook->io);
     free(duckhook);
     return 0;
 }

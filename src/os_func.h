@@ -42,4 +42,32 @@ int duckhook_munmap(void *addr, size_t length);
 int duckhook_mprotect(void *addr, size_t len, int prot);
 #endif
 
+int duckhook_snprintf(char *str, size_t size, const char *format, ...);
+int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
+
+typedef struct {
+#ifdef WIN32
+#define INVALID_FILE_HANDLE INVALID_HANDLE_VALUE
+    void *file;
+    int append;
+#else
+#define INVALID_FILE_HANDLE -1
+    int file;
+#endif
+    char *ptr;
+    char *end;
+    char buf[128];
+} duckhook_io_t;
+
+#define DUCKHOOK_IO_READ    0
+#define DUCKHOOK_IO_WRITE   1
+#define DUCKHOOK_IO_APPEND  2
+int duckhook_io_open(duckhook_io_t *io, const char *path, int mode);
+int duckhook_io_close(duckhook_io_t *io);
+char *duckhook_io_gets(char *s, int size, duckhook_io_t *io);
+int duckhook_io_putc(char c, duckhook_io_t *io);
+int duckhook_io_puts(const char *s, duckhook_io_t *io);
+int duckhook_io_vprintf(duckhook_io_t *io, const char *format, va_list ap);
+int duckhook_io_flush(duckhook_io_t *io);
+
 #endif /* OS_FUNC_H */

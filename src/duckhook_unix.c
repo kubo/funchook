@@ -50,12 +50,11 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-static size_t page_size;
+/* hard coded not to use sysconf(_SC_PAGE_SIZE) */
+static size_t page_size = 4096;
 
 size_t duckhook_page_size(duckhook_t *duckhook)
 {
-    page_size = sysconf(_SC_PAGE_SIZE);
-    duckhook_log(duckhook, "  page_size=%"SIZE_T_FMT"u\n", page_size);
     return page_size;
 }
 
@@ -86,17 +85,17 @@ static char scan_address(const char **str, size_t *addr_p)
 static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_out)
 {
 #if defined(__linux)
-    FILE *fp = fopen("/proc/self/maps", "r");
+    duckhook_io_t io;
     char buf[PATH_MAX];
     size_t prev_end = 0;
 
-    if (fp == NULL) {
+    if (duckhook_io_open(&io, "/proc/self/maps", DUCKHOOK_IO_READ) != 0) {
         duckhook_set_error_message(duckhook, "Failed to open /proc/self/maps (%s)",
                                    duckhook_strerror(errno, buf, sizeof(buf)));
         return DUCKHOOK_ERROR_INTERNAL_ERROR;
     }
 
-    while (fgets(buf, sizeof(buf), fp) != NULL) {
+    while (duckhook_io_gets(buf, sizeof(buf), &io) != NULL) {
         const char *str = buf;
         size_t start, end;
 
@@ -112,7 +111,7 @@ static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_o
                     duckhook_log(duckhook, "  -- Use address %p for function %p\n",
                                  *addr_out, func_addr);
                     duckhook_log(duckhook, "  process map: %s", buf);
-                    fclose(fp);
+                    duckhook_io_close(&io);
                     return 0;
                 } else {
                     prev_end = end;
@@ -121,7 +120,7 @@ static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_o
         }
         duckhook_log(duckhook, "  process map: %s", buf);
     }
-    fclose(fp);
+    duckhook_io_close(&io);
     duckhook_set_error_message(duckhook, "Could not find a free region after %p",
                                func_addr);
     return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
@@ -394,6 +393,6 @@ const char *duckhook_strerror(int errnum, char *buf, size_t buflen)
         return sys_errlist[errnum];
     }
 #endif
-    snprintf(buf, buflen, "Unknown error (%d)", errnum);
+    duckhook_snprintf(buf, buflen, "Unknown error (%d)", errnum);
     return buf;
 }
