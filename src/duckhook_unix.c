@@ -61,6 +61,28 @@ size_t duckhook_page_size(duckhook_t *duckhook)
 
 #ifdef CPU_X86_64
 
+#if defined(__linux)
+static char scan_address(const char **str, size_t *addr_p)
+{
+    size_t addr = 0;
+    const char *s = *str;
+
+    while (1) {
+        char c = *(s++);
+
+        if ('0' <= c && c <= '9') {
+            addr = (addr * 16) + (c - '0');
+        } else if ('a' <= c && c <= 'f') {
+            addr = (addr * 16) + (c - 'a' + 10);
+        } else {
+            *str = s;
+            *addr_p = addr;
+            return c;
+        }
+    }
+}
+#endif
+
 static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_out)
 {
 #if defined(__linux)
@@ -75,8 +97,11 @@ static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_o
     }
 
     while (fgets(buf, sizeof(buf), fp) != NULL) {
+        const char *str = buf;
         size_t start, end;
-        if (sscanf(buf, "%"SIZE_T_FMT"x-%"SIZE_T_FMT"x", &start, &end) == 2) {
+
+        if (scan_address(&str, &start) == '-' && scan_address(&str, &end) == ' ') {
+            /* same with sscanf(buf, "%lx-%lx ", &start, &end) == 2 */
             if (prev_end == 0) {
                 if (end >= (size_t)func_addr) {
                     prev_end = end;
@@ -358,16 +383,17 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
     return func;
 }
 
-char *duckhook_strerror(int errnum, char *buf, size_t buflen)
+const char *duckhook_strerror(int errnum, char *buf, size_t buflen)
 {
-#if (!defined(__linux)) || (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
-    /* XSI-compliant strerror_r */
-    if (strerror_r(errnum, buf, buflen) != 0) {
-        snprintf(buf, buflen, "Unknown error %d", errnum);
+#ifdef __linux
+    if (0 <= errnum && errno < _sys_nerr) {
+        return _sys_errlist[errnum];
     }
-    return buf;
 #else
-    /* GNU-specific strerror_r */
-    return strerror_r(errnum, buf, buflen);
+    if (0 <= errnum && errno < sys_nerr) {
+        return sys_errlist[errnum];
+    }
 #endif
+    snprintf(buf, buflen, "Unknown error (%d)", errnum);
+    return buf;
 }

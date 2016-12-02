@@ -74,7 +74,7 @@ int duckhook_write_jump32(duckhook_t *duckhook, const uint8_t *src, const uint8_
 {
     out[0] = 0xe9;
     *(int*)(out + 1) = (int)(dst - (src + 5));
-    duckhook_log(duckhook, "  Write jump32 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    duckhook_log(duckhook, "  Write jump32 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }

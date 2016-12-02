@@ -31,6 +31,7 @@
 #ifndef DUCKHOOK_INTERNAL_H
 #define DUCKHOOK_INTERNAL_H 1
 #include "duckhook.h"
+#include "os_func.h"
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -121,7 +122,7 @@ int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *ad
 int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate);
 
 void *duckhook_resolve_func(duckhook_t *duckhook, void *func);
-char *duckhook_strerror(int errnum, char *buf, size_t buflen);
+const char *duckhook_strerror(int errnum, char *buf, size_t buflen);
 
 /* Functions in duckhook_x86.c */
 

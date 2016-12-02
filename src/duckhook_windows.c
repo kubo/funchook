@@ -53,7 +53,7 @@ static const char *to_errmsg(DWORD err, char *buf, size_t bufsiz)
 {
     size_t len = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                                 NULL, err, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-                                buf, bufsiz, NULL);
+                                buf, (DWORD)bufsiz, NULL);
     if (len == 0) {
         return "Unknown Error";
     }

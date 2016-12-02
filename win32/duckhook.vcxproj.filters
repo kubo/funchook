@@ -51,12 +51,18 @@
     <ClCompile Include="..\distorm\src\wstring.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\os_func.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\duckhook_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\duckhook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\os_func.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -14,6 +14,7 @@ LINK_SHARED = @LINK_SHARED@
 @IF_OSX@LDFLAGS += -install_name @rpath/libduckhook.dylib
 
 DUCKHOOK_OBJS = \
+	os_func.o \
 	duckhook.o \
 	duckhook_x86.o \
 	duckhook_@DUCKHOOK_OS@.o
@@ -29,6 +30,11 @@ DISTORM3_OBJS = \
 	distorm.o \
 	decoder.o
 
+HEADERS = \
+	duckhook.h \
+	duckhook_internal.h \
+	os_func.h
+
 OBJS = $(DUCKHOOK_OBJS) $(DISTORM3_OBJS)
 
 all: @LIBDUCKHOOK_SO@
@@ -39,10 +45,11 @@ check:
 @LIBDUCKHOOK_SO@: $(OBJS)
 	$(LINK_SHARED) $(LDFLAGS) -o @LIBDUCKHOOK_SO@ $(OBJS) $(LIBS)
 
-duckhook.o: duckhook.c duckhook.h duckhook_internal.h
-duckhook_linux.o: duckhook_linux.c duckhook.h duckhook_internal.h
-duckhook_windows.o: duckhook_windows.c duckhook.h duckhook_internal.h
-duckhook_x86.o: duckhook_x86.c duckhook.h duckhook_internal.h
+duckhook.o: duckhook.c $(HEADERS)
+duckhook_linux.o: duckhook_linux.c $(HEADERS)
+duckhook_windows.o: duckhook_windows.c $(HEADERS)
+duckhook_x86.o: duckhook_x86.c $(HEADERS)
+os_func.o: os_func.c os_func.h
 
 # suppress warning: missing braces around initializer [-Wmissing-braces]
 insts.o: insts.c
