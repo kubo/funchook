@@ -101,7 +101,7 @@ typedef struct {
 typedef struct duckhook_page duckhook_page_t;
 
 /* Functions in duckhook.c */
-extern char *duckhook_debug_file;
+extern char duckhook_debug_file[];
 #ifdef CPU_X86_64
 int duckhook_page_avail(duckhook_t *duckhook, duckhook_page_t *page, int idx, uint8_t *addr, rip_displacement_t *disp);
 #else

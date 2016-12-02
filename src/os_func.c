@@ -109,6 +109,18 @@ int duckhook_mprotect(void *addr, size_t len, int prot)
 }
 #endif
 
+char *duckhook_strlcpy(char *dest, const char *src, size_t n)
+{
+    if (n != 0) {
+        char *d = dest;
+        while (--n > 0 && *src) {
+            *(d++) = *(src++);
+        }
+        *d = '\0';
+    }
+    return dest;
+}
+
 int duckhook_snprintf(char *str, size_t size, const char *format, ...)
 {
     va_list ap;

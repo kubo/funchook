@@ -42,6 +42,11 @@ int duckhook_munmap(void *addr, size_t length);
 int duckhook_mprotect(void *addr, size_t len, int prot);
 #endif
 
+#define strlcpy duckhook_strlcpy
+#define snprintf duckhook_snprintf
+#define vsnprintf duckhook_vsnprintf
+
+char *duckhook_strlcpy(char *dest, const char *src, size_t n);
 int duckhook_snprintf(char *str, size_t size, const char *format, ...);
 int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 

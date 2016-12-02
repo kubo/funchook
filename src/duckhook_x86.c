@@ -202,7 +202,7 @@ void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline)
     _DecodeResult decres;
     unsigned int i;
 
-    if (duckhook_debug_file == NULL) {
+    if (*duckhook_debug_file == '\0') {
         return;
     }
 

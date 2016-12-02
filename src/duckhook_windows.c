@@ -339,7 +339,7 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
     size_t pos = 0;
     DWORD cnt;
 
-    if (duckhook_debug_file != NULL) {
+    if (*duckhook_debug_file != '\0') {
         DWORD len = GetMappedFileNameA(GetCurrentProcess(), func, path, sizeof(path));
         if (len > 0) {
             duckhook_log(duckhook, "  func %p is in %.*s\n", func, (int)len, path);
@@ -376,7 +376,7 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
         while (addr_thunk->u1.Function != 0) {
             if (pos == (size_t)&addr_thunk->u1.Function) {
                 func = (void*)addr_thunk->u1.Function;
-                if (duckhook_debug_file != NULL) {
+                if (*duckhook_debug_file != '\0') {
                     DWORD len = GetMappedFileNameA(GetCurrentProcess(), func, path, sizeof(path));
                     if (len > 0) {
                         duckhook_log(duckhook, "  -> func %p in %.*s\n", func, (int)len, path);

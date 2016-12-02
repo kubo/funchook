@@ -35,8 +35,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 #ifdef WIN32
 #include <windows.h>
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif
 #endif
 #include "duckhook.h"
 #include "duckhook_internal.h"
@@ -67,7 +71,7 @@ struct duckhook {
     duckhook_io_t io;
 };
 
-char *duckhook_debug_file;
+char duckhook_debug_file[PATH_MAX];
 
 static size_t mem_size;
 static size_t num_entries_in_page;
@@ -166,15 +170,10 @@ int duckhook_destroy(duckhook_t *duckhook)
 
 int duckhook_set_debug_file(const char *name)
 {
-    if (duckhook_debug_file != NULL) {
-        free(duckhook_debug_file);
-        duckhook_debug_file = NULL;
-    }
     if (name != NULL) {
-        duckhook_debug_file = strdup(name);
-        if (duckhook_debug_file == NULL) {
-            return -1;
-        }
+        strlcpy(duckhook_debug_file, name, sizeof(duckhook_debug_file));
+    } else {
+        duckhook_debug_file[0] = '\0';
     }
     return 0;
 }
@@ -204,7 +203,7 @@ static void duckhook_logv(duckhook_t *duckhook, int set_error, const char *fmt, 
     duckhook_io_t iobuf;
     duckhook_io_t *io = &iobuf;
 
-    if (duckhook_debug_file == NULL) {
+    if (*duckhook_debug_file == '\0') {
         return;
     }
     if (duckhook == NULL) {
