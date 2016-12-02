@@ -50,12 +50,23 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-/* hard coded not to use sysconf(_SC_PAGE_SIZE) */
-static size_t page_size = 4096;
+const size_t page_size = PAGE_SIZE;
 
-size_t duckhook_page_size(duckhook_t *duckhook)
+duckhook_t *duckhook_alloc(void)
 {
-    return page_size;
+    size_t size = ROUND_UP(duckhook_size, page_size);
+    void *mem = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mem == (void*)-1) {
+        return NULL;
+    }
+    return (duckhook_t*)mem;
+}
+
+int duckhook_free(duckhook_t *duckhook)
+{
+    size_t size = ROUND_UP(duckhook_size, page_size);
+    munmap(duckhook, size);
+    return 0;
 }
 
 #ifdef CPU_X86_64

@@ -84,6 +84,16 @@
 
 #define TRAMPOLINE_SIZE (JUMP32_SIZE + (MAX_INSN_LEN - 1) + JUMP32_SIZE)
 
+/* This must be same with sysconf(_SC_PAGE_SIZE) on Unix
+ * or the dwPageSize member of the SYSTEM_INFO structure on Windows.
+ */
+#define PAGE_SIZE 0x1000 /* 4k */
+
+/* This must be same with the dwAllocationGranularity
+ * member of the SYSTEM_INFO structure on Windows.
+ */
+#define ALLOCATION_UNIT 0x10000 /* 64k */
+
 typedef struct {
     void *addr;
     size_t size;
@@ -101,6 +111,7 @@ typedef struct {
 typedef struct duckhook_page duckhook_page_t;
 
 /* Functions in duckhook.c */
+extern const size_t duckhook_size;
 extern char duckhook_debug_file[];
 #ifdef CPU_X86_64
 int duckhook_page_avail(duckhook_t *duckhook, duckhook_page_t *page, int idx, uint8_t *addr, rip_displacement_t *disp);
@@ -111,8 +122,12 @@ void duckhook_log(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__f
 void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 
 /* Functions in duckhook_linux.c & duckhook_windows.c */
+extern const size_t page_size;
+extern const size_t allocation_unit; /* windows only */
 
-size_t duckhook_page_size(duckhook_t *duckhook);
+duckhook_t *duckhook_alloc(void);
+int duckhook_free(duckhook_t *duckhook);
+
 int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp);
 int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page);
 int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page);

@@ -73,7 +73,8 @@ struct duckhook {
 
 char duckhook_debug_file[PATH_MAX];
 
-static size_t mem_size;
+const size_t duckhook_size = sizeof(duckhook_t);
+
 static size_t num_entries_in_page;
 
 static void duckhook_logv(duckhook_t *duckhook, int set_error, const char *fmt, va_list ap);
@@ -244,12 +245,23 @@ static void duckhook_log_end(duckhook_t *duckhook, const char *fmt, ...)
 
 static duckhook_t *duckhook_create_internal(void)
 {
-    duckhook_t *duckhook = calloc(1, sizeof(duckhook_t));
+    duckhook_t *duckhook = duckhook_alloc();
+    if (duckhook == NULL) {
+        return NULL;
+    }
     duckhook->io.file = INVALID_FILE_HANDLE;
-    if (mem_size == 0) {
-        mem_size = duckhook_page_size(duckhook);
-        num_entries_in_page = (mem_size - offsetof(duckhook_page_t, entries)) / sizeof(duckhook_entry_t);
-        duckhook_log(duckhook, "  num_entries_in_page=%"SIZE_T_FMT"u\n", num_entries_in_page);
+    if (num_entries_in_page == 0) {
+        num_entries_in_page = (page_size - offsetof(duckhook_page_t, entries)) / sizeof(duckhook_entry_t);
+        duckhook_log(duckhook,
+#ifdef WIN32
+                     "  allocation_unit=%"SIZE_T_FMT"u\n"
+#endif
+                     "  page_size=%"SIZE_T_FMT"u\n"
+                     "  num_entries_in_page=%"SIZE_T_FMT"u\n",
+#ifdef WIN32
+                     allocation_unit,
+#endif
+                     page_size, num_entries_in_page);
     }
     return duckhook;
 }
@@ -391,7 +403,7 @@ static int duckhook_destroy_internal(duckhook_t *duckhook)
         duckhook_page_free(duckhook, page);
     }
     duckhook_io_close(&duckhook->io);
-    free(duckhook);
+    duckhook_free(duckhook);
     return 0;
 }
 
