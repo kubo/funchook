@@ -49,6 +49,8 @@ int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 /* no function for now */
 #else
 /* os_func_unix.c */
+extern int duckhook_os_errno;
+long duckhook_os_syscall(long, ...);
 int duckhook_os_open(const char *pathname, int flags, ...);
 int duckhook_os_close(int fd);
 ssize_t duckhook_os_read(int fd, void *buf, size_t count);
@@ -57,6 +59,9 @@ void *duckhook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, o
 int duckhook_os_munmap(void *addr, size_t length);
 int duckhook_os_mprotect(void *addr, size_t len, int prot);
 
+#undef errno
+#define errno duckhook_os_errno
+#define syscall duckhook_os_syscall
 #define open duckhook_os_open
 #define close duckhook_os_close
 #define read duckhook_os_read

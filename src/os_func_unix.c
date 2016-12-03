@@ -36,6 +36,8 @@
 #include <errno.h>
 #include "os_func.h"
 
+int duckhook_os_errno;
+
 /* Dont' include unistd.h on macOS.
  * macOS defines syscall as int syscall(int, ...).
  * But it truncates syscall(SYS_mmap, ...)'s return value to 32 bits.

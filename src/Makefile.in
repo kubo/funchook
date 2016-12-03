@@ -22,6 +22,9 @@ DUCKHOOK_OBJS = \
 	duckhook_x86.o \
 	duckhook_@DUCKHOOK_OS@.o
 
+@IF_LINUX@DUCKHOOK_OBJS += duckhook_syscall.o
+@IF_OSX@DUCKHOOK_OBJS += duckhook_syscall.o
+
 DISTORM3_OBJS = \
 	mnemonics.o \
 	wstring.o \
