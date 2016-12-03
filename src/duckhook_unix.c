@@ -309,9 +309,8 @@ int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
 void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
 {
 #ifdef __GLIBC__
-    Dl_info dli;
+    struct link_map *lmap, *lm;
     const ElfW(Ehdr) *ehdr;
-    struct link_map *lmap;
     const ElfW(Dyn) *dyn;
     const ElfW(Sym) *symtab = NULL;
     const ElfW(Sym) *symtab_end = NULL;
@@ -319,41 +318,31 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
     size_t strtab_size = 0;
     int i;
 
-    if (dladdr(func, &dli) == 0) {
-        duckhook_log(duckhook, "  func %p is not in a module. Use it anyway.\n", func);
-        return func;
-    }
-    duckhook_log(duckhook, "  func %p(%s+0x%"SIZE_T_FMT"x) in module %s(base %p)\n",
-                 func,
-                 dli.dli_sname ? dli.dli_sname : dli.dli_fname,
-                 dli.dli_sname ? ((size_t)func - (size_t)dli.dli_saddr) :
-                 ((size_t)func - (size_t)dli.dli_fbase),
-                 dli.dli_fname, dli.dli_fbase);
-    ehdr = (ElfW(Ehdr) *)dli.dli_fbase;
-    if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
-        duckhook_log(duckhook, "  not a valid ELF module %s.\n", dli.dli_fname);
-        return func;
-    }
-    switch (ehdr->e_type) {
-    case ET_EXEC:
-        lmap = _r_debug.r_map;
-        break;
-    case ET_DYN:
-        for (lmap = _r_debug.r_map; lmap != NULL; lmap = lmap->l_next) {
-            if ((void*)lmap->l_addr == dli.dli_fbase) {
-                break;
+    lmap = NULL;
+    for (lm = _r_debug.r_map; lm != NULL; lm = lm->l_next) {
+        if ((void*)lm->l_addr <= func) {
+            if (lmap == NULL) {
+                lmap = lm;
+            } else if (lmap->l_addr > lm->l_addr) {
+                lmap = lm;
             }
         }
-        if (lmap == NULL) {
-            duckhook_log(duckhook, "  could not find link_map\n");
-            return func;
-        }
-        break;
-    default:
-        duckhook_log(duckhook, "  ELF type is neither ET_EXEC nor ET_DYN.\n");
+    }
+    if (lmap == NULL) {
         return func;
     }
-    duckhook_log(duckhook, "  link_map=%p\n", lmap);
+    if (lmap->l_addr != 0) {
+        ehdr = (ElfW(Ehdr) *)lmap->l_addr;
+        if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
+            duckhook_log(duckhook, "  not a valid ELF module %s.\n", lmap->l_name);
+            return func;
+        }
+        if (ehdr->e_type != ET_EXEC && ehdr->e_type != ET_DYN) {
+          duckhook_log(duckhook, "  ELF type is neither ET_EXEC nor ET_DYN.\n");
+          return func;
+        }
+    }
+    duckhook_log(duckhook, "  link_map addr=%p, name=%s\n", (void*)lmap->l_addr, lmap->l_name);
     dyn = lmap->l_ld;
 
     for (i = 0; dyn[i].d_tag != DT_NULL; i++) {
@@ -381,8 +370,8 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
                 fn = dlsym(RTLD_NEXT, strtab + symtab->st_name);
             }
             if (fn != NULL) {
-                duckhook_log(duckhook, "  change func address from %p to %p\n",
-                             func, fn);
+                duckhook_log(duckhook, "  change %s address from %p to %p\n",
+                             strtab + symtab->st_name, func, fn);
                 func = fn;
             }
             break;
