@@ -37,8 +37,11 @@ char *duckhook_strlcpy(char *dest, const char *src, size_t n);
 int duckhook_snprintf(char *str, size_t size, const char *format, ...);
 int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
+#undef strlcpy
 #define strlcpy duckhook_strlcpy
+#undef snprintf
 #define snprintf duckhook_snprintf
+#undef vsnprintf
 #define vsnprintf duckhook_vsnprintf
 
 #ifdef WIN32

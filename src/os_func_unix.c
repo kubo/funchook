@@ -48,7 +48,7 @@ int duckhook_os_open(const char *pathname, int flags, ...)
     va_list ap;
 
     va_start(ap, flags);
-    mode = va_arg(ap, mode_t);
+    mode = (mode_t)va_arg(ap, long);
     va_end(ap);
     return (int)syscall(SYS_open, pathname, flags, mode);
 }

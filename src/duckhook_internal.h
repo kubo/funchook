@@ -87,6 +87,7 @@
 /* This must be same with sysconf(_SC_PAGE_SIZE) on Unix
  * or the dwPageSize member of the SYSTEM_INFO structure on Windows.
  */
+#undef PAGE_SIZE
 #define PAGE_SIZE 0x1000 /* 4k */
 
 /* This must be same with the dwAllocationGranularity
