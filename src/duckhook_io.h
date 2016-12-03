@@ -28,39 +28,37 @@
  * You should have received a copy of the GNU General Public License
  * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OS_FUNC_H
-#define OS_FUNC_H 1
+#ifndef DUCKHOOK_IO_H
+#define DUCKHOOK_IO_H 1
 #include <stdarg.h>
 
-/* os_func.c */
-char *duckhook_strlcpy(char *dest, const char *src, size_t n);
-int duckhook_snprintf(char *str, size_t size, const char *format, ...);
-int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
-
-#define strlcpy duckhook_strlcpy
-#define snprintf duckhook_snprintf
-#define vsnprintf duckhook_vsnprintf
-
+typedef struct {
 #ifdef WIN32
-/* os_func_windows.c */
-/* no function for now */
+#define INVALID_FILE_HANDLE INVALID_HANDLE_VALUE
+    void *file;
+    int append;
 #else
-/* os_func_unix.c */
-int duckhook_os_open(const char *pathname, int flags, ...);
-int duckhook_os_close(int fd);
-ssize_t duckhook_os_read(int fd, void *buf, size_t count);
-ssize_t duckhook_os_write(int fd, const void *buf, size_t count);
-void *duckhook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-int duckhook_os_munmap(void *addr, size_t length);
-int duckhook_os_mprotect(void *addr, size_t len, int prot);
-
-#define open duckhook_os_open
-#define close duckhook_os_close
-#define read duckhook_os_read
-#define write duckhook_os_write
-#define mmap duckhook_os_mmap
-#define munmap duckhook_os_munmap
-#define mprotect duckhook_os_mprotect
+#define INVALID_FILE_HANDLE -1
+    int file;
 #endif
+    char *ptr;
+    char *end;
+    char buf[128];
+} duckhook_io_t;
 
-#endif /* OS_FUNC_H */
+#define DUCKHOOK_IO_READ    0
+#define DUCKHOOK_IO_WRITE   1
+#define DUCKHOOK_IO_APPEND  2
+
+/*
+ * stdio-like functions
+ */
+int duckhook_io_open(duckhook_io_t *io, const char *path, int mode);
+int duckhook_io_close(duckhook_io_t *io);
+char *duckhook_io_gets(char *s, int size, duckhook_io_t *io);
+int duckhook_io_putc(char c, duckhook_io_t *io);
+int duckhook_io_puts(const char *s, duckhook_io_t *io);
+int duckhook_io_vprintf(duckhook_io_t *io, const char *format, va_list ap);
+int duckhook_io_flush(duckhook_io_t *io);
+
+#endif /* DUCKHOOK_IO_H */

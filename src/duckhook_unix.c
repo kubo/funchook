@@ -44,6 +44,7 @@
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
+#include "duckhook_io.h"
 #include "duckhook_internal.h"
 
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)

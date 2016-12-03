@@ -43,6 +43,7 @@
 #endif
 #endif
 #include "duckhook.h"
+#include "duckhook_io.h"
 #include "duckhook_internal.h"
 
 #define DUCKHOOK_MAX_ERROR_MESSAGE_LEN 200

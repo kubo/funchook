@@ -28,39 +28,65 @@
  * You should have received a copy of the GNU General Public License
  * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OS_FUNC_H
-#define OS_FUNC_H 1
-#include <stdarg.h>
-
-/* os_func.c */
-char *duckhook_strlcpy(char *dest, const char *src, size_t n);
-int duckhook_snprintf(char *str, size_t size, const char *format, ...);
-int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
-
-#define strlcpy duckhook_strlcpy
-#define snprintf duckhook_snprintf
-#define vsnprintf duckhook_vsnprintf
-
-#ifdef WIN32
-/* os_func_windows.c */
-/* no function for now */
-#else
-/* os_func_unix.c */
-int duckhook_os_open(const char *pathname, int flags, ...);
-int duckhook_os_close(int fd);
-ssize_t duckhook_os_read(int fd, void *buf, size_t count);
-ssize_t duckhook_os_write(int fd, const void *buf, size_t count);
-void *duckhook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-int duckhook_os_munmap(void *addr, size_t length);
-int duckhook_os_mprotect(void *addr, size_t len, int prot);
-
-#define open duckhook_os_open
-#define close duckhook_os_close
-#define read duckhook_os_read
-#define write duckhook_os_write
-#define mmap duckhook_os_mmap
-#define munmap duckhook_os_munmap
-#define mprotect duckhook_os_mprotect
+#if defined __linux
+#define _GNU_SOURCE
 #endif
+#include <sys/types.h>
+#include <sys/syscall.h>
+#include <errno.h>
+#include "os_func.h"
 
-#endif /* OS_FUNC_H */
+/* Dont' include unistd.h on macOS.
+ * macOS defines syscall as int syscall(int, ...).
+ * But it truncates syscall(SYS_mmap, ...)'s return value to 32 bits.
+ */
+long syscall(long, ...);
+
+int duckhook_os_open(const char *pathname, int flags, ...)
+{
+    mode_t mode;
+    va_list ap;
+
+    va_start(ap, flags);
+    mode = va_arg(ap, mode_t);
+    va_end(ap);
+    return (int)syscall(SYS_open, pathname, flags, mode);
+}
+
+int duckhook_os_close(int fd)
+{
+    return (int)syscall(SYS_close, fd);
+}
+
+ssize_t duckhook_os_read(int fd, void *buf, size_t count)
+{
+    return (ssize_t)syscall(SYS_read, fd, buf, count);
+}
+
+ssize_t duckhook_os_write(int fd, const void *buf, size_t count)
+{
+    return (ssize_t)syscall(SYS_write, fd, buf, count);
+}
+
+void *duckhook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+#if defined(__linux) && defined(__i386)
+    if (offset & 4095) {
+        errno = EINVAL;
+        return (void*)-1;
+    }
+    return (void*)syscall(SYS_mmap2, addr, length, prot, flags, fd, (long)(offset >> 12));
+#else
+    return (void*)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#endif
+}
+
+int duckhook_os_munmap(void *addr, size_t length)
+{
+    return (int)syscall(SYS_munmap, addr, length);
+}
+
+int duckhook_os_mprotect(void *addr, size_t len, int prot)
+{
+    return (int)syscall(SYS_mprotect, addr, len, prot);
+}

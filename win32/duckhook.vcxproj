@@ -168,14 +168,17 @@
     <ClCompile Include="..\distorm\src\textdefs.c" />
     <ClCompile Include="..\distorm\src\wstring.c" />
     <ClCompile Include="..\src\duckhook.c" />
+    <ClCompile Include="..\src\duckhook_io.c" />
     <ClCompile Include="..\src\duckhook_windows.c" />
     <ClCompile Include="..\src\duckhook_x86.c" />
     <ClCompile Include="..\src\os_func.c" />
+    <ClCompile Include="..\src\os_func_windows.c" />
     <ClCompile Include="..\src\printf_base.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\duckhook.h" />
     <ClInclude Include="..\src\duckhook_internal.h" />
+    <ClInclude Include="..\src\duckhook_io.h" />
     <ClInclude Include="..\src\os_func.h" />
     <ClInclude Include="..\src\printf_base.h" />
   </ItemGroup>

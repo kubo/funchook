@@ -57,6 +57,12 @@
     <ClCompile Include="..\src\printf_base.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\duckhook_io.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\os_func_windows.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\duckhook_internal.h">
@@ -69,6 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\printf_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\duckhook_io.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

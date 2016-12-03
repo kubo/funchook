@@ -15,8 +15,10 @@ LINK_SHARED = @LINK_SHARED@
 
 DUCKHOOK_OBJS = \
 	os_func.o \
+	os_func_@DUCKHOOK_OS@.o \
 	printf_base.o \
 	duckhook.o \
+	duckhook_io.o \
 	duckhook_x86.o \
 	duckhook_@DUCKHOOK_OS@.o
 
