@@ -4,7 +4,7 @@ top_builddir = @top_builddir@
 
 .PHONY: all test
 
-all:
+all: $(srcdir)/distorm/src/distorm.c
 	cd src && $(MAKE)
 	cd test && $(MAKE)
 
@@ -14,6 +14,10 @@ test: all
 clean:
 	cd src && $(MAKE) clean
 	cd test && $(MAKE) clean
+
+$(srcdir)/distorm/src/distorm.c:
+	cd $(srcdir) && git submodule init
+	cd $(srcdir) && git submodule update
 
 config.status: $(srcdir)/configure
 	./config.status --recheck
