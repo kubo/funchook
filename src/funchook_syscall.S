@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,26 +20,26 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
 #ifdef __APPLE__
-#define duckhook_os_syscall _duckhook_os_syscall
-#define duckhook_os_errno _duckhook_os_errno
+#define funchook_os_syscall _funchook_os_syscall
+#define funchook_os_errno _funchook_os_errno
 #define hidden private_extern
 #endif
 
 #ifdef __x86_64__
 	.text
 	.p2align 4,,15
-	.globl	duckhook_os_syscall
-	.hidden	duckhook_os_syscall
-duckhook_os_syscall:
+	.globl	funchook_os_syscall
+	.hidden	funchook_os_syscall
+funchook_os_syscall:
 	movq	%rdi, %rax /* syscall number */
 #ifdef __APPLE__
 	addq	$0x2000000, %rax
@@ -58,7 +58,7 @@ duckhook_os_syscall:
 	jbe	1f
 	negl	%eax
 #endif
-	movq	duckhook_os_errno@GOTPCREL(%rip), %rdi
+	movq	funchook_os_errno@GOTPCREL(%rip), %rdi
 	movl	%eax, (%rdi)
 	movq	$-1, %rax
 1:
@@ -68,9 +68,9 @@ duckhook_os_syscall:
 #if defined(__i386__) && defined(__linux__)
 	.text
 	.p2align 4,,15
-	.globl	duckhook_os_syscall
-	.hidden	duckhook_os_syscall
-duckhook_os_syscall:
+	.globl	funchook_os_syscall
+	.hidden	funchook_os_syscall
+funchook_os_syscall:
 	pushl	%ebx
 	pushl	%esi
 	pushl	%edi
@@ -85,9 +85,9 @@ duckhook_os_syscall:
 	call	*%gs:0x10 	// or int $0x80
 	cmpl	$-4096, %eax
 	jbe	1f
-	call	duckhook.get_pc_thunk.cx
+	call	funchook.get_pc_thunk.cx
 	addl	$_GLOBAL_OFFSET_TABLE_, %ecx
-	movl	duckhook_os_errno@GOT(%ecx), %ecx
+	movl	funchook_os_errno@GOT(%ecx), %ecx
 	negl	%eax
 	movl	%eax, (%ecx)
 	movl	$-1, %eax
@@ -98,7 +98,7 @@ duckhook_os_syscall:
 	popl	%ebx
 	ret
 
-duckhook.get_pc_thunk.cx:
+funchook.get_pc_thunk.cx:
 	movl	(%esp), %ecx
 	ret
 #endif
@@ -106,9 +106,9 @@ duckhook.get_pc_thunk.cx:
 #if defined(__i386__) && defined(__APPLE__)
 	.text
 	.p2align 4,,15
-	.globl	duckhook_os_syscall
-	.hidden	duckhook_os_syscall
-duckhook_os_syscall:
+	.globl	funchook_os_syscall
+	.hidden	funchook_os_syscall
+funchook_os_syscall:
 	popl	%ecx    /* return address */
 	popl	%eax    /* syscall number */
 	pushl	%ecx
@@ -117,18 +117,18 @@ duckhook_os_syscall:
 	jc	L_1
 	/* success. return %eax */
 	ret
-	/* failure. set %eax to duckhook_os_errno and return -1 */
+	/* failure. set %eax to funchook_os_errno and return -1 */
 L_1:
 	call	L_2
 L_2:
 	popl	%ecx    /* get current eip */
-	movl	L_duckhook_os_errno$non_lazy_ptr-L_2(%ecx), %edx
+	movl	L_funchook_os_errno$non_lazy_ptr-L_2(%ecx), %edx
 	movl	%eax, (%edx)
 	movl	$-1, %eax
 	ret
 
 	.section	__IMPORT,__pointers,non_lazy_symbol_pointers
-L_duckhook_os_errno$non_lazy_ptr:
-	.indirect_symbol	duckhook_os_errno
+L_funchook_os_errno$non_lazy_ptr:
+	.indirect_symbol	funchook_os_errno
 	.long	0
 #endif

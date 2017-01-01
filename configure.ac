@@ -1,4 +1,4 @@
-AC_INIT([duckhook], [0.1])
+AC_INIT([funchook], [0.1])
 
 AC_PROG_CC
 AC_GNU_SOURCE
@@ -10,41 +10,41 @@ fi
 
 AC_CHECK_SIZEOF(void*)
 if test "$ac_cv_sizeof_voidp" = 4; then
-  DUCKHOOK_CPU=x86
+  FUNCHOOK_CPU=x86
 else
-  DUCKHOOK_CPU=x86_64
+  FUNCHOOK_CPU=x86_64
 fi
-AC_SUBST(DUCKHOOK_CPU)
+AC_SUBST(FUNCHOOK_CPU)
 
 IF_WIN32='#'
 IF_LINUX='#'
 IF_OSX='#'
 
 if test "$EXEEXT"; then
-  DUCKHOOK_OS=windows
-  LIBDUCKHOOK_SO=duckhook.dll
-  CFLAGS="$CFLAGS -DDUCKHOOK_EXPORTS"
-  LINK_SHARED="\$(CC) -shared -Wl,--out-implib,duckhook.lib"
+  FUNCHOOK_OS=windows
+  LIBFUNCHOOK_SO=funchook.dll
+  CFLAGS="$CFLAGS -DFUNCHOOK_EXPORTS"
+  LINK_SHARED="\$(CC) -shared -Wl,--out-implib,funchook.lib"
   IF_WIN32=
 else
-  DUCKHOOK_OS=unix
+  FUNCHOOK_OS=unix
   PIC_CFLAGS="-fPIC"
   LINK_SHARED="\$(CC) -shared"
   case "$host_os" in
   linux*)
-    LIBDUCKHOOK_SO=libduckhook.so
+    LIBFUNCHOOK_SO=libfunchook.so
     LIBS="-ldl"
     IF_LINUX=
     ;;
   darwin*)
-    LIBDUCKHOOK_SO=libduckhook.dylib
+    LIBFUNCHOOK_SO=libfunchook.dylib
     IF_OSX=
     ;;
   esac
 fi
 
-AC_SUBST(DUCKHOOK_OS)
-AC_SUBST(LIBDUCKHOOK_SO)
+AC_SUBST(FUNCHOOK_OS)
+AC_SUBST(LIBFUNCHOOK_SO)
 AC_SUBST(LINK_SHARED)
 AC_SUBST(PIC_CFLAGS)
 AC_SUBST(IF_WIN32)

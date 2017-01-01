@@ -1,3 +1,0 @@
-LIBRARY duckhook_test.exe
-EXPORTS
-get_val_in_exe

@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,16 +20,16 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef DUCKHOOK_IO_H
-#define DUCKHOOK_IO_H 1
+#ifndef FUNCHOOK_IO_H
+#define FUNCHOOK_IO_H 1
 #include <stdarg.h>
 
 typedef struct {
@@ -44,21 +44,21 @@ typedef struct {
     char *ptr;
     char *end;
     char buf[128];
-} duckhook_io_t;
+} funchook_io_t;
 
-#define DUCKHOOK_IO_READ    0
-#define DUCKHOOK_IO_WRITE   1
-#define DUCKHOOK_IO_APPEND  2
+#define FUNCHOOK_IO_READ    0
+#define FUNCHOOK_IO_WRITE   1
+#define FUNCHOOK_IO_APPEND  2
 
 /*
  * stdio-like functions
  */
-int duckhook_io_open(duckhook_io_t *io, const char *path, int mode);
-int duckhook_io_close(duckhook_io_t *io);
-char *duckhook_io_gets(char *s, int size, duckhook_io_t *io);
-int duckhook_io_putc(char c, duckhook_io_t *io);
-int duckhook_io_puts(const char *s, duckhook_io_t *io);
-int duckhook_io_vprintf(duckhook_io_t *io, const char *format, va_list ap);
-int duckhook_io_flush(duckhook_io_t *io);
+int funchook_io_open(funchook_io_t *io, const char *path, int mode);
+int funchook_io_close(funchook_io_t *io);
+char *funchook_io_gets(char *s, int size, funchook_io_t *io);
+int funchook_io_putc(char c, funchook_io_t *io);
+int funchook_io_puts(const char *s, funchook_io_t *io);
+int funchook_io_vprintf(funchook_io_t *io, const char *format, va_list ap);
+int funchook_io_flush(funchook_io_t *io);
 
-#endif /* DUCKHOOK_IO_H */
+#endif /* FUNCHOOK_IO_H */

@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,13 +20,13 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
 #include <sys/types.h>
 #include "printf_base.h"
@@ -63,7 +63,7 @@ void *memcpy(void *dest, const void *src, size_t n)
 }
 #endif
 
-char *duckhook_strlcpy(char *dest, const char *src, size_t n)
+char *funchook_strlcpy(char *dest, const char *src, size_t n)
 {
     if (n != 0) {
         char *d = dest;
@@ -75,13 +75,13 @@ char *duckhook_strlcpy(char *dest, const char *src, size_t n)
     return dest;
 }
 
-int duckhook_snprintf(char *str, size_t size, const char *format, ...)
+int funchook_snprintf(char *str, size_t size, const char *format, ...)
 {
     va_list ap;
     int rv;
 
     va_start(ap, format);
-    rv = duckhook_vsnprintf(str, size, format, ap);
+    rv = funchook_vsnprintf(str, size, format, ap);
     va_end(ap);
     return rv;
 }
@@ -100,7 +100,7 @@ static int snprintf_putc(char c, void *handle)
     return 0;
 }
 
-int duckhook_vsnprintf(char *str, size_t size, const char *format, va_list ap)
+int funchook_vsnprintf(char *str, size_t size, const char *format, va_list ap)
 {
     snprintf_arg_t arg;
     int rv;

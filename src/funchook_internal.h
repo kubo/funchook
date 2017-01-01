@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,17 +20,17 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef DUCKHOOK_INTERNAL_H
-#define DUCKHOOK_INTERNAL_H 1
-#include "duckhook.h"
+#ifndef FUNCHOOK_INTERNAL_H
+#define FUNCHOOK_INTERNAL_H 1
+#include "funchook.h"
 #include "os_func.h"
 
 #ifndef MIN
@@ -109,47 +109,47 @@ typedef struct {
     intptr_t pos_offset;
 } rip_displacement_t;
 
-typedef struct duckhook_page duckhook_page_t;
+typedef struct funchook_page funchook_page_t;
 
-/* Functions in duckhook.c */
-extern const size_t duckhook_size;
-extern char duckhook_debug_file[];
+/* Functions in funchook.c */
+extern const size_t funchook_size;
+extern char funchook_debug_file[];
 #ifdef CPU_X86_64
-int duckhook_page_avail(duckhook_t *duckhook, duckhook_page_t *page, int idx, uint8_t *addr, rip_displacement_t *disp);
+int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, uint8_t *addr, rip_displacement_t *disp);
 #else
-#define duckhook_page_avail(duckhook, page, idx, addr, disp) (1)
+#define funchook_page_avail(funchook, page, idx, addr, disp) (1)
 #endif
-void duckhook_log(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
-void duckhook_set_error_message(duckhook_t *duckhook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
+void funchook_log(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
+void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 
-/* Functions in duckhook_linux.c & duckhook_windows.c */
+/* Functions in funchook_linux.c & funchook_windows.c */
 extern const size_t page_size;
 extern const size_t allocation_unit; /* windows only */
 
-duckhook_t *duckhook_alloc(void);
-int duckhook_free(duckhook_t *duckhook);
+funchook_t *funchook_alloc(void);
+int funchook_free(funchook_t *funchook);
 
-int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp);
-int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page);
-int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page);
-int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page);
+int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, rip_displacement_t *disp);
+int funchook_page_free(funchook_t *funchook, funchook_page_t *page);
+int funchook_page_protect(funchook_t *funchook, funchook_page_t *page);
+int funchook_page_unprotect(funchook_t *funchook, funchook_page_t *page);
 
-int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *addr, size_t len);
-int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate);
+int funchook_unprotect_begin(funchook_t *funchook, mem_state_t *mstate, void *addr, size_t len);
+int funchook_unprotect_end(funchook_t *funchook, const mem_state_t *mstate);
 
-void *duckhook_resolve_func(duckhook_t *duckhook, void *func);
-const char *duckhook_strerror(int errnum, char *buf, size_t buflen);
+void *funchook_resolve_func(funchook_t *funchook, void *func);
+const char *funchook_strerror(int errnum, char *buf, size_t buflen);
 
-/* Functions in duckhook_x86.c */
+/* Functions in funchook_x86.c */
 
-int duckhook_write_jump32(duckhook_t *duckhook, const uint8_t *src, const uint8_t *dst, uint8_t *out);
+int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const uint8_t *dst, uint8_t *out);
 #ifdef CPU_X86_64
-int duckhook_write_jump64(duckhook_t *duckhook, uint8_t *src, const uint8_t *dst);
-int duckhook_within_32bit_relative(const uint8_t *src, const uint8_t *dst);
-int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst);
+int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst);
+int funchook_within_32bit_relative(const uint8_t *src, const uint8_t *dst);
+int funchook_jump32_avail(const uint8_t *src, const uint8_t *dst);
 #endif
 
-int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline);
-void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline);
+int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline);
+void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline);
 
 #endif

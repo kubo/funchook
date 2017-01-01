@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,13 +20,13 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
 #if defined __linux
 #define _GNU_SOURCE
@@ -36,7 +36,7 @@
 #include <errno.h>
 #include "os_func.h"
 
-int duckhook_os_errno;
+int funchook_os_errno;
 
 /* Dont' include unistd.h on macOS.
  * macOS defines syscall as int syscall(int, ...).
@@ -44,7 +44,7 @@ int duckhook_os_errno;
  */
 long syscall(long, ...);
 
-int duckhook_os_open(const char *pathname, int flags, ...)
+int funchook_os_open(const char *pathname, int flags, ...)
 {
     mode_t mode;
     va_list ap;
@@ -55,22 +55,22 @@ int duckhook_os_open(const char *pathname, int flags, ...)
     return (int)syscall(SYS_open, pathname, flags, mode);
 }
 
-int duckhook_os_close(int fd)
+int funchook_os_close(int fd)
 {
     return (int)syscall(SYS_close, fd);
 }
 
-ssize_t duckhook_os_read(int fd, void *buf, size_t count)
+ssize_t funchook_os_read(int fd, void *buf, size_t count)
 {
     return (ssize_t)syscall(SYS_read, fd, buf, count);
 }
 
-ssize_t duckhook_os_write(int fd, const void *buf, size_t count)
+ssize_t funchook_os_write(int fd, const void *buf, size_t count)
 {
     return (ssize_t)syscall(SYS_write, fd, buf, count);
 }
 
-void *duckhook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+void *funchook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
 #if defined(__linux) && defined(__i386)
     if (offset & 4095) {
@@ -83,12 +83,12 @@ void *duckhook_os_mmap(void *addr, size_t length, int prot, int flags, int fd, o
 #endif
 }
 
-int duckhook_os_munmap(void *addr, size_t length)
+int funchook_os_munmap(void *addr, size_t length)
 {
     return (int)syscall(SYS_munmap, addr, length);
 }
 
-int duckhook_os_mprotect(void *addr, size_t len, int prot)
+int funchook_os_mprotect(void *addr, size_t len, int prot)
 {
     return (int)syscall(SYS_mprotect, addr, len, prot);
 }

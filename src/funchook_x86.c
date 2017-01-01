@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,13 +20,13 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "config.h"
 #include <stdio.h>
@@ -38,7 +38,7 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "duckhook_internal.h"
+#include "funchook_internal.h"
 
 /* RIP-relative address information */
 typedef struct {
@@ -49,7 +49,7 @@ typedef struct {
 } rip_relative_t;
 
 typedef struct {
-    duckhook_t *duckhook;
+    funchook_t *funchook;
     rip_displacement_t *rip_disp;
     const uint8_t *src;
     const uint8_t *dst_base;
@@ -66,22 +66,22 @@ static int handle_x86_get_pc_by_call_and_pop(make_trampoline_context_t *ctx, con
 #define handle_x86_get_pc_by_call_and_pop(ctx, di) (0)
 #endif
 
-static void log_instruction(duckhook_t *duckhook, const _CodeInfo *ci, const _DInst *dis);
+static void log_instruction(funchook_t *funchook, const _CodeInfo *ci, const _DInst *dis);
 static void get_rip_relative(const make_trampoline_context_t *ctx, rip_relative_t *rel_disp, rip_relative_t *rel_imm, const _DInst *di);
 static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relative_t *rel, const _DInst *di);
 
-int duckhook_write_jump32(duckhook_t *duckhook, const uint8_t *src, const uint8_t *dst, uint8_t *out)
+int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const uint8_t *dst, uint8_t *out)
 {
     out[0] = 0xe9;
     *(int*)(out + 1) = (int)(dst - (src + 5));
-    duckhook_log(duckhook, "  Write jump32 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump32 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
 
 #ifdef CPU_X86_64
 
-int duckhook_write_jump64(duckhook_t *duckhook, uint8_t *src, const uint8_t *dst)
+int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst)
 {
     src[0] = 0xFF;
     src[1] = 0x25;
@@ -90,25 +90,25 @@ int duckhook_write_jump64(duckhook_t *duckhook, uint8_t *src, const uint8_t *dst
     src[4] = 0x00;
     src[5] = 0x00;
     *(const uint8_t**)(src + 6) = dst;
-    duckhook_log(duckhook, "  Write jump64 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump64 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
 
-int duckhook_within_32bit_relative(const uint8_t *src, const uint8_t *dst)
+int funchook_within_32bit_relative(const uint8_t *src, const uint8_t *dst)
 {
     int64_t diff = (int64_t)(dst - src);
     return (INT32_MIN <= diff && diff <= INT32_MAX);
 }
 
-int duckhook_jump32_avail(const uint8_t *src, const uint8_t *dst)
+int funchook_jump32_avail(const uint8_t *src, const uint8_t *dst)
 {
-    return duckhook_within_32bit_relative(src + 5, dst);
+    return funchook_within_32bit_relative(src + 5, dst);
 }
 
 #endif
 
-int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline)
+int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline)
 {
     make_trampoline_context_t ctx;
     _DInst dis[MAX_INSN_CHECK_SIZE];
@@ -119,7 +119,7 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     unsigned int i;
 
     memset(trampoline, NOP_INSTRUCTION, TRAMPOLINE_SIZE);
-    ctx.duckhook = duckhook;
+    ctx.funchook = funchook;
     ctx.rip_disp = disp;
     ctx.src = func;
     ctx.dst_base = ctx.dst = trampoline;
@@ -135,22 +135,22 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     ci.features = DF_STOP_ON_RET;
     decres = distorm_decompose64(&ci, dis, MAX_INSN_CHECK_SIZE, &di_cnt);
     if (decres != DECRES_SUCCESS) {
-        duckhook_set_error_message(duckhook, "Disassemble Error: %d", decres);
-        return DUCKHOOK_ERROR_DISASSEMBLY;
+        funchook_set_error_message(funchook, "Disassemble Error: %d", decres);
+        return FUNCHOOK_ERROR_DISASSEMBLY;
     }
-    duckhook_log(duckhook, "  Original Instructions:\n");
+    funchook_log(funchook, "  Original Instructions:\n");
     for (i = 0; i < di_cnt; i++) {
         const _DInst *di = &dis[i];
         rip_relative_t rel_disp;
         rip_relative_t rel_imm;
 
-        log_instruction(duckhook, &ci, di);
+        log_instruction(funchook, &ci, di);
 
         if (handle_x86_get_pc_thunk(&ctx, di)) {
             ;
         } else if (handle_x86_get_pc_by_call_and_pop(&ctx, di)) {
             di = &dis[++i];
-            log_instruction(duckhook, &ci, di);
+            log_instruction(funchook, &ci, di);
         } else {
             memcpy(ctx.dst, ctx.src, di->size);
             get_rip_relative(&ctx, &rel_disp, &rel_imm, di);
@@ -172,12 +172,12 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
             disp[0].pos_offset = (ctx.dst - ctx.dst_base) + 1;
             while (++i < di_cnt) {
                 const _DInst *di = &dis[i];
-                log_instruction(duckhook, &ci, di);
+                log_instruction(funchook, &ci, di);
                 get_rip_relative(&ctx, &rel_disp, &rel_imm, di);
                 if (func <= rel_imm.addr && rel_imm.addr < func + JUMP32_SIZE) {
                     /* jump to the hot-patched region. */
-                    duckhook_set_error_message(duckhook, "instruction jumping back to the hot-patched region was found");
-                    return DUCKHOOK_ERROR_FOUND_BACK_JUMP;
+                    funchook_set_error_message(funchook, "instruction jumping back to the hot-patched region was found");
+                    return FUNCHOOK_ERROR_FOUND_BACK_JUMP;
                 }
             }
             return 0;
@@ -186,15 +186,15 @@ int duckhook_make_trampoline(duckhook_t *duckhook, rip_displacement_t *disp, con
     /* too short function. Check whether NOP instructions continue. */
     while (ctx.src - func < JUMP32_SIZE) {
         if (*ctx.src != NOP_INSTRUCTION) {
-            duckhook_set_error_message(duckhook, "Too short instructions");
-            return DUCKHOOK_ERROR_TOO_SHORT_INSTRUCTIONS;
+            funchook_set_error_message(funchook, "Too short instructions");
+            return FUNCHOOK_ERROR_TOO_SHORT_INSTRUCTIONS;
         }
         ctx.src++;
     }
     return 0;
 }
 
-void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline)
+void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline)
 {
     _DInst dis[TRAMPOLINE_SIZE];
     unsigned int di_cnt = 0;
@@ -202,11 +202,11 @@ void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline)
     _DecodeResult decres;
     unsigned int i;
 
-    if (*duckhook_debug_file == '\0') {
+    if (*funchook_debug_file == '\0') {
         return;
     }
 
-    duckhook_log(duckhook, "  Trampoline Instructions:\n");
+    funchook_log(funchook, "  Trampoline Instructions:\n");
     ci.codeOffset = (_OffsetType)(size_t)trampoline;
     ci.code = trampoline;
     ci.codeLen = TRAMPOLINE_SIZE;
@@ -218,11 +218,11 @@ void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline)
     ci.features = DF_NONE;
     decres = distorm_decompose64(&ci, dis, TRAMPOLINE_SIZE, &di_cnt);
     if (decres != DECRES_SUCCESS) {
-        duckhook_log(duckhook, "  Failed to decode trampoline\n    ");
+        funchook_log(funchook, "  Failed to decode trampoline\n    ");
         for (i = 0; i < TRAMPOLINE_SIZE; i++) {
-            duckhook_log(duckhook, " %02x", trampoline[i]);
+            funchook_log(funchook, " %02x", trampoline[i]);
         }
-        duckhook_log(duckhook, "\n");
+        funchook_log(funchook, "\n");
         return;
     }
     while (di_cnt > 0 && dis[di_cnt - 1].opcode == I_NOP) {
@@ -231,7 +231,7 @@ void duckhook_log_trampoline(duckhook_t *duckhook, const uint8_t *trampoline)
     for (i = 0; i < di_cnt; i++) {
         _DecodedInst dec;
         distorm_format64(&ci, &dis[i], &dec);
-        duckhook_log(duckhook, "    %0"SIZE_T_WIDTH SIZE_T_FMT"x (%02d) %-24s %s%s%s\n",
+        funchook_log(funchook, "    %0"SIZE_T_WIDTH SIZE_T_FMT"x (%02d) %-24s %s%s%s\n",
                      (size_t)dec.offset, dec.size, (char*)dec.instructionHex.p,
                      (char*)dec.mnemonic.p, dec.operands.length != 0 ? " " : "", (char*)dec.operands.p);
     }
@@ -292,7 +292,7 @@ static int handle_x86_get_pc_thunk(make_trampoline_context_t *ctx, const _DInst 
     return 0;
 
 fixed:
-    duckhook_log(ctx->duckhook, "      use 'MOV E%c%c, 0x%x' instead of 'CALL __x86.get_pc_thunk.%s'\n",
+    funchook_log(ctx->funchook, "      use 'MOV E%c%c, 0x%x' instead of 'CALL __x86.get_pc_thunk.%s'\n",
                  reg_name[0] + 'A' - 'a',
                  reg_name[1] + 'A' - 'a',
                  eip, reg_name);
@@ -351,7 +351,7 @@ static int handle_x86_get_pc_by_call_and_pop(make_trampoline_context_t *ctx, con
     return 0;
 
 fixed:
-    duckhook_log(ctx->duckhook, "      use 'MOV %s, 0x%x' instead of 'CALL 0x%x; POP %s'\n",
+    funchook_log(ctx->funchook, "      use 'MOV %s, 0x%x' instead of 'CALL 0x%x; POP %s'\n",
                  reg_name, eip, eip, reg_name);
     ctx->dst += 5;
     ctx->src += 6;
@@ -360,11 +360,11 @@ fixed:
 }
 #endif
 
-static void log_instruction(duckhook_t *duckhook, const _CodeInfo *ci, const _DInst *dis)
+static void log_instruction(funchook_t *funchook, const _CodeInfo *ci, const _DInst *dis)
 {
     _DecodedInst dec;
     distorm_format64(ci, dis, &dec);
-    duckhook_log(duckhook, "    %0"SIZE_T_WIDTH SIZE_T_FMT"x (%02d) %-24s %s%s%s\n",
+    funchook_log(funchook, "    %0"SIZE_T_WIDTH SIZE_T_FMT"x (%02d) %-24s %s%s%s\n",
                  (size_t)dec.offset, dec.size, (char*)dec.instructionHex.p,
                  (char*)dec.mnemonic.p, dec.operands.length != 0 ? " " : "", (char*)dec.operands.p);
 }
@@ -586,12 +586,12 @@ static void get_rip_relative(const make_trampoline_context_t *ctx, rip_relative_
 
     if (rel_disp->size > 0) {
         rel_disp->offset = di->size - opsiz + disp_offset;
-        duckhook_log(ctx->duckhook, "      ip-relative %08x, absolute address= %0"SIZE_T_WIDTH SIZE_T_FMT"x, offset=%d, size=%d\n",
+        funchook_log(ctx->funchook, "      ip-relative %08x, absolute address= %0"SIZE_T_WIDTH SIZE_T_FMT"x, offset=%d, size=%d\n",
                      (uint32_t)rel_disp->raddr, (size_t)rel_disp->addr, rel_disp->offset, rel_disp->size);
     }
     if (rel_imm->size > 0) {
         rel_imm->offset = di->size - opsiz + imm_offset;
-        duckhook_log(ctx->duckhook, "      ip-relative %08x, absolute address= %0"SIZE_T_WIDTH SIZE_T_FMT"x, offset=%d, size=%d\n",
+        funchook_log(ctx->funchook, "      ip-relative %08x, absolute address= %0"SIZE_T_WIDTH SIZE_T_FMT"x, offset=%d, size=%d\n",
                      (uint32_t)rel_imm->raddr, (size_t)rel_imm->addr, rel_imm->offset, rel_imm->size);
     }
 }
@@ -607,16 +607,16 @@ static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relativ
              * reach here if opsiz and/or disp_offset are incorrectly
              * estimated.
              */
-            duckhook_set_error_message(ctx->duckhook, "Invalid ip-relative offset %d. The value at the offset should be %08x but %08x",
+            funchook_set_error_message(ctx->funchook, "Invalid ip-relative offset %d. The value at the offset should be %08x but %08x",
                          rel->offset, (uint32_t)rel->raddr, *(int32_t*)(ctx->dst + rel->offset));
-            return DUCKHOOK_ERROR_IP_RELATIVE_OFFSET;
+            return FUNCHOOK_ERROR_IP_RELATIVE_OFFSET;
         }
         ctx->rip_disp[1].dst_addr = rel->addr;
         ctx->rip_disp[1].src_addr_offset = (ctx->dst - ctx->dst_base) + di->size;;
         ctx->rip_disp[1].pos_offset = (ctx->dst - ctx->dst_base) + rel->offset;
     } else if (rel->size != 0) {
-        duckhook_set_error_message(ctx->duckhook, "Could not fix ip-relative address. The size is not 32.");
-        return DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE;
+        funchook_set_error_message(ctx->funchook, "Could not fix ip-relative address. The size is not 32.");
+        return FUNCHOOK_ERROR_CANNOT_FIX_IP_RELATIVE;
     }
     return 0;
 }

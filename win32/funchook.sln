@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "duckhook", "duckhook.vcxproj", "{6E012034-BE65-43DB-BC03-9B6286723129}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "funchook", "funchook.vcxproj", "{6E012034-BE65-43DB-BC03-9B6286723129}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "duckhook_test_dll", "duckhook_test_dll.vcxproj", "{9ABF8228-945D-44CF-BE1E-95C3C5A8CE9E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "funchook_test_dll", "funchook_test_dll.vcxproj", "{9ABF8228-945D-44CF-BE1E-95C3C5A8CE9E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "duckhook_test", "duckhook_test.vcxproj", "{5FF07D47-19F0-4846-928D-ACE9041BAA10}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "funchook_test", "funchook_test.vcxproj", "{5FF07D47-19F0-4846-928D-ACE9041BAA10}"
 	ProjectSection(ProjectDependencies) = postProject
 		{9ABF8228-945D-44CF-BE1E-95C3C5A8CE9E} = {9ABF8228-945D-44CF-BE1E-95C3C5A8CE9E}
 		{6E012034-BE65-43DB-BC03-9B6286723129} = {6E012034-BE65-43DB-BC03-9B6286723129}

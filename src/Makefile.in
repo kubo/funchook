@@ -11,19 +11,19 @@ LIBS = @LIBS@
 LINK_SHARED = @LINK_SHARED@
 
 @IF_WIN32@LIBS += -lpsapi
-@IF_OSX@LDFLAGS += -install_name @rpath/libduckhook.dylib
+@IF_OSX@LDFLAGS += -install_name @rpath/libfunchook.dylib
 
-DUCKHOOK_OBJS = \
+FUNCHOOK_OBJS = \
 	os_func.o \
-	os_func_@DUCKHOOK_OS@.o \
+	os_func_@FUNCHOOK_OS@.o \
 	printf_base.o \
-	duckhook.o \
-	duckhook_io.o \
-	duckhook_x86.o \
-	duckhook_@DUCKHOOK_OS@.o
+	funchook.o \
+	funchook_io.o \
+	funchook_x86.o \
+	funchook_@FUNCHOOK_OS@.o
 
-@IF_LINUX@DUCKHOOK_OBJS += duckhook_syscall.o
-@IF_OSX@DUCKHOOK_OBJS += duckhook_syscall.o
+@IF_LINUX@FUNCHOOK_OBJS += funchook_syscall.o
+@IF_OSX@FUNCHOOK_OBJS += funchook_syscall.o
 
 DISTORM3_OBJS = \
 	mnemonics.o \
@@ -37,24 +37,24 @@ DISTORM3_OBJS = \
 	decoder.o
 
 HEADERS = \
-	duckhook.h \
-	duckhook_internal.h \
+	funchook.h \
+	funchook_internal.h \
 	os_func.h
 
-OBJS = $(DUCKHOOK_OBJS) $(DISTORM3_OBJS)
+OBJS = $(FUNCHOOK_OBJS) $(DISTORM3_OBJS)
 
-all: @LIBDUCKHOOK_SO@
+all: @LIBFUNCHOOK_SO@
 
 check:
 	cd ../test && $(MAKE) check
 
-@LIBDUCKHOOK_SO@: $(OBJS)
-	$(LINK_SHARED) $(LDFLAGS) -o @LIBDUCKHOOK_SO@ $(OBJS) $(LIBS)
+@LIBFUNCHOOK_SO@: $(OBJS)
+	$(LINK_SHARED) $(LDFLAGS) -o @LIBFUNCHOOK_SO@ $(OBJS) $(LIBS)
 
-duckhook.o: duckhook.c $(HEADERS)
-duckhook_linux.o: duckhook_linux.c $(HEADERS)
-duckhook_windows.o: duckhook_windows.c $(HEADERS)
-duckhook_x86.o: duckhook_x86.c $(HEADERS)
+funchook.o: funchook.c $(HEADERS)
+funchook_linux.o: funchook_linux.c $(HEADERS)
+funchook_windows.o: funchook_windows.c $(HEADERS)
+funchook_x86.o: funchook_x86.c $(HEADERS)
 os_func.o: os_func.c os_func.h printf_base.h
 printf_base.o: printf_base.c printf_base.h
 	$(CC) $(CFLAGS) -c -o $@ $< -DPFB_NO_EXTERNAL_FUNC -DPFB_MSVC_FORMAT
@@ -64,7 +64,7 @@ insts.o: insts.c
 	$(CC) $(CFLAGS) -c -o $@ $< -Wno-missing-braces
 
 clean:
-	$(RM) @LIBDUCKHOOK_SO@ $(OBJS)
+	$(RM) @LIBFUNCHOOK_SO@ $(OBJS)
 
 Makefile config.h: $(srcdir)/Makefile.in $(srcdir)/config.h.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status

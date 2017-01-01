@@ -1,7 +1,7 @@
 /* -*- indent-tabs-mode: nil -*-
  */
 #include <stdio.h>
-#include <duckhook.h>
+#include <funchook.h>
 
 #ifdef WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -70,21 +70,21 @@ static int hook_func(void)
     return orig_func();
 }
 
-#define TEST_DUCKHOOK_INT(func) test_duckhook_int(func, #func, NULL, NULL)
-#define TEST_DUCKHOOK_INT2(func, func2) test_duckhook_int(func, #func, func2, #func2)
+#define TEST_FUNCHOOK_INT(func) test_funchook_int(func, #func, NULL, NULL)
+#define TEST_FUNCHOOK_INT2(func, func2) test_funchook_int(func, #func, func2, #func2)
 
-void test_duckhook_int(volatile int_func_t func, const char *func_str, volatile int_func_t func2, const char *func2_str)
+void test_funchook_int(volatile int_func_t func, const char *func_str, volatile int_func_t func2, const char *func2_str)
 {
-    duckhook_t *duckhook = duckhook_create();
+    funchook_t *funchook = funchook_create();
     int result;
     int expected;
     int rv;
 
     test_cnt++;
     if (func2 == NULL) {
-        printf("[%d] test_duckhook_int: %s\n", test_cnt, func_str);
+        printf("[%d] test_funchook_int: %s\n", test_cnt, func_str);
     } else {
-        printf("[%d] test_duckhook_int: %s and %s\n", test_cnt, func_str, func2_str);
+        printf("[%d] test_funchook_int: %s and %s\n", test_cnt, func_str, func2_str);
     }
 
     expected = ++int_val;
@@ -106,13 +106,13 @@ void test_duckhook_int(volatile int_func_t func, const char *func_str, volatile 
         }
     }
     orig_func = func;
-    rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
+    rv = funchook_prepare(funchook, (void**)&orig_func, hook_func);
     if (rv != 0) {
         printf("ERROR: failed to hook %s.\n", func_str);
         error_cnt++;
         return;
     }
-    duckhook_install(duckhook, 0);
+    funchook_install(funchook, 0);
 
     hook_is_called = 0;
     expected = ++int_val;
@@ -145,7 +145,7 @@ void test_duckhook_int(volatile int_func_t func, const char *func_str, volatile 
         }
     }
 
-    duckhook_uninstall(duckhook, 0);
+    funchook_uninstall(funchook, 0);
 
     expected = ++int_val;
     set_int_val(int_val);
@@ -166,55 +166,55 @@ void test_duckhook_int(volatile int_func_t func, const char *func_str, volatile 
         }
     }
 
-    duckhook_destroy(duckhook);
+    funchook_destroy(funchook);
 }
 
-#define TEST_DUCKHOOK_EXPECT_ERROR(func, errcode) test_duckhook_expect_error(func, errcode, #func, __LINE__)
-void test_duckhook_expect_error(int_func_t func, int errcode, const char *func_str, int line)
+#define TEST_FUNCHOOK_EXPECT_ERROR(func, errcode) test_funchook_expect_error(func, errcode, #func, __LINE__)
+void test_funchook_expect_error(int_func_t func, int errcode, const char *func_str, int line)
 {
-    duckhook_t *duckhook = duckhook_create();
+    funchook_t *funchook = funchook_create();
     int rv;
 
     test_cnt++;
-    printf("[%d] test_duckhook_expect_error: %s\n", test_cnt, func_str);
+    printf("[%d] test_funchook_expect_error: %s\n", test_cnt, func_str);
 
     orig_func = func;
-    rv = duckhook_prepare(duckhook, (void**)&orig_func, hook_func);
+    rv = funchook_prepare(funchook, (void**)&orig_func, hook_func);
     if (rv != errcode) {
         printf("ERROR at line %d: hooking must fail with %d but %d.\n", line, errcode, rv);
         error_cnt++;
     }
-    duckhook_destroy(duckhook);
+    funchook_destroy(funchook);
 }
 
 int main()
 {
-    duckhook_set_debug_file("debug.log");
+    funchook_set_debug_file("debug.log");
 
-    TEST_DUCKHOOK_INT2(get_val_in_exe, get_val_in_exe_from_dll);
-    TEST_DUCKHOOK_INT2(get_val_in_dll, get_val_in_dll_from_dll);
+    TEST_FUNCHOOK_INT2(get_val_in_exe, get_val_in_exe_from_dll);
+    TEST_FUNCHOOK_INT2(get_val_in_dll, get_val_in_dll_from_dll);
 
 #ifndef _MSC_VER
 #if defined __i386 || defined  _M_I386
-    TEST_DUCKHOOK_INT(x86_test_jump);
-    TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump1, DUCKHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
-    TEST_DUCKHOOK_EXPECT_ERROR(x86_test_error_jump2, DUCKHOOK_ERROR_FOUND_BACK_JUMP);
+    TEST_FUNCHOOK_INT(x86_test_jump);
+    TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump1, FUNCHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
+    TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump2, FUNCHOOK_ERROR_FOUND_BACK_JUMP);
 
 #ifndef WIN32
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_ax);
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_bx);
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_cx);
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_dx);
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_si);
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_di);
-    TEST_DUCKHOOK_INT(x86_test_call_get_pc_thunk_bp);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_eax);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_ebx);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_ecx);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_edx);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_esi);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_edi);
-    TEST_DUCKHOOK_INT(x86_test_call_and_pop_ebp);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_ax);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bx);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_cx);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_dx);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_si);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_di);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bp);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_eax);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ebx);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ecx);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_edx);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_esi);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_edi);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ebp);
 #endif
 #endif
 

@@ -1,9 +1,9 @@
 /* -*- indent-tabs-mode: nil -*-
  *
- * This file is part of Duckhook.
- * https://github.com/kubo/duckhook
+ * This file is part of Funchook.
+ * https://github.com/kubo/funchook
  *
- * Duckhook is free software: you can redistribute it and/or modify it
+ * Funchook is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 2 of the License, or (at your
  * option) any later version.
@@ -20,13 +20,13 @@
  * do so. If you do not wish to do so, delete this exception statement
  * from your version.
  *
- * Duckhook is distributed in the hope that it will be useful, but WITHOUT
+ * Funchook is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Duckhook. If not, see <http://www.gnu.org/licenses/>.
+ * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "config.h"
 #include <stdio.h>
@@ -44,8 +44,8 @@
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
-#include "duckhook_io.h"
-#include "duckhook_internal.h"
+#include "funchook_io.h"
+#include "funchook_internal.h"
 
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
 #define MAP_ANONYMOUS MAP_ANON
@@ -53,20 +53,20 @@
 
 const size_t page_size = PAGE_SIZE;
 
-duckhook_t *duckhook_alloc(void)
+funchook_t *funchook_alloc(void)
 {
-    size_t size = ROUND_UP(duckhook_size, page_size);
+    size_t size = ROUND_UP(funchook_size, page_size);
     void *mem = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mem == (void*)-1) {
         return NULL;
     }
-    return (duckhook_t*)mem;
+    return (funchook_t*)mem;
 }
 
-int duckhook_free(duckhook_t *duckhook)
+int funchook_free(funchook_t *funchook)
 {
-    size_t size = ROUND_UP(duckhook_size, page_size);
-    munmap(duckhook, size);
+    size_t size = ROUND_UP(funchook_size, page_size);
+    munmap(funchook, size);
     return 0;
 }
 
@@ -94,20 +94,20 @@ static char scan_address(const char **str, size_t *addr_p)
 }
 #endif
 
-static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_out)
+static int get_free_address(funchook_t *funchook, void *func_addr, void **addr_out)
 {
 #if defined(__linux)
-    duckhook_io_t io;
+    funchook_io_t io;
     char buf[PATH_MAX];
     size_t prev_end = 0;
 
-    if (duckhook_io_open(&io, "/proc/self/maps", DUCKHOOK_IO_READ) != 0) {
-        duckhook_set_error_message(duckhook, "Failed to open /proc/self/maps (%s)",
-                                   duckhook_strerror(errno, buf, sizeof(buf)));
-        return DUCKHOOK_ERROR_INTERNAL_ERROR;
+    if (funchook_io_open(&io, "/proc/self/maps", FUNCHOOK_IO_READ) != 0) {
+        funchook_set_error_message(funchook, "Failed to open /proc/self/maps (%s)",
+                                   funchook_strerror(errno, buf, sizeof(buf)));
+        return FUNCHOOK_ERROR_INTERNAL_ERROR;
     }
 
-    while (duckhook_io_gets(buf, sizeof(buf), &io) != NULL) {
+    while (funchook_io_gets(buf, sizeof(buf), &io) != NULL) {
         const char *str = buf;
         size_t start, end;
 
@@ -120,22 +120,22 @@ static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_o
             } else {
                 if (start - prev_end >= page_size) {
                     *addr_out = (void*)(prev_end);
-                    duckhook_log(duckhook, "  -- Use address %p for function %p\n",
+                    funchook_log(funchook, "  -- Use address %p for function %p\n",
                                  *addr_out, func_addr);
-                    duckhook_log(duckhook, "  process map: %s", buf);
-                    duckhook_io_close(&io);
+                    funchook_log(funchook, "  process map: %s", buf);
+                    funchook_io_close(&io);
                     return 0;
                 } else {
                     prev_end = end;
                 }
             }
         }
-        duckhook_log(duckhook, "  process map: %s", buf);
+        funchook_log(funchook, "  process map: %s", buf);
     }
-    duckhook_io_close(&io);
-    duckhook_set_error_message(duckhook, "Could not find a free region after %p",
+    funchook_io_close(&io);
+    funchook_set_error_message(funchook, "Could not find a free region after %p",
                                func_addr);
-    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 #elif defined(__APPLE__)
     mach_port_t task = mach_task_self();
     vm_size_t size;
@@ -149,19 +149,19 @@ static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_o
         size_t end = start + size;
         if (prev_end + page_size <= start) {
             *addr_out = (void*)(prev_end);
-            duckhook_log(duckhook, "  -- Use address %p for function %p\n",
+            funchook_log(funchook, "  -- Use address %p for function %p\n",
                          *addr_out, func_addr);
-            duckhook_log(duckhook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+            funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                          start, end);
             return 0;
         }
-        duckhook_log(duckhook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+        funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                      start, end);
         start = prev_end = end;
     }
-    duckhook_set_error_message(duckhook, "Could not find a free region after %p",
+    funchook_set_error_message(funchook, "Could not find a free region after %p",
                                func_addr);
-    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 #else
 #error unsupported OS
 #endif
@@ -169,98 +169,98 @@ static int get_free_address(duckhook_t *duckhook, void *func_addr, void **addr_o
 
 #endif /* CPU_X86_64 */
 
-int duckhook_page_alloc(duckhook_t *duckhook, duckhook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
+int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
 {
 #ifdef CPU_X86_64
     int loop_cnt;
 
     for (loop_cnt = 0; loop_cnt < 3; loop_cnt++) {
         void *target;
-        int rv = get_free_address(duckhook, func, &target);
+        int rv = get_free_address(funchook, func, &target);
 
         if (rv != 0) {
             return rv;
         }
         *page_out = mmap(target, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (*page_out == target) {
-            duckhook_log(duckhook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+            funchook_log(funchook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
             return 0;
         }
         if (*page_out == MAP_FAILED) {
             char errbuf[128];
 
-            duckhook_set_error_message(duckhook, "mmap failed(addr=%p): %s", target,
-                                       duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-            return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+            funchook_set_error_message(funchook, "mmap failed(addr=%p): %s", target,
+                                       funchook_strerror(errno, errbuf, sizeof(errbuf)));
+            return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
         }
-        duckhook_log(duckhook, "  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", *page_out, target, page_size);
+        funchook_log(funchook, "  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", *page_out, target, page_size);
         /* other thread might allocate memory at the target address. */
         munmap(*page_out, page_size);
     }
-    duckhook_set_error_message(duckhook, "Failed to allocate memory in unused regions");
-    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+    funchook_set_error_message(funchook, "Failed to allocate memory in unused regions");
+    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 #else
     char errbuf[128];
 
     *page_out = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (*page_out != MAP_FAILED) {
-        duckhook_log(duckhook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+        funchook_log(funchook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
         return 0;
     }
-    duckhook_set_error_message(duckhook, "mmap failed: %s", duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-    return DUCKHOOK_ERROR_MEMORY_ALLOCATION;
+    funchook_set_error_message(funchook, "mmap failed: %s", funchook_strerror(errno, errbuf, sizeof(errbuf)));
+    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 #endif
 }
 
-int duckhook_page_free(duckhook_t *duckhook, duckhook_page_t *page)
+int funchook_page_free(funchook_t *funchook, funchook_page_t *page)
 {
     char errbuf[128];
     int rv = munmap(page, page_size);
 
     if (rv == 0) {
-        duckhook_log(duckhook, " deallocate page %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, " deallocate page %p (size=%"SIZE_T_FMT"u)\n",
                      page, page_size);
         return 0;
     }
-    duckhook_set_error_message(duckhook, "Failed to deallocate page %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to deallocate page %p (size=%"SIZE_T_FMT"u, error=%s)",
                                page, page_size,
-                               duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-    return DUCKHOOK_ERROR_MEMORY_FUNCTION;
+                               funchook_strerror(errno, errbuf, sizeof(errbuf)));
+    return FUNCHOOK_ERROR_MEMORY_FUNCTION;
 }
 
-int duckhook_page_protect(duckhook_t *duckhook, duckhook_page_t *page)
+int funchook_page_protect(funchook_t *funchook, funchook_page_t *page)
 {
     char errbuf[128];
     int rv = mprotect(page, page_size, PROT_READ | PROT_EXEC);
 
     if (rv == 0) {
-        duckhook_log(duckhook, "  protect page %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  protect page %p (size=%"SIZE_T_FMT"u)\n",
                      page, page_size);
         return 0;
     }
-    duckhook_set_error_message(duckhook, "Failed to protect page %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to protect page %p (size=%"SIZE_T_FMT"u, error=%s)",
                                page, page_size,
-                               duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-    return DUCKHOOK_ERROR_MEMORY_FUNCTION;
+                               funchook_strerror(errno, errbuf, sizeof(errbuf)));
+    return FUNCHOOK_ERROR_MEMORY_FUNCTION;
 }
 
-int duckhook_page_unprotect(duckhook_t *duckhook, duckhook_page_t *page)
+int funchook_page_unprotect(funchook_t *funchook, funchook_page_t *page)
 {
     char errbuf[128];
     int rv = mprotect(page, page_size, PROT_READ | PROT_WRITE);
 
     if (rv == 0) {
-        duckhook_log(duckhook, "  unprotect page %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  unprotect page %p (size=%"SIZE_T_FMT"u)\n",
                      page, page_size);
         return 0;
     }
-    duckhook_set_error_message(duckhook, "Failed to unprotect page %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to unprotect page %p (size=%"SIZE_T_FMT"u, error=%s)",
                                page, page_size,
-                               duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-    return DUCKHOOK_ERROR_MEMORY_FUNCTION;
+                               funchook_strerror(errno, errbuf, sizeof(errbuf)));
+    return FUNCHOOK_ERROR_MEMORY_FUNCTION;
 }
 
-int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *start, size_t len)
+int funchook_unprotect_begin(funchook_t *funchook, mem_state_t *mstate, void *start, size_t len)
 {
     static int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
     char errbuf[128];
@@ -272,7 +272,7 @@ int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *st
     mstate->size = ROUND_UP(mstate->size, page_size);
     rv = mprotect(mstate->addr, mstate->size, prot);
     if (rv == 0) {
-        duckhook_log(duckhook, "  unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write%s) <- %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write%s) <- %p (size=%"SIZE_T_FMT"u)\n",
                      mstate->addr, mstate->size, (prot & PROT_EXEC) ? ",exec" : "", start, len);
         return 0;
     }
@@ -280,34 +280,34 @@ int duckhook_unprotect_begin(duckhook_t *duckhook, mem_state_t *mstate, void *st
         rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
         if (rv == 0) {
             prot = PROT_READ | PROT_WRITE;
-            duckhook_log(duckhook, "  unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
+            funchook_log(funchook, "  unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
                          mstate->addr, mstate->size, start, len);
             return 0;
         }
     }
-    duckhook_set_error_message(duckhook, "Failed to unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write%s) <- %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write%s) <- %p (size=%"SIZE_T_FMT"u, error=%s)",
                                mstate->addr, mstate->size, (prot & PROT_EXEC) ? ",exec" : "", start, len,
-                               duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-    return DUCKHOOK_ERROR_MEMORY_FUNCTION;
+                               funchook_strerror(errno, errbuf, sizeof(errbuf)));
+    return FUNCHOOK_ERROR_MEMORY_FUNCTION;
 }
 
-int duckhook_unprotect_end(duckhook_t *duckhook, const mem_state_t *mstate)
+int funchook_unprotect_end(funchook_t *funchook, const mem_state_t *mstate)
 {
     char errbuf[128];
     int rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_EXEC);
 
     if (rv == 0) {
-        duckhook_log(duckhook, "  protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
+        funchook_log(funchook, "  protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
                      mstate->addr, mstate->size);
         return 0;
     }
-    duckhook_set_error_message(duckhook, "Failed to protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec, error=%s)",
+    funchook_set_error_message(funchook, "Failed to protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec, error=%s)",
                                mstate->addr, mstate->size,
-                               duckhook_strerror(errno, errbuf, sizeof(errbuf)));
-    return DUCKHOOK_ERROR_MEMORY_FUNCTION;
+                               funchook_strerror(errno, errbuf, sizeof(errbuf)));
+    return FUNCHOOK_ERROR_MEMORY_FUNCTION;
 }
 
-void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
+void *funchook_resolve_func(funchook_t *funchook, void *func)
 {
 #ifdef __GLIBC__
     struct link_map *lmap, *lm;
@@ -335,15 +335,15 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
     if (lmap->l_addr != 0) {
         ehdr = (ElfW(Ehdr) *)lmap->l_addr;
         if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
-            duckhook_log(duckhook, "  not a valid ELF module %s.\n", lmap->l_name);
+            funchook_log(funchook, "  not a valid ELF module %s.\n", lmap->l_name);
             return func;
         }
         if (ehdr->e_type != ET_EXEC && ehdr->e_type != ET_DYN) {
-          duckhook_log(duckhook, "  ELF type is neither ET_EXEC nor ET_DYN.\n");
+          funchook_log(funchook, "  ELF type is neither ET_EXEC nor ET_DYN.\n");
           return func;
         }
     }
-    duckhook_log(duckhook, "  link_map addr=%p, name=%s\n", (void*)lmap->l_addr, lmap->l_name);
+    funchook_log(funchook, "  link_map addr=%p, name=%s\n", (void*)lmap->l_addr, lmap->l_name);
     dyn = lmap->l_ld;
 
     for (i = 0; dyn[i].d_tag != DT_NULL; i++) {
@@ -371,7 +371,7 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
                 fn = dlsym(RTLD_NEXT, strtab + symtab->st_name);
             }
             if (fn != NULL) {
-                duckhook_log(duckhook, "  change %s address from %p to %p\n",
+                funchook_log(funchook, "  change %s address from %p to %p\n",
                              strtab + symtab->st_name, func, fn);
                 func = fn;
             }
@@ -383,7 +383,7 @@ void *duckhook_resolve_func(duckhook_t *duckhook, void *func)
     return func;
 }
 
-const char *duckhook_strerror(int errnum, char *buf, size_t buflen)
+const char *funchook_strerror(int errnum, char *buf, size_t buflen)
 {
 #ifdef __linux
     if (0 <= errnum && errnum < _sys_nerr) {
@@ -394,6 +394,6 @@ const char *duckhook_strerror(int errnum, char *buf, size_t buflen)
         return sys_errlist[errnum];
     }
 #endif
-    duckhook_snprintf(buf, buflen, "Unknown error (%d)", errnum);
+    funchook_snprintf(buf, buflen, "Unknown error (%d)", errnum);
     return buf;
 }

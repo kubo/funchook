@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{6E012034-BE65-43DB-BC03-9B6286723129}</ProjectGuid>
+    <ProjectGuid>{9ABF8228-945D-44CF-BE1E-95C3C5A8CE9E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>duckhook</RootNamespace>
+    <RootNamespace>funchook_testdll</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -71,19 +71,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(Configuration)\dll\</IntDir>
+    <IntDir>$(Configuration)\test_dll\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\dll\</IntDir>
+    <IntDir>$(Platform)\$(Configuration)\test_dll\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(Configuration)\dll\</IntDir>
+    <IntDir>$(Configuration)\test_dll\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\dll\</IntDir>
+    <IntDir>$(Platform)\$(Configuration)\test_dll\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -91,15 +91,19 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;DUCKHOOK_EXPORTS;PFB_NO_EXTERNAL_FUNC;PFB_MSVC_FORMAT;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FUNCHOOK_TESTDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\distorm\include;$(ProjectDir)\..\include;$(ProjectDir)\..\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuild>
+      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x86 /out:$(OutDir)\funchook_test_exe.lib</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -107,15 +111,19 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;DUCKHOOK_EXPORTS;PFB_NO_EXTERNAL_FUNC;PFB_MSVC_FORMAT;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FUNCHOOK_TESTDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\distorm\include;$(ProjectDir)\..\win32;$(ProjectDir)\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuild>
+      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x64 /out:$(OutDir)\funchook_test_exe.lib</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -125,17 +133,19 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;DUCKHOOK_EXPORTS;PFB_NO_EXTERNAL_FUNC;PFB_MSVC_FORMAT;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;FUNCHOOK_TESTDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\distorm\include;$(ProjectDir)\..\include;$(ProjectDir)\..\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuild>
+      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x86 /out:$(OutDir)\funchook_test_exe.lib</Command>
+      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -145,42 +155,28 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;DUCKHOOK_EXPORTS;PFB_NO_EXTERNAL_FUNC;PFB_MSVC_FORMAT;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;FUNCHOOK_TESTDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\distorm\include;$(ProjectDir)\..\win32;$(ProjectDir)\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuild>
+      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x64 /out:$(OutDir)\funchook_test_exe.lib</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\distorm\src\decoder.c" />
-    <ClCompile Include="..\distorm\src\distorm.c" />
-    <ClCompile Include="..\distorm\src\instructions.c" />
-    <ClCompile Include="..\distorm\src\insts.c" />
-    <ClCompile Include="..\distorm\src\mnemonics.c" />
-    <ClCompile Include="..\distorm\src\operands.c" />
-    <ClCompile Include="..\distorm\src\prefix.c" />
-    <ClCompile Include="..\distorm\src\textdefs.c" />
-    <ClCompile Include="..\distorm\src\wstring.c" />
-    <ClCompile Include="..\src\duckhook.c" />
-    <ClCompile Include="..\src\duckhook_io.c" />
-    <ClCompile Include="..\src\duckhook_windows.c" />
-    <ClCompile Include="..\src\duckhook_x86.c" />
-    <ClCompile Include="..\src\os_func.c" />
-    <ClCompile Include="..\src\os_func_windows.c" />
-    <ClCompile Include="..\src\printf_base.c" />
+    <ClCompile Include="..\test\libfunchook_test.c" />
+    <ClCompile Include="..\test\libfunchook_test2.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\duckhook.h" />
-    <ClInclude Include="..\src\duckhook_internal.h" />
-    <ClInclude Include="..\src\duckhook_io.h" />
-    <ClInclude Include="..\src\os_func.h" />
-    <ClInclude Include="..\src\printf_base.h" />
+    <CustomBuild Include="funchook_test_exe.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

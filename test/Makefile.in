@@ -4,40 +4,40 @@ top_builddir = @top_builddir@
 
 CC = @CC@
 AS = @CC@ -c
-OBJS = test_main.o @DUCKHOOK_CPU@_test.o
+OBJS = test_main.o @FUNCHOOK_CPU@_test.o
 CFLAGS += -O2 -g -I$(srcdir)/../include
 PIC_CFLAGS = @PIC_CFLAGS@
-LIBS = -L$(top_builddir)/src -lduckhook -Wl,-rpath,$(top_builddir)/src -L. -lduckhook_test -Wl,-rpath,.
+LIBS = -L$(top_builddir)/src -lfunchook -Wl,-rpath,$(top_builddir)/src -L. -lfunchook_test -Wl,-rpath,.
 LINK_SHARED = @LINK_SHARED@
 EXEEXT = @EXEEXT@
 DLLTOOL = $(CC:gcc=dlltool)
-SO_OBJS = $(srcdir)/libduckhook_test.c $(srcdir)/libduckhook_test2.c
-@IF_WIN32@LDFLAGS += -Wl,--out-implib,duckhook_test.lib
-@IF_WIN32@DUCKHOOK_TEST_LIB = duckhook_test_exe.lib
+SO_OBJS = $(srcdir)/libfunchook_test.c $(srcdir)/libfunchook_test2.c
+@IF_WIN32@LDFLAGS += -Wl,--out-implib,funchook_test.lib
+@IF_WIN32@FUNCHOOK_TEST_LIB = funchook_test_exe.lib
 @IF_OSX@LDFLAGS += -Wl,-undefined,dynamic_lookup
 
 VPATH = $(srcdir):../src
 
-all: duckhook_test$(EXEEXT)
+all: funchook_test$(EXEEXT)
 
-test: duckhook_test$(EXEEXT)
-	@IF_WIN32@ cmp -s $(top_builddir)/src/duckhook.dll duckhook.dll || cp $(top_builddir)/src/duckhook.dll duckhook.dll
-	./duckhook_test$(EXEEXT)
+test: funchook_test$(EXEEXT)
+	@IF_WIN32@ cmp -s $(top_builddir)/src/funchook.dll funchook.dll || cp $(top_builddir)/src/funchook.dll funchook.dll
+	./funchook_test$(EXEEXT)
 
-duckhook_test$(EXEEXT): $(OBJS) @LIBDUCKHOOK_SO@ libduckhook_test.so
-	$(CC) -o duckhook_test$(EXEEXT) $(OBJS) $(LIBS)
+funchook_test$(EXEEXT): $(OBJS) @LIBFUNCHOOK_SO@ libfunchook_test.so
+	$(CC) -o funchook_test$(EXEEXT) $(OBJS) $(LIBS)
 
-libduckhook_test.so: $(SO_OBJS) $(DUCKHOOK_TEST_LIB)
-	$(LINK_SHARED) $(LDFLAGS) $(PIC_CFLAGS) $(CFLAGS) -o libduckhook_test.so $(SO_OBJS) $(DUCKHOOK_TEST_LIB)
+libfunchook_test.so: $(SO_OBJS) $(FUNCHOOK_TEST_LIB)
+	$(LINK_SHARED) $(LDFLAGS) $(PIC_CFLAGS) $(CFLAGS) -o libfunchook_test.so $(SO_OBJS) $(FUNCHOOK_TEST_LIB)
 
 clean:
-	$(RM) $(TESTEXE) *.o libduckhook_test.so
+	$(RM) $(TESTEXE) *.o libfunchook_test.so
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status
 
-duckhook_test_exe.lib:
-	echo "LIBRARY duckhook_test.exe" > duckhook_test_exe.def
-	echo "EXPORTS" >> duckhook_test_exe.def
-	echo "get_val_in_exe" >> duckhook_test_exe.def
-	$(DLLTOOL) -d duckhook_test_exe.def -l duckhook_test_exe.lib
+funchook_test_exe.lib:
+	echo "LIBRARY funchook_test.exe" > funchook_test_exe.def
+	echo "EXPORTS" >> funchook_test_exe.def
+	echo "get_val_in_exe" >> funchook_test_exe.def
+	$(DLLTOOL) -d funchook_test_exe.def -l funchook_test_exe.lib
