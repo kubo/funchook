@@ -174,7 +174,7 @@ int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, con
                 const _DInst *di = &dis[i];
                 log_instruction(funchook, &ci, di);
                 get_rip_relative(&ctx, &rel_disp, &rel_imm, di);
-                if (func <= rel_imm.addr && rel_imm.addr < func + JUMP32_SIZE) {
+                if (func < rel_imm.addr && rel_imm.addr < func + JUMP32_SIZE) {
                     /* jump to the hot-patched region. */
                     funchook_set_error_message(funchook, "instruction jumping back to the hot-patched region was found");
                     return FUNCHOOK_ERROR_FOUND_BACK_JUMP;
