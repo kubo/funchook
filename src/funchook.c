@@ -275,6 +275,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     funchook_page_t *page = NULL;
     funchook_entry_t *entry;
     uint8_t *src_addr;
+    uint32_t *offset_addr;
     int rv;
 
     if (funchook->installed) {
@@ -311,10 +312,12 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
 #endif
     /* fix rip-relative offsets */
     src_addr = entry->trampoline + disp[0].src_addr_offset;
-    *(uint32_t*)(entry->trampoline + disp[0].pos_offset) = (uint32_t)(disp[0].dst_addr - src_addr);
+    offset_addr = (uint32_t*)(entry->trampoline + disp[0].pos_offset);
+    *offset_addr = (uint32_t)(disp[0].dst_addr - src_addr);
     if (disp[1].dst_addr != 0) {
         src_addr = entry->trampoline + disp[1].src_addr_offset;
-        *(uint32_t*)(entry->trampoline + disp[1].pos_offset) = (uint32_t)(disp[1].dst_addr - src_addr);
+        offset_addr = (uint32_t*)(entry->trampoline + disp[1].pos_offset);
+        *offset_addr = (uint32_t)(disp[1].dst_addr - src_addr);
     }
     funchook_log_trampoline(funchook, entry->trampoline);
 
