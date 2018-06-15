@@ -10,7 +10,7 @@ PIC_CFLAGS = @PIC_CFLAGS@
 LIBS = -L$(top_builddir)/src -lfunchook -Wl,-rpath,$(top_builddir)/src -L. -lfunchook_test -Wl,-rpath,.
 LINK_SHARED = @LINK_SHARED@
 EXEEXT = @EXEEXT@
-DLLTOOL = $(CC:gcc=dlltool)
+DLLTOOL = $(firstword $(CC:gcc=dlltool))
 SO_OBJS = $(srcdir)/libfunchook_test.c $(srcdir)/libfunchook_test2.c
 @IF_WIN32@LDFLAGS += -Wl,--out-implib,funchook_test.lib
 @IF_WIN32@FUNCHOOK_TEST_LIB = funchook_test_exe.lib
