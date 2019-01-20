@@ -90,7 +90,7 @@ int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst
     src[4] = 0x00;
     src[5] = 0x00;
     *(const uint8_t**)(src + 6) = dst;
-    funchook_log(funchook, "  Write jump64 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x0%"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump64 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
