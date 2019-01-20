@@ -1,6 +1,23 @@
 /* -*- indent-tabs-mode: nil -*-
  */
+#ifdef WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#ifdef WIN32
+#include <io.h>
+#define mode_t int
+#define ssize_t int
+#define open _open
+#define read _read
+#define close _close
+#else
+#include <unistd.h>
+#endif
 #include <funchook.h>
 
 #ifdef WIN32
@@ -187,6 +204,106 @@ void test_funchook_expect_error(int_func_t func, int errcode, const char *func_s
     funchook_destroy(funchook);
 }
 
+static int (*open_func)(const char *pathname, int flags, mode_t mode);
+static FILE *(*fopen_func)(const char *pathname, const char *mode);
+
+static int open_hook(const char *pathname, int flags, mode_t mode)
+{
+    if (strcmp(pathname, "test-1.txt") == 0) {
+        pathname = "test-2.txt";
+    }
+    return open_func(pathname, flags, mode);
+}
+
+static FILE *fopen_hook(const char *pathname, const char *mode)
+{
+    if (strcmp(pathname, "test-1.txt") == 0) {
+        pathname = "test-2.txt";
+    }
+    return fopen_func(pathname, mode);
+}
+
+static void read_content_by_open(const char *filename, char *buf, size_t bufsiz)
+{
+    int fd = open(filename, O_RDONLY);
+    ssize_t size = read(fd, buf, bufsiz);
+
+    if (size >= 0) {
+        buf[size] = '\0';
+    } else {
+        strcpy(buf, "read error");
+    }
+    close(fd);
+}
+
+static void read_content_by_fopen(const char *filename, char *buf, size_t bufsiz)
+{
+    FILE *fp = fopen(filename, "r");
+    if (fp != NULL) {
+        if (fgets(buf, bufsiz, fp) == NULL) {
+            strcpy(buf, "read error");
+        }
+        fclose(fp);
+    } else {
+        strcpy(buf, "open error");
+    }
+}
+
+static void check_content(const char *filename, const char *expect, int line)
+{
+    char buf[512];
+
+    read_content_by_open(filename, buf, sizeof(buf));
+    if (strcmp(buf, expect) != 0) {
+        printf("ERROR at line %d: '%s' != '%s' (open)\n", line, buf, expect);
+        error_cnt++;
+    }
+    read_content_by_fopen(filename, buf, sizeof(buf));
+    if (strcmp(buf, expect) != 0) {
+        printf("ERROR at line %d: '%s' != '%s' (fopen)\n", line, buf, expect);
+        error_cnt++;
+    }
+}
+
+static void test_hook_open_and_fopen(void)
+{
+    FILE *fp;
+    funchook_t *funchook;
+
+    test_cnt++;
+    printf("[%d] test_hook_open_and_fopen\n", test_cnt);
+
+    /* prepare file contents */
+    fp = fopen("test-1.txt", "w");
+    fputs("This is test-1.txt.", fp);
+    fclose(fp);
+    fp = fopen("test-2.txt", "w");
+    fputs("This is test-2.txt.", fp);
+    fclose(fp);
+
+    /* prepare to hook `open' and `fopen` */
+    funchook = funchook_create();
+    open_func = (int (*)(const char*, int, mode_t))open;
+    funchook_prepare(funchook, (void**)&open_func, open_hook);
+    fopen_func = fopen;
+    funchook_prepare(funchook, (void**)&fopen_func, fopen_hook);
+
+    /* The contents of test-1.txt should be "This is test-1.txt". */
+    check_content("test-1.txt", "This is test-1.txt.", __LINE__);
+
+    /* hook `open' and `fopen` */
+    funchook_install(funchook, 0);
+    /* Try to open test-1.txt but open test-2.txt. */
+    check_content("test-1.txt", "This is test-2.txt.", __LINE__);
+
+    /* restore hooks.  */
+    funchook_uninstall(funchook, 0);
+    /* Open test-1.txt. */
+    check_content("test-1.txt", "This is test-1.txt.", __LINE__);
+
+    funchook_destroy(funchook);
+}
+
 int main()
 {
     funchook_set_debug_file("debug.log");
@@ -219,6 +336,8 @@ int main()
 #endif
 
 #endif
+
+    test_hook_open_and_fopen();
 
     if (error_cnt == 0) {
         printf("all %d tests are passed.\n", test_cnt);
