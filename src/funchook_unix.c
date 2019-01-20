@@ -42,6 +42,7 @@
 #include <link.h>
 #endif
 #ifdef __APPLE__
+#include <stdlib.h>
 #include <mach/mach.h>
 #endif
 #include "funchook_io.h"
@@ -72,6 +73,11 @@ int funchook_free(funchook_t *funchook)
 
 #ifdef CPU_X86_64
 
+typedef struct memory_map memory_map_t;
+static int memory_map_open(funchook_t *funchook, memory_map_t *mmap);
+static int memory_map_next(memory_map_t *mmap, size_t *start, size_t *end);
+static void memory_map_close(memory_map_t *mmap);
+
 #if defined(__linux)
 static char scan_address(const char **str, size_t *addr_p)
 {
@@ -92,79 +98,123 @@ static char scan_address(const char **str, size_t *addr_p)
         }
     }
 }
-#endif
 
-static int get_free_address(funchook_t *funchook, void *func_addr, void **addr_out)
-{
-#if defined(__linux)
+struct memory_map {
     funchook_io_t io;
-    char buf[PATH_MAX];
-    size_t prev_end = 0;
+};
 
-    if (funchook_io_open(&io, "/proc/self/maps", FUNCHOOK_IO_READ) != 0) {
+static int memory_map_open(funchook_t *funchook, memory_map_t *mm)
+{
+    char buf[64];
+    if (funchook_io_open(&mm->io, "/proc/self/maps", FUNCHOOK_IO_READ) != 0) {
         funchook_set_error_message(funchook, "Failed to open /proc/self/maps (%s)",
                                    funchook_strerror(errno, buf, sizeof(buf)));
         return FUNCHOOK_ERROR_INTERNAL_ERROR;
     }
+    return 0;
+}
 
-    while (funchook_io_gets(buf, sizeof(buf), &io) != NULL) {
-        const char *str = buf;
-        size_t start, end;
+static int memory_map_next(memory_map_t *mm, size_t *start, size_t *end)
+{
+    char buf[PATH_MAX];
+    const char *str = buf;
 
-        if (scan_address(&str, &start) == '-' && scan_address(&str, &end) == ' ') {
-            /* same with sscanf(buf, "%lx-%lx ", &start, &end) == 2 */
-            if (prev_end == 0) {
-                if (end >= (size_t)func_addr) {
-                    prev_end = end;
-                }
-            } else {
-                if (start - prev_end >= page_size) {
-                    *addr_out = (void*)(prev_end);
-                    funchook_log(funchook, "  -- Use address %p for function %p\n",
-                                 *addr_out, func_addr);
-                    funchook_log(funchook, "  process map: %s", buf);
-                    funchook_io_close(&io);
-                    return 0;
-                } else {
-                    prev_end = end;
-                }
-            }
-        }
-        funchook_log(funchook, "  process map: %s", buf);
+    if (funchook_io_gets(buf, sizeof(buf), &mm->io) == NULL) {
+        return -1;
     }
-    funchook_io_close(&io);
-    funchook_set_error_message(funchook, "Could not find a free region after %p",
-                               func_addr);
-    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
+    if (scan_address(&str, start) != '-') {
+        return -1;
+    }
+    if (scan_address(&str, end) != ' ') {
+        return -1;
+    }
+    return 0;
+}
+
+static void memory_map_close(memory_map_t *mm)
+{
+    funchook_io_close(&mm->io);
+}
+
 #elif defined(__APPLE__)
-    mach_port_t task = mach_task_self();
+
+struct memory_map {
+    mach_port_t task;
+    vm_address_t addr;
+};
+
+static int memory_map_open(funchook_t *funchook, memory_map_t *mm)
+{
+    mm->task = mach_task_self();
+    mm->addr = 0;
+    return 0;
+}
+
+static int memory_map_next(memory_map_t *mm, size_t *start, size_t *end)
+{
     vm_size_t size;
-    vm_address_t start = (vm_address_t)func_addr;
     vm_region_basic_info_data_64_t info;
     mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
     memory_object_name_t object = 0;
-    size_t prev_end = ((size_t)-1) - page_size;
 
-    while (vm_region_64(task, &start, &size, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &info_count, &object) == KERN_SUCCESS) {
-        size_t end = start + size;
-        if (prev_end + page_size <= start) {
-            *addr_out = (void*)(prev_end);
-            funchook_log(funchook, "  -- Use address %p for function %p\n",
-                         *addr_out, func_addr);
-            funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
-                         start, end);
-            return 0;
-        }
-        funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
-                     start, end);
-        start = prev_end = end;
+    if (vm_region_64(mm->task, &mm->addr, &size, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &info_count, &object) != KERN_SUCCESS) {
+        return -1;
     }
-    funchook_set_error_message(funchook, "Could not find a free region after %p",
-                               func_addr);
-    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
+    *start = mm->addr;
+    *end = mm->addr + size;
+    mm->addr += size;
+    return 0;
+}
+
+static void memory_map_close(memory_map_t *mm)
+{
+    return;
+}
+
 #else
 #error unsupported OS
 #endif
+
+static int get_free_address(funchook_t *funchook, void *func_addr, void *addrs[2])
+{
+    memory_map_t mm;
+    size_t prev_end = 0;
+    size_t start, end;
+    int rv;
+
+    if ((rv = memory_map_open(funchook, &mm)) != 0) {
+        return rv;
+    }
+    addrs[0] = addrs[1] = NULL;
+
+    while (memory_map_next(&mm, &start, &end) == 0) {
+        funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+                     start, end);
+        if (prev_end + page_size <= start) {
+            if (start < (size_t)func_addr) {
+                size_t addr = start - page_size;
+                if ((size_t)func_addr - addr < INT32_MAX) {
+                    /* unused memory region before func_addr. */
+                    addrs[0] = (void*)addr;
+                }
+            }
+            if ((size_t)func_addr < prev_end) {
+                if (prev_end - (size_t)func_addr < INT32_MAX) {
+                    /* unused memory region after func_addr. */
+                    addrs[1] = (void*)prev_end;
+                }
+                funchook_log(funchook, "  -- Use address %p or %p for function %p\n",
+                             addrs[0], addrs[1], func_addr);
+                memory_map_close(&mm);
+                return 0;
+            }
+        }
+        prev_end = end;
+    }
+    memory_map_close(&mm);
+    funchook_set_error_message(funchook, "Could not find a free region near %p",
+                               func_addr);
+    return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 }
 
 #endif /* CPU_X86_64 */
@@ -174,28 +224,40 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
 #ifdef CPU_X86_64
     int loop_cnt;
 
+    /* Loop three times just to avoid rare cases such as
+     * unused memory region is used between 'get_free_address()'
+     * and 'mmap()'.
+     */
     for (loop_cnt = 0; loop_cnt < 3; loop_cnt++) {
-        void *target;
-        int rv = get_free_address(funchook, func, &target);
+        void *addrs[2];
+        int rv = get_free_address(funchook, func, addrs);
+        int i;
 
         if (rv != 0) {
             return rv;
         }
-        *page_out = mmap(target, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (*page_out == target) {
-            funchook_log(funchook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
-            return 0;
-        }
-        if (*page_out == MAP_FAILED) {
-            char errbuf[128];
+        for (i = 1; i >= 0; i--) {
+            /* Try to use addr[1] (unused memory region after `func`)
+             * and then addr[0] (before `func`)
+             */
+            if (addrs[i] == NULL) {
+                continue;
+            }
+            *page_out = mmap(addrs[i], page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            if (*page_out == addrs[i]) {
+                funchook_log(funchook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+                return 0;
+            }
+            if (*page_out == MAP_FAILED) {
+                char errbuf[128];
 
-            funchook_set_error_message(funchook, "mmap failed(addr=%p): %s", target,
-                                       funchook_strerror(errno, errbuf, sizeof(errbuf)));
-            return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
+                funchook_set_error_message(funchook, "mmap failed(addr=%p): %s", addrs[i],
+                                           funchook_strerror(errno, errbuf, sizeof(errbuf)));
+                return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
+            }
+            funchook_log(funchook, "  try to allocate %p but %p (size=%"SIZE_T_FMT"u)\n", addrs[i], *page_out, page_size);
+            munmap(*page_out, page_size);
         }
-        funchook_log(funchook, "  allocate page %p (hint=%p, size=%"SIZE_T_FMT"u)\n", *page_out, target, page_size);
-        /* other thread might allocate memory at the target address. */
-        munmap(*page_out, page_size);
     }
     funchook_set_error_message(funchook, "Failed to allocate memory in unused regions");
     return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
