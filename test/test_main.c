@@ -270,6 +270,13 @@ static void test_hook_open_and_fopen(void)
     FILE *fp;
     funchook_t *funchook;
 
+#ifdef WIN64
+    if (getenv("WINELOADERNOEXEC") != NULL) {
+        /* The test doesn't work on Wine. */
+        return;
+    }
+#endif
+
     test_cnt++;
     printf("[%d] test_hook_open_and_fopen\n", test_cnt);
 

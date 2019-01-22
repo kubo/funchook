@@ -17,7 +17,7 @@ Supported Platforms
 * Linux x86 (*1)
 * OS X x86_64 (*1)
 * OS X x86 (*1)
-* Windows x64 (*2)
+* Windows x64 (*2) (except C-runtime functions under [Wine][])
 * Windows 32-bit (*2)
 
 *1 tested on [Travis CI](https://travis-ci.org/kubo/funchook)  
@@ -116,3 +116,4 @@ license is compatible with the GPL.
 
 [GPL linking exception]: https://en.wikipedia.org/wiki/GPL_linking_exception
 [diStorm3]: https://github.com/gdabah/distorm/
+[Wine]: https://www.winehq.org/
