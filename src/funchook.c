@@ -172,7 +172,7 @@ int funchook_destroy(funchook_t *funchook)
 
 const char *funchook_error_message(const funchook_t *funchook)
 {
-    return ((struct funchook *)funchook)->error_message;
+    return funchook->error_message;
 }
 
 int funchook_set_debug_file(const char *name)
