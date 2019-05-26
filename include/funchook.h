@@ -108,9 +108,9 @@ FUNCHOOK_EXPORT int funchook_destroy(funchook_t *funchook);
  * Get error message
  *
  * @param funchook     a funchook handle created by funchook_create()
- * @return             error code. one of FUNCHOOK_ERROR_*.
+ * @return             pointer to buffer containing error message
  */
-FUNCHOOK_EXPORT const char *funchook_error_message(funchook_t *funchook);
+FUNCHOOK_EXPORT const char *funchook_error_message(const funchook_t *funchook);
 
 /**
  * Set log file name to debug funchook itself.
