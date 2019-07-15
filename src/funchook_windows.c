@@ -163,13 +163,15 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
     for (pl = page_list.next; pl != &page_list; pl = pl->next) {
         for (i = 0; i < max_num_pages; i++) {
             if (!pl->used[i]) {
-                page = (funchook_page_t *)((size_t)pl + (i + 1) * page_size);
-                if (funchook_page_avail(funchook, page, 0, func, disp)) {
-                    break;
+                funchook_page_t *p = (funchook_page_t *)((size_t)pl + (i + 1) * page_size);
+                if (funchook_page_avail(funchook, p, 0, func, disp)) {
+                    page = p;
+                    goto exit_loop;
                 }
             }
         }
     }
+exit_loop:
     if (page == NULL) {
         /* no page_list is available. */
         int rv = alloc_page_info(funchook, &pl, func);
