@@ -26,6 +26,13 @@
 #define DLLEXPORT
 #endif
 
+#ifdef __GNUC__
+#define NOINLINE __attribute__((noinline))
+#endif
+#ifdef _MSC_VER
+#define NOINLINE __declspec(noinline)
+#endif
+
 typedef int (*int_func_t)(void);
 
 extern int reset_retval(void);
@@ -311,6 +318,72 @@ static void test_hook_open_and_fopen(void)
     funchook_destroy(funchook);
 }
 
+#define S(suffix) \
+    extern int dllfunc_##suffix(int, int); \
+    static int (*dllfunc_##suffix##_func)(int, int); \
+    static int dllfunc_##suffix##_hook(int a, int b) { \
+        return dllfunc_##suffix##_func(a, b) * 2; \
+    } \
+    NOINLINE int exefunc_##suffix(int a, int b) { return a * b + suffix; } \
+    static int (*exefunc_##suffix##_func)(int, int); \
+    static int exefunc_##suffix##_hook(int a, int b) { \
+        return exefunc_##suffix##_func(a, b) * 2; \
+    }
+#include "suffix.list"
+#undef S
+
+static NOINLINE int call_dll_and_exe_funcs(int installed)
+{
+    int rv;
+    int mul = installed ? 2 : 1;
+    const char *is_str = installed ? "isn't" : "is";
+#define S(suffix) \
+    rv = dllfunc_##suffix(2, 3); \
+    if (rv != (2 * 3 + suffix) * mul) { \
+        printf("ERROR: dllfunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
+        error_cnt++; \
+        return -1; \
+    } \
+    rv = exefunc_##suffix(2, 3); \
+    if (rv != (2 * 3 + suffix) * mul) { \
+        printf("ERROR: exefunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
+        error_cnt++; \
+        return -1; \
+    }
+#include "suffix.list"
+#undef S
+    return 0;
+}
+
+static void test_hook_many_funcs(void)
+{
+    funchook_t *funchook;
+    test_cnt++;
+    printf("[%d] test_hook_many_funcs\n", test_cnt);
+    funchook = funchook_create();
+#define S(suffix) \
+    dllfunc_##suffix##_func = dllfunc_##suffix; \
+    funchook_prepare(funchook, (void**)&dllfunc_##suffix##_func, dllfunc_##suffix##_hook); \
+    exefunc_##suffix##_func = exefunc_##suffix; \
+    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook); \
+    putchar('.'); fflush(stdout);
+#include "suffix.list"
+#undef S
+    putchar('\n');
+
+    funchook_install(funchook, 0);
+    if (call_dll_and_exe_funcs(1) != 0) {
+        return;
+    }
+
+    funchook_uninstall(funchook, 0);
+    if (call_dll_and_exe_funcs(0) != 0) {
+        return;
+    }
+
+    funchook_destroy(funchook);
+}
+
 int main()
 {
     funchook_set_debug_file("debug.log");
@@ -345,6 +418,7 @@ int main()
 #endif
 
     test_hook_open_and_fopen();
+    test_hook_many_funcs();
 
     if (error_cnt == 0) {
         printf("all %d tests are passed.\n", test_cnt);
