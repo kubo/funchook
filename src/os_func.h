@@ -48,6 +48,7 @@ int funchook_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 /* os_func_windows.c */
 /* no function for now */
 #else
+#include <sys/types.h>
 /* os_func_unix.c */
 extern int funchook_os_errno;
 long funchook_os_syscall(long, ...);

@@ -1,3 +1,4 @@
+dist: bionic
 sudo: required
 matrix:
   include:
@@ -6,13 +7,12 @@ matrix:
 language: c
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get remove mingw32 mingw32-runtime mingw32-binutils; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install mingw-w64 gcc-multilib wine; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install mingw-w64 gcc-multilib wine-development; fi
 script:
   - ./autogen.sh
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-linux   && (cd x86_64-linux   && ../configure && (make test || (cat test/debug.log; exit 1))); fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-linux     && (cd i686-linux     && ../configure "CC=gcc -m32" && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure CC=x86_64-w64-mingw32-gcc && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-mingw32   && (cd i686-mingw32   && ../configure "CC=i686-w64-mingw32-gcc -static-libgcc" && (make test || (cat test/debug.log; exit 1))); fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure --target=x86_64-w64-mingw32-gcc && (make test || (cat test/debug.log; exit 1))); fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-mingw32   && (cd i686-mingw32   && ../configure --target=i686-w64-mingw32-gcc CFLAGS="-static-libgcc" && (make test || (cat test/debug.log; exit 1))); fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir x86_64-darwin  && (cd x86_64-darwin  && ../configure && (make test || (cat test/debug.log; exit 1))); fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir i686-darwin    && (cd i686-darwin    && ../configure "CC=cc -m32" && (make test || (cat test/debug.log; exit 1))); fi
