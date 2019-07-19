@@ -6,14 +6,14 @@ include(CheckSymbolExists)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 
-if(NOT DEFINED _GNU_SOURCE)
+if (NOT DEFINED _GNU_SOURCE)
     check_symbol_exists(__GNU_LIBRARY__ "features.h" _GNU_SOURCE)
 
-    if(NOT _GNU_SOURCE)
+    if (NOT _GNU_SOURCE)
         unset(_GNU_SOURCE CACHE)
         check_symbol_exists(_GNU_SOURCE "features.h" _GNU_SOURCE)
-  endif()
-endif()
+    endif ()
+endif ()
 
 set(DISTORM_PATH distorm/)
 set(DISTORM_SRC_DIR ${DISTORM_PATH}/src/)
@@ -29,8 +29,8 @@ set(FUNCHOOK_SOURCES src/funchook.c src/funchook_io.c src/funchook_x86.c src/os_
         src/funchook_unix.c src/os_func_unix.c src/funchook_syscall.S)
 
 add_library(funchook STATIC ${FUNCHOOK_SOURCES})
-if(_GNU_SOURCE)
+if (_GNU_SOURCE)
     target_compile_definitions(funchook PRIVATE _GNU_SOURCE)
-endif()
+endif ()
 target_link_libraries(funchook PUBLIC distorm dl)
 target_include_directories(funchook PUBLIC include)
