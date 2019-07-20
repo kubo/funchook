@@ -28,6 +28,9 @@
  * You should have received a copy of the GNU General Public License
  * along with Funchook. If not, see <http://www.gnu.org/licenses/>.
  */
+#if defined __linux && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>

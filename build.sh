@@ -22,7 +22,7 @@ done
 cd test
 mkdir -p "${PREFIX}-${OS}" && cd "${PREFIX}-${OS}"
 if [[ ${X86} == "yes" ]]; then
-	cmake -DCMAKE_C_FLAGS="-m32" .. || exit 1
+	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-m32" .. || exit 1
 else
 	cmake .. || exit 1
 fi

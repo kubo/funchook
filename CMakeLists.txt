@@ -2,19 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 
 project(funchook C ASM)
 
-include(CheckSymbolExists)
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-
-if (NOT DEFINED _GNU_SOURCE)
-    check_symbol_exists(__GNU_LIBRARY__ "features.h" _GNU_SOURCE)
-
-    if (NOT _GNU_SOURCE)
-        unset(_GNU_SOURCE CACHE)
-        check_symbol_exists(_GNU_SOURCE "features.h" _GNU_SOURCE)
-    endif ()
-endif ()
-
 set(DISTORM_PATH distorm/)
 set(DISTORM_SRC_DIR ${DISTORM_PATH}/src/)
 set(DISTORM_SOURCES ${DISTORM_SRC_DIR}/decoder.c ${DISTORM_SRC_DIR}/distorm.c ${DISTORM_SRC_DIR}/instructions.c
