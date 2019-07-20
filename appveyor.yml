@@ -10,7 +10,7 @@ version: 0.1.{build}
 #---------------------------------#
 
 # Build worker image (VM template)
-image: Visual Studio 2015
+image: Visual Studio 2019
 
 # scripts that run after cloning repository
 install:
