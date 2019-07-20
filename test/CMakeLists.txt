@@ -13,7 +13,6 @@ add_library(funchook_test SHARED libfunchook_test.c libfunchook_test2.c)
 if (APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif ()
-target_link_libraries(funchook_test PUBLIC funchook)
 
 add_executable(funchook_test_ex test_main.c ${FUNCHOOK_TEST})
 target_link_libraries(funchook_test_ex funchook_test funchook m)
