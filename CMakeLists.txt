@@ -16,8 +16,5 @@ set(FUNCHOOK_SOURCES src/funchook.c src/funchook_io.c src/funchook_x86.c src/os_
         src/funchook_unix.c src/os_func_unix.c src/funchook_syscall.S)
 
 add_library(funchook STATIC ${FUNCHOOK_SOURCES})
-if (_GNU_SOURCE)
-    target_compile_definitions(funchook PRIVATE _GNU_SOURCE)
-endif ()
 target_link_libraries(funchook PUBLIC distorm dl)
 target_include_directories(funchook PUBLIC include)
