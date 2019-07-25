@@ -8,7 +8,13 @@ set(DISTORM_SOURCES ${DISTORM_SRC_DIR}/decoder.c ${DISTORM_SRC_DIR}/distorm.c ${
         ${DISTORM_SRC_DIR}/insts.c ${DISTORM_SRC_DIR}/mnemonics.c ${DISTORM_SRC_DIR}/operands.c
         ${DISTORM_SRC_DIR}/prefix.c ${DISTORM_SRC_DIR}/textdefs.c ${DISTORM_SRC_DIR}/wstring.c)
 
-add_library(distorm STATIC ${DISTORM_SOURCES})
+if (MINGW)
+    set(LINKING SHARED)
+else ()
+    set(LINKING STATIC)
+endif ()
+
+add_library(distorm ${LINKING} ${DISTORM_SOURCES})
 target_include_directories(distorm PUBLIC ${DISTORM_PATH}/include)
 
 set(FUNCHOOK_SRC_DIR src/)
@@ -19,7 +25,7 @@ else ()
     set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/funchook_unix.c src/os_func_unix.c src/funchook_syscall.S)
 endif ()
 
-add_library(funchook STATIC ${FUNCHOOK_SOURCES})
+add_library(funchook ${LINKING} ${FUNCHOOK_SOURCES})
 if (MINGW)
     target_link_libraries(funchook PUBLIC distorm psapi)
 else ()

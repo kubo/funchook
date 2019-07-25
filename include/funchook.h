@@ -35,11 +35,11 @@
  * or libfunchook.so. Others are invisible.
  */
 #ifdef WIN32
-#ifdef FUNCHOOK_EXPORTS
+#ifdef funchook_EXPORTS
 #define FUNCHOOK_EXPORT __declspec(dllexport)
-#else /* FUNCHOOK_EXPORTS */
+#else /* funchook_EXPORTS */
 #define FUNCHOOK_EXPORT __declspec(dllimport)
-#endif /* FUNCHOOK_EXPORTS */
+#endif /* funchook_EXPORTS */
 #elif defined(__GNUC__)
 #define FUNCHOOK_EXPORT __attribute__((visibility("default")))
 #else
