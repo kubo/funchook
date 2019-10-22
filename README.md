@@ -15,13 +15,15 @@ Supported Platforms
 
 * Linux x86_64 (*1)
 * Linux x86 (*1)
-* OS X x86_64 (*1)
-* OS X x86 (*1)
+* OS X x86_64 (*1) (Xcode version <= 10.3(*3))
+* OS X x86 (*1) (Xcode version <= 10.1(*4))
 * Windows x64 (*2) (except C-runtime functions under [Wine][])
 * Windows 32-bit (*2)
 
 *1 tested on [Travis CI](https://travis-ci.org/kubo/funchook)  
-*2 tested on [AppVeyor](https://ci.appveyor.com/project/kubo/funchook/branch/master)
+*2 tested on [AppVeyor](https://ci.appveyor.com/project/kubo/funchook/branch/master)  
+*3 Unit tests pass with xcode 10.3 on macOS 10.14.4 Mojave but fail with xcode 11.0 on the same macOS version. See [here](https://travis-ci.org/kubo/funchook/builds/601220026).  
+*4 Xcode 10.2 dropped support for building 32-bit apps.
 
 Compilation
 -----------
