@@ -445,15 +445,34 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
     return func;
 }
 
+#ifndef HAVE_DECL__SYS_NERR
+#define HAVE_DECL__SYS_NERR 0
+#endif
+#ifndef HAVE_DECL__SYS_ERRLIST
+#define HAVE_DECL__SYS_ERRLIST 0
+#endif
+#ifndef HAVE_DECL_SYS_NERR
+#define HAVE_DECL_SYS_NERR 0
+#endif
+#ifndef HAVE_DECL_SYS_ERRLIST
+#define HAVE_DECL_SYS_ERRLIST 0
+#endif
+
 const char *funchook_strerror(int errnum, char *buf, size_t buflen)
 {
-#ifdef __linux
+#if HAVE_DECL__SYS_NERR && HAVE_DECL__SYS_ERRLIST
     if (0 <= errnum && errnum < _sys_nerr) {
         return _sys_errlist[errnum];
     }
-#else
+#elif HAVE_DECL_SYS_NERR && HAVE_DECL_SYS_ERRLIST
     if (0 <= errnum && errnum < sys_nerr) {
         return sys_errlist[errnum];
+    }
+#else
+    switch (errnum) {
+#undef E
+#define E(err, msg) case err: return msg;
+#include "__strerror.h" /* header file copied from musl libc */
     }
 #endif
     funchook_snprintf(buf, buflen, "Unknown error (%d)", errnum);
