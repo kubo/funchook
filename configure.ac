@@ -43,6 +43,8 @@ else
   esac
 fi
 
+AC_CHECK_DECLS([_sys_nerr, _sys_errlist, sys_nerr, sys_errlist])
+
 AC_SUBST(FUNCHOOK_OS)
 AC_SUBST(LIBFUNCHOOK_SO)
 AC_SUBST(LINK_SHARED)
