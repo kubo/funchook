@@ -1,18 +1,53 @@
-dist: bionic
-sudo: required
+language: c
 matrix:
   include:
     - os: linux
+      sudo: required
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - gcc-multilib
+            - mingw-w64
+            - wine64
+            - wine32
+            - wine-binfmt
+      before_script:
+        - sudo update-binfmts --import wine
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-linux
+        - ./.travis/run-test.sh i686-linux       "CC=gcc -m32"
+        - ./.travis/run-test.sh x86_64-mingw32   "CC=x86_64-w64-mingw32-gcc"
+        - ./.travis/run-test.sh i686-mingw32     "CC=i686-w64-mingw32-gcc -static-libgcc"
     - os: osx
-language: c
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install mingw-w64 gcc-multilib wine-development; fi
-script:
-  - ./autogen.sh
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-linux   && (cd x86_64-linux   && ../configure && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-linux     && (cd i686-linux     && ../configure "CC=gcc -m32" && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir x86_64-mingw32 && (cd x86_64-mingw32 && ../configure --target=x86_64-w64-mingw32-gcc && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mkdir i686-mingw32   && (cd i686-mingw32   && ../configure --target=i686-w64-mingw32-gcc CFLAGS="-static-libgcc" && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir x86_64-darwin  && (cd x86_64-darwin  && ../configure && (make test || (cat test/debug.log; exit 1))); fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then mkdir i686-darwin    && (cd i686-darwin    && ../configure "CC=cc -m32" && (make test || (cat test/debug.log; exit 1))); fi
+      osx_image: xcode9.4  # Xcode 9.4.1 on macOS 10.13 High Sierra
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+        - ./.travis/run-test.sh i686-darwin      "CC=cc -m32"
+    - os: osx
+      osx_image: xcode10.2 # Xcode 10.2.1 on macOS 10.14 Mojave
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+    - os: osx
+      osx_image: xcode10.3 # Xcode 10.3 on macOS 10.14 Mojave
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+    - os: osx
+      osx_image: xcode11   # Xcode 11.0 on macOS 10.14 Mojave
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+    - os: osx
+      osx_image: xcode11.1 # Xcode 11.1 on macOS 10.14 Mojave
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+    - os: osx
+      osx_image: xcode11.2 # Xcode 11.2 on macOS 10.14 Mojave
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
