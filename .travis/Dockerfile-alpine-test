@@ -1,0 +1,5 @@
+FROM alpine
+RUN apk add musl-dev gcc autoconf make
+COPY . /funchook
+ENTRYPOINT ["/funchook/.travis/run-test.sh", "alpine"]
+
