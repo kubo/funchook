@@ -20,6 +20,12 @@ matrix:
         - ./.travis/run-test.sh i686-linux       "CC=gcc -m32"
         - ./.travis/run-test.sh x86_64-mingw32   "CC=x86_64-w64-mingw32-gcc"
         - ./.travis/run-test.sh i686-mingw32     "CC=i686-w64-mingw32-gcc -static-libgcc"
+    - os: linux
+      dist: bionic
+      before_script:
+        - docker build -f .travis/Dockerfile-alpine-test -t funchook-test .
+      script:
+        - docker run --rm funchook-test
     - os: osx
       osx_image: xcode10.1 # Xcode 10.1 on macOS 10.13.6 High Sierra
       script:
