@@ -1,7 +1,8 @@
 language: c
 matrix:
   include:
-    - os: linux
+    - name: linux x86_64 and i686 / mingw x64 and x32 on Wine
+      os: linux
       sudo: required
       dist: bionic
       addons:
@@ -20,20 +21,29 @@ matrix:
         - ./.travis/run-test.sh i686-linux       "CC=gcc -m32"
         - ./.travis/run-test.sh x86_64-mingw32   "CC=x86_64-w64-mingw32-gcc"
         - ./.travis/run-test.sh i686-mingw32     "CC=i686-w64-mingw32-gcc -static-libgcc"
-    - os: linux
+    - name: alpine linux on docker
+      os: linux
       dist: bionic
       before_script:
         - docker build -f .travis/Dockerfile-alpine-test -t funchook-test .
       script:
         - docker run --rm funchook-test
-    - os: osx
-      osx_image: xcode10.1 # Xcode 10.1 on macOS 10.13.6 High Sierra
+    - name: Xcode 11.3 (the latest version)
+      os: osx
+      osx_image: xcode11.3
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+    - name: Xcode 10.3 (the latest version which can change memory regions in exe)
+      os: osx
+      osx_image: xcode10.3
+      script:
+        - ./autogen.sh
+        - ./.travis/run-test.sh x86_64-darwin
+    - name: Xcode 10.1 (the latest version supporting 32-bit)
+      os: osx
+      osx_image: xcode10.1
       script:
         - ./autogen.sh
         - ./.travis/run-test.sh x86_64-darwin
         - ./.travis/run-test.sh i686-darwin      "CC=cc -m32"
-    - os: osx
-      osx_image: xcode10.3 # Xcode 10.3 on macOS 10.14.4 Mojave
-      script:
-        - ./autogen.sh
-        - ./.travis/run-test.sh x86_64-darwin

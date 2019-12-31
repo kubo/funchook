@@ -33,6 +33,10 @@
 #define NOINLINE __declspec(noinline)
 #endif
 
+#if defined(__APPLE__) && defined(__clang_major__) && __clang_major__ >= 11
+#define SKIP_TESTS_CHANGING_EXE
+#endif
+
 typedef int (*int_func_t)(void);
 
 extern int reset_retval(void);
@@ -343,7 +347,7 @@ static void test_hook_open_and_fopen(void)
 #include "suffix.list"
 #undef S
 
-static NOINLINE int call_dll_and_exe_funcs(int installed)
+static NOINLINE int call_many_funcs(int installed)
 {
     int rv;
     int mul = installed ? 2 : 1;
@@ -354,7 +358,11 @@ static NOINLINE int call_dll_and_exe_funcs(int installed)
         printf("ERROR: dllfunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
         error_cnt++; \
         return -1; \
-    } \
+    }
+#include "suffix.list"
+#undef S
+#ifndef SKIP_TESTS_CHANGING_EXE
+#define S(suffix) \
     rv = exefunc_##suffix(2, 3); \
     if (rv != (2 * 3 + suffix) * mul) { \
         printf("ERROR: exefunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
@@ -363,6 +371,7 @@ static NOINLINE int call_dll_and_exe_funcs(int installed)
     }
 #include "suffix.list"
 #undef S
+#endif
     return 0;
 }
 
@@ -377,11 +386,16 @@ static void test_hook_many_funcs(void)
 #define S(suffix) \
     dllfunc_##suffix##_func = dllfunc_##suffix; \
     funchook_prepare(funchook, (void**)&dllfunc_##suffix##_func, dllfunc_##suffix##_hook); \
-    exefunc_##suffix##_func = exefunc_##suffix; \
-    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook); \
     putchar('.'); fflush(stdout);
 #include "suffix.list"
 #undef S
+#ifndef SKIP_TESTS_CHANGING_EXE
+#define S(suffix) \
+    exefunc_##suffix##_func = exefunc_##suffix; \
+    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook);
+#include "suffix.list"
+#undef S
+#endif
     putchar('\n');
 
     rv = funchook_install(funchook, 0);
@@ -390,12 +404,12 @@ static void test_hook_many_funcs(void)
         error_cnt++;
         return;
     }
-    if (call_dll_and_exe_funcs(1) != 0) {
+    if (call_many_funcs(1) != 0) {
         return;
     }
 
     funchook_uninstall(funchook, 0);
-    if (call_dll_and_exe_funcs(0) != 0) {
+    if (call_many_funcs(0) != 0) {
         return;
     }
 
@@ -406,7 +420,11 @@ int main()
 {
     funchook_set_debug_file("debug.log");
 
+#ifdef SKIP_TESTS_CHANGING_EXE
+    printf("*** Skip tests changing executable compiled by Xcode 11.0 or upper on macOS. ***\n");
+#else
     TEST_FUNCHOOK_INT2(get_val_in_exe, get_val_in_exe_from_dll);
+#endif
     TEST_FUNCHOOK_INT2(get_val_in_dll, get_val_in_dll_from_dll);
 
 #ifndef _MSC_VER
