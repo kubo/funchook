@@ -132,11 +132,16 @@ void test_funchook_int(volatile int_func_t func, const char *func_str, volatile 
     orig_func = func;
     rv = funchook_prepare(funchook, (void**)&orig_func, hook_func);
     if (rv != 0) {
-        printf("ERROR: failed to hook %s.\n", func_str);
+        printf("ERROR: failed to prepare hook %s. (%s)\n", func_str, funchook_error_message(funchook));
         error_cnt++;
         return;
     }
-    funchook_install(funchook, 0);
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hook %s. (%s)\n", func_str, funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
 
     hook_is_called = 0;
     expected = ++int_val;
@@ -276,6 +281,7 @@ static void test_hook_open_and_fopen(void)
 {
     FILE *fp;
     funchook_t *funchook;
+    int rv;
 
 #ifdef WIN64
     if (getenv("WINELOADERNOEXEC") != NULL) {
@@ -306,7 +312,12 @@ static void test_hook_open_and_fopen(void)
     check_content("test-1.txt", "This is test-1.txt.", __LINE__);
 
     /* hook `open' and `fopen` */
-    funchook_install(funchook, 0);
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install open and fopen hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
     /* Try to open test-1.txt but open test-2.txt. */
     check_content("test-1.txt", "This is test-2.txt.", __LINE__);
 
@@ -358,6 +369,8 @@ static NOINLINE int call_dll_and_exe_funcs(int installed)
 static void test_hook_many_funcs(void)
 {
     funchook_t *funchook;
+    int rv;
+
     test_cnt++;
     printf("[%d] test_hook_many_funcs\n", test_cnt);
     funchook = funchook_create();
@@ -371,7 +384,12 @@ static void test_hook_many_funcs(void)
 #undef S
     putchar('\n');
 
-    funchook_install(funchook, 0);
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
     if (call_dll_and_exe_funcs(1) != 0) {
         return;
     }
