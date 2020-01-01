@@ -98,12 +98,6 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <CustomBuild>
-      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x86 /out:$(OutDir)\funchook_test_exe.lib</Command>
-    </CustomBuild>
-    <CustomBuild>
-      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
-    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -118,12 +112,6 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <CustomBuild>
-      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x64 /out:$(OutDir)\funchook_test_exe.lib</Command>
-    </CustomBuild>
-    <CustomBuild>
-      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
-    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -142,10 +130,6 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <CustomBuild>
-      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x86 /out:$(OutDir)\funchook_test_exe.lib</Command>
-      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
-    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -164,19 +148,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <CustomBuild>
-      <Command>lib /def:$(ProjectDir)\funchook_test_exe.def /machine:x64 /out:$(OutDir)\funchook_test_exe.lib</Command>
-    </CustomBuild>
-    <CustomBuild>
-      <Outputs>$(OutDir)\funchook_test_exe.lib</Outputs>
-    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\test\libfunchook_test.c" />
-    <ClCompile Include="..\test\libfunchook_test2.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="funchook_test_exe.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
