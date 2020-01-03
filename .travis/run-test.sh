@@ -16,7 +16,7 @@ type make > /dev/null && make || cmake --build .
 case "$(basename "$dir")" in
 *mingw32*)
     cp ../../build/funchook.dll .
-    wine ./funchook_test_ex
+    wine ./funchook_test_ex.exe
     ;;
 *windows*)
     cp ../../build/Debug/funchook.dll Debug
