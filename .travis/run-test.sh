@@ -1,21 +1,32 @@
 #!/bin/sh
 set -e
 
-cd `dirname $0`
+cd "$(dirname "$0")"
 cd ..
+rm -rf build
+cd test
 
-if ! test -f configure; then
-  ./autogen.sh
-fi
-
-dir=$1
+dir="target-$1"
 shift
-mkdir $dir
-cd $dir
-../configure "$@"
-if ! make test; then
-  cat test/debug.log
-  exit 1
-fi
-exit 0
+rm -rf "$dir"
+mkdir "$dir"
+cd "$dir"
+cmake "$@" ..
+make VERBOSE=1
 
+failed() {
+  cat debug.log
+  exit 1
+}
+
+case "$dir" in
+*mingw32*)
+  cp ../../build/libfunchook.dll .
+  wine ./funchook_test_ex || failed
+  ;;
+*)
+  ./funchook_test_ex || failed
+  ;;
+esac
+
+exit 0
