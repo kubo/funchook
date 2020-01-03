@@ -36,10 +36,13 @@
  */
 #ifdef WIN32
 #ifdef funchook_EXPORTS
+#define FUNCHOOK_EXPORTS //workaround for cmake build system
+#endif
+#ifdef FUNCHOOK_EXPORTS
 #define FUNCHOOK_EXPORT __declspec(dllexport)
-#else /* funchook_EXPORTS */
+#else /* FUNCHOOK_EXPORTS */
 #define FUNCHOOK_EXPORT __declspec(dllimport)
-#endif /* funchook_EXPORTS */
+#endif /* FUNCHOOK_EXPORTS */
 #elif defined(__GNUC__)
 #define FUNCHOOK_EXPORT __attribute__((visibility("default")))
 #else

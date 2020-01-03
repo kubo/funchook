@@ -10,11 +10,10 @@ PIC_CFLAGS = @PIC_CFLAGS@
 LIBS = -L$(top_builddir)/src -lfunchook -Wl,-rpath,$(top_builddir)/src -L. -lfunchook_test -Wl,-rpath,.
 LINK_SHARED = @LINK_SHARED@
 EXEEXT = @EXEEXT@
-DLLTOOL = $(firstword $(CC:gcc=dlltool))
-SO_OBJS = $(srcdir)/libfunchook_test.c $(srcdir)/libfunchook_test2.c
+SO_OBJS = $(srcdir)/libfunchook_test.c
 @IF_WIN32@LDFLAGS += -Wl,--out-implib,funchook_test.lib
-@IF_WIN32@FUNCHOOK_TEST_LIB = funchook_test_exe.lib
 @IF_OSX@LDFLAGS += -Wl,-undefined,dynamic_lookup
+@IF_LINUX@LIBS += -ldl -rdynamic
 
 VPATH = $(srcdir):../src
 
@@ -27,17 +26,11 @@ test: funchook_test$(EXEEXT)
 funchook_test$(EXEEXT): $(OBJS) @LIBFUNCHOOK_SO@ libfunchook_test.so
 	$(CC) -o funchook_test$(EXEEXT) $(OBJS) $(LIBS)
 
-libfunchook_test.so: $(SO_OBJS) $(FUNCHOOK_TEST_LIB)
-	$(LINK_SHARED) $(LDFLAGS) $(PIC_CFLAGS) $(CFLAGS) -o libfunchook_test.so $(SO_OBJS) $(FUNCHOOK_TEST_LIB)
+libfunchook_test.so: $(SO_OBJS)
+	$(LINK_SHARED) $(LDFLAGS) $(PIC_CFLAGS) $(CFLAGS) -o libfunchook_test.so $(SO_OBJS)
 
 clean:
 	$(RM) $(TESTEXE) *.o libfunchook_test.so
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status
-
-funchook_test_exe.lib:
-	echo "LIBRARY funchook_test.exe" > funchook_test_exe.def
-	echo "EXPORTS" >> funchook_test_exe.def
-	echo "get_val_in_exe" >> funchook_test_exe.def
-	$(DLLTOOL) -d funchook_test_exe.def -l funchook_test_exe.lib

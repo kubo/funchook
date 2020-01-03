@@ -1,13 +1,45 @@
-dist: bionic
-sudo: required
+language: c
 matrix:
   include:
-    - os: linux
-    - os: osx
-language: c
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gcc-multilib; fi
-script:
-  - ./build.sh
-  - ./build.sh -p "x86" -l
+    - name: linux x86_64 and i686 / mingw x64 and x32 on Wine
+      os: linux
+      sudo: required
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - gcc-multilib
+            - mingw-w64
+            - wine64
+            - wine32
+            - wine-binfmt
+      before_script:
+        - sudo update-binfmts --import wine
+      script:
+        - ./.travis/run-test.sh x86_64-linux
+        - ./.travis/run-test.sh i686-linux       -DCMAKE_C_FLAGS="-m32" -DCMAKE_ASM_FLAGS="-m32"
+        - ./.travis/run-test.sh x86_64-mingw32   -DCMAKE_TOOLCHAIN_FILE=../toolchain/mingw-w64-x86_64.cmake
+        - ./.travis/run-test.sh i686-mingw32     -DCMAKE_TOOLCHAIN_FILE=../toolchain/i686-w64-mingw32.cmake
+    - name: alpine linux on docker
+      os: linux
+      dist: bionic
+      before_script:
+        - docker build -f .travis/Dockerfile-alpine-test -t funchook-test .
+      script:
+        - docker run -t --rm funchook-test --color=auto
+    - name: Xcode 11.3 (the latest version)
+      os: osx
+      osx_image: xcode11.3
+      script:
+        - ./.travis/run-test.sh x86_64-darwin
+    - name: Xcode 10.3 (the latest version which can change memory regions in exe)
+      os: osx
+      osx_image: xcode10.3
+      script:
+        - ./.travis/run-test.sh x86_64-darwin
+    - name: Xcode 10.1 (the latest version supporting 32-bit)
+      os: osx
+      osx_image: xcode10.1
+      script:
+        - ./.travis/run-test.sh x86_64-darwin
+        - ./.travis/run-test.sh i686-darwin      -DCMAKE_C_FLAGS="-m32" -DCMAKE_ASM_FLAGS="-m32"

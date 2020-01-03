@@ -1,14 +1,19 @@
 /* -*- indent-tabs-mode: nil -*-
  */
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
 #ifdef WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef WIN32
+#include <windows.h>
 #include <io.h>
 #define mode_t int
 #define ssize_t int
@@ -17,6 +22,7 @@
 #define close _close
 #else
 #include <unistd.h>
+#include <dlfcn.h>
 #endif
 #include <funchook.h>
 
@@ -33,13 +39,15 @@
 #define NOINLINE __declspec(noinline)
 #endif
 
+#if defined(__APPLE__) && defined(__clang_major__) && __clang_major__ >= 11
+#define SKIP_TESTS_CHANGING_EXE
+#endif
+
 typedef int (*int_func_t)(void);
 
 extern int reset_retval(void);
 DLLEXPORT int get_val_in_exe(void);
 extern int get_val_in_dll(void);
-extern int get_val_in_exe_from_dll(void);
-extern int get_val_in_dll_from_dll(void);
 extern int x86_test_jump(void);
 extern int x86_test_call_get_pc_thunk_ax(void);
 extern int x86_test_call_get_pc_thunk_bx(void);
@@ -94,21 +102,69 @@ static int hook_func(void)
     return orig_func();
 }
 
-#define TEST_FUNCHOOK_INT(func) test_funchook_int(func, #func, NULL, NULL)
-#define TEST_FUNCHOOK_INT2(func, func2) test_funchook_int(func, #func, func2, #func2)
+#define TEST_FUNCHOOK_INT(func, load_type) test_funchook_int(func, #func, load_type)
 
-void test_funchook_int(volatile int_func_t func, const char *func_str, volatile int_func_t func2, const char *func2_str)
+enum load_type {
+   LOAD_TYPE_IN_EXE,
+   LOAD_TYPE_IN_DLL,
+   LOAD_TYPE_NO_LOAD,
+};
+
+static void *load_func(const char *module, const char *func)
+{
+    void *addr;
+#ifdef WIN32
+    HMODULE hMod = GetModuleHandleA(module);
+        
+    if (hMod == NULL) {
+        printf("ERROR: Could not open module %s.\n", module ? module : "(null)");
+        exit(1);
+    }
+    addr = (void *)GetProcAddress(hMod, func);
+#else
+    void *handle = dlopen(module, RTLD_LAZY | RTLD_NOLOAD);
+    if (handle == NULL) {
+        printf("ERROR: Could not open file %s.\n", module ? module : "(null)");
+        exit(1);
+    }
+    addr = dlsym(handle, func);
+    dlclose(handle);
+#endif
+    if (addr == NULL) {
+        printf("ERROR: Could not get function address of %s.\n", func);
+        exit(1);
+    }
+    return addr;
+}
+
+void test_funchook_int(volatile int_func_t func, const char *func_name, enum load_type load_type)
 {
     funchook_t *funchook = funchook_create();
     int result;
     int expected;
     int rv;
+    int_func_t func_real = NULL;
 
     test_cnt++;
-    if (func2 == NULL) {
-        printf("[%d] test_funchook_int: %s\n", test_cnt, func_str);
-    } else {
-        printf("[%d] test_funchook_int: %s and %s\n", test_cnt, func_str, func2_str);
+    printf("[%d] test_funchook_int: %s\n", test_cnt, func_name);
+
+    switch (load_type) {
+    case LOAD_TYPE_IN_EXE:
+        func_real = (int_func_t)load_func(NULL, func_name);
+        break;
+    case LOAD_TYPE_IN_DLL:
+#ifdef _MSC_VER
+        func_real = (int_func_t)load_func("funchook_test_dll", func_name);
+#elif WIN32
+        func_real = (int_func_t)load_func("libfunchook_test.dll", func_name);
+#elif __APPLE__
+		func_real = (int_func_t)load_func("libfunchook_test.dylib", func_name);
+#else
+        func_real = (int_func_t)load_func("libfunchook_test.so", func_name);
+#endif
+        break;
+    case LOAD_TYPE_NO_LOAD:
+        break;
     }
 
     expected = ++int_val;
@@ -116,15 +172,15 @@ void test_funchook_int(volatile int_func_t func, const char *func_str, volatile 
     reset_retval();
     result = func();
     if (expected != result) {
-        printf("ERROR: %s should return %d but %d before hooking.\n", func_str, expected, result);
+        printf("ERROR: %s should return %d but %d before hooking.\n", func_name, expected, result);
         error_cnt++;
         return;
     }
-    if (func2 != NULL) {
+    if (func_real != NULL) {
         reset_retval();
-        result = func2();
+        result = func_real();
         if (expected != result) {
-            printf("ERROR: %s should return %d but %d before hooking.\n", func2_str, expected, result);
+            printf("ERROR: %s (real) should return %d but %d before hooking.\n", func_name, expected, result);
             error_cnt++;
             return;
         }
@@ -132,11 +188,16 @@ void test_funchook_int(volatile int_func_t func, const char *func_str, volatile 
     orig_func = func;
     rv = funchook_prepare(funchook, (void**)&orig_func, hook_func);
     if (rv != 0) {
-        printf("ERROR: failed to hook %s.\n", func_str);
+        printf("ERROR: failed to prepare hook %s. (%s)\n", func_name, funchook_error_message(funchook));
         error_cnt++;
         return;
     }
-    funchook_install(funchook, 0);
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hook %s. (%s)\n", func_name, funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
 
     hook_is_called = 0;
     expected = ++int_val;
@@ -144,26 +205,26 @@ void test_funchook_int(volatile int_func_t func, const char *func_str, volatile 
     reset_retval();
     result = func();
     if (hook_is_called == 0) {
-        printf("ERROR: hook_func is not called by %s.\n", func_str);
+        printf("ERROR: hook_func is not called by %s.\n", func_name);
         error_cnt++;
         return;
     }
     if (expected != result) {
-        printf("ERROR: %s should return %d but %d after hooking.\n", func_str, expected, result);
+        printf("ERROR: %s should return %d but %d after hooking.\n", func_name, expected, result);
         error_cnt++;
         return;
     }
-    if (func2 != NULL) {
+    if (func_real != NULL) {
         hook_is_called = 0;
         reset_retval();
-        result = func2();
+        result = func_real();
         if (hook_is_called == 0) {
-            printf("ERROR: hook_func is not called by %s.\n", func2_str);
+            printf("ERROR: hook_func is not called by %s (real).\n", func_name);
             error_cnt++;
             return;
         }
         if (expected != result) {
-            printf("ERROR: %s should return %d but %d after hooking.\n", func2_str, expected, result);
+            printf("ERROR: %s (real) should return %d but %d after hooking.\n", func_name, expected, result);
             error_cnt++;
             return;
         }
@@ -176,15 +237,15 @@ void test_funchook_int(volatile int_func_t func, const char *func_str, volatile 
     reset_retval();
     result = func();
     if (expected != result) {
-        printf("ERROR: %s should return %d but %d after hook is removed.\n", func_str, expected, result);
+        printf("ERROR: %s should return %d but %d after hook is removed.\n", func_name, expected, result);
         error_cnt++;
         return;
     }
-    if (func2 != NULL) {
+    if (func_real != NULL) {
         reset_retval();
-        result = func2();
+        result = func_real();
         if (expected != result) {
-            printf("ERROR: %s should return %d but %d after hook is removed.\n", func2_str, expected, result);
+            printf("ERROR: %s (real) should return %d but %d after hook is removed.\n", func_name, expected, result);
             error_cnt++;
             return;
         }
@@ -276,6 +337,7 @@ static void test_hook_open_and_fopen(void)
 {
     FILE *fp;
     funchook_t *funchook;
+    int rv;
 
 #ifdef WIN64
     if (getenv("WINELOADERNOEXEC") != NULL) {
@@ -306,7 +368,12 @@ static void test_hook_open_and_fopen(void)
     check_content("test-1.txt", "This is test-1.txt.", __LINE__);
 
     /* hook `open' and `fopen` */
-    funchook_install(funchook, 0);
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install open and fopen hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
     /* Try to open test-1.txt but open test-2.txt. */
     check_content("test-1.txt", "This is test-2.txt.", __LINE__);
 
@@ -332,7 +399,7 @@ static void test_hook_open_and_fopen(void)
 #include "suffix.list"
 #undef S
 
-static NOINLINE int call_dll_and_exe_funcs(int installed)
+static NOINLINE int call_many_funcs(int installed)
 {
     int rv;
     int mul = installed ? 2 : 1;
@@ -343,7 +410,11 @@ static NOINLINE int call_dll_and_exe_funcs(int installed)
         printf("ERROR: dllfunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
         error_cnt++; \
         return -1; \
-    } \
+    }
+#include "suffix.list"
+#undef S
+#ifndef SKIP_TESTS_CHANGING_EXE
+#define S(suffix) \
     rv = exefunc_##suffix(2, 3); \
     if (rv != (2 * 3 + suffix) * mul) { \
         printf("ERROR: exefunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
@@ -352,32 +423,45 @@ static NOINLINE int call_dll_and_exe_funcs(int installed)
     }
 #include "suffix.list"
 #undef S
+#endif
     return 0;
 }
 
 static void test_hook_many_funcs(void)
 {
     funchook_t *funchook;
+    int rv;
+
     test_cnt++;
     printf("[%d] test_hook_many_funcs\n", test_cnt);
     funchook = funchook_create();
 #define S(suffix) \
     dllfunc_##suffix##_func = dllfunc_##suffix; \
     funchook_prepare(funchook, (void**)&dllfunc_##suffix##_func, dllfunc_##suffix##_hook); \
-    exefunc_##suffix##_func = exefunc_##suffix; \
-    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook); \
     putchar('.'); fflush(stdout);
 #include "suffix.list"
 #undef S
+#ifndef SKIP_TESTS_CHANGING_EXE
+#define S(suffix) \
+    exefunc_##suffix##_func = exefunc_##suffix; \
+    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook);
+#include "suffix.list"
+#undef S
+#endif
     putchar('\n');
 
-    funchook_install(funchook, 0);
-    if (call_dll_and_exe_funcs(1) != 0) {
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+    if (call_many_funcs(1) != 0) {
         return;
     }
 
     funchook_uninstall(funchook, 0);
-    if (call_dll_and_exe_funcs(0) != 0) {
+    if (call_many_funcs(0) != 0) {
         return;
     }
 
@@ -388,30 +472,34 @@ int main()
 {
     funchook_set_debug_file("debug.log");
 
-    TEST_FUNCHOOK_INT2(get_val_in_exe, get_val_in_exe_from_dll);
-    TEST_FUNCHOOK_INT2(get_val_in_dll, get_val_in_dll_from_dll);
+#ifdef SKIP_TESTS_CHANGING_EXE
+    printf("*** Skip tests changing executable compiled by Xcode 11.0 or upper on macOS. ***\n");
+#else
+    TEST_FUNCHOOK_INT(get_val_in_exe, LOAD_TYPE_IN_EXE);
+#endif
+    TEST_FUNCHOOK_INT(get_val_in_dll, LOAD_TYPE_IN_DLL);
 
 #ifndef _MSC_VER
 #if defined __i386 || defined  _M_I386
-    TEST_FUNCHOOK_INT(x86_test_jump);
+    TEST_FUNCHOOK_INT(x86_test_jump, LOAD_TYPE_NO_LOAD);
     TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump1, FUNCHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
     TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump2, FUNCHOOK_ERROR_FOUND_BACK_JUMP);
 
 #ifndef WIN32
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_ax);
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bx);
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_cx);
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_dx);
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_si);
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_di);
-    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bp);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_eax);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ebx);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ecx);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_edx);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_esi);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_edi);
-    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ebp);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_ax, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bx, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_cx, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_dx, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_si, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_di, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bp, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_eax, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ebx, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ecx, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_edx, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_esi, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_edi, LOAD_TYPE_NO_LOAD);
+    TEST_FUNCHOOK_INT(x86_test_call_and_pop_ebp, LOAD_TYPE_NO_LOAD);
 #endif
 #endif
 
