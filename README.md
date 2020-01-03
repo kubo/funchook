@@ -3,7 +3,7 @@ Funchook - an API hook library
 
 This library depends on [diStorm3][].
 
-[![Build Status](https://travis-ci.org/kubo/funchook.svg?branch=master)](https://travis-ci.org/kubo/funchook) [![Build status](https://ci.appveyor.com/api/projects/status/molkbu0csbshbnmh/branch/master?svg=true)](https://ci.appveyor.com/project/kubo/funchook/branch/master)
+[![Build Status](https://travis-ci.org/kubo/funchook.svg?branch=master)](https://travis-ci.org/kubo/funchook)
 
 TODO
 ----
@@ -12,18 +12,17 @@ TODO
 
 Supported Platforms
 -------------------
+All platforms are tested on [Travis CI](https://travis-ci.org/kubo/funchook)
 
-* Linux x86_64 (*1)
-* Linux x86 (*1)
-* macOS x86_64 (*1) (Functions in executables cannot be hooked when Xcode version >= 11.0. (*3))
-* macOS x86 (*1) (Xcode version <= 10.1(*4))
-* Windows x64 (*2) (except C-runtime functions under [Wine][])
-* Windows 32-bit (*2)
+* Linux x86_64
+* Linux x86
+* macOS x86_64 (Functions in executables cannot be hooked when Xcode version >= 11.0. (*1))
+* macOS x86 (Xcode version <= 10.1(*2))
+* Windows x64 (except C-runtime functions under [Wine][])
+* Windows 32-bit
 
-*1 tested on [Travis CI](https://travis-ci.org/kubo/funchook)  
-*2 tested on [AppVeyor](https://ci.appveyor.com/project/kubo/funchook/branch/master)  
-*3 [`mprotect`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html) fails with EACCES.
-*4 Xcode 10.2 dropped support for building 32-bit apps.
+*1 [`mprotect`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html) fails with EACCES. \
+*2 Xcode 10.2 dropped support for building 32-bit apps.
 
 Compilation
 -----------
@@ -31,10 +30,10 @@ Compilation
 ```shell
 $ git clone --recursive https://github.com/kubo/funchook.git
 $ cd funchook
-$ ./autogen.sh
-$ ./configure
+$ mkdir -p build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ make
-$ make test
 ```
 
 Example

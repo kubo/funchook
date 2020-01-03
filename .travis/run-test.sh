@@ -1,21 +1,33 @@
 #!/bin/sh
-set -e
 
-cd `dirname $0`
+cd "$(dirname "$0")"
 cd ..
+rm -rf build
+cd test
 
-if ! test -f configure; then
-  ./autogen.sh
-fi
-
-dir=$1
+dir="target-$1"
 shift
-mkdir $dir
-cd $dir
-../configure "$@"
-if ! make test; then
-  cat test/debug.log
-  exit 1
-fi
-exit 0
+rm -rf "$dir"
+mkdir "$dir"
+cd "$dir"
+cmake -DCMAKE_BUILD_TYPE=Release "$@" ..
+type make > /dev/null && make || cmake --build .
 
+case "$(basename "$dir")" in
+*mingw32*)
+    cp ../../build/funchook.dll .
+    wine ./funchook_test_ex
+    ;;
+*windows*)
+    cp ../../build/Debug/funchook.dll Debug
+    cd Debug
+    ./funchook_test_ex.exe
+    ;;
+*)
+    ./funchook_test_ex
+    ;;
+esac
+
+ret=$?
+test ${ret} -eq 0 || cat debug.log
+exit ${ret}

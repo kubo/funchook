@@ -35,6 +35,9 @@
  * or libfunchook.so. Others are invisible.
  */
 #ifdef WIN32
+#ifdef funchook_EXPORTS
+#define FUNCHOOK_EXPORTS //workaround for cmake build system
+#endif
 #ifdef FUNCHOOK_EXPORTS
 #define FUNCHOOK_EXPORT __declspec(dllexport)
 #else /* FUNCHOOK_EXPORTS */

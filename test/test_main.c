@@ -153,8 +153,10 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
         func_real = (int_func_t)load_func(NULL, func_name);
         break;
     case LOAD_TYPE_IN_DLL:
-#ifdef _MSC_VER
-        func_real = (int_func_t)load_func("funchook_test_dll", func_name);
+#ifdef WIN32
+        func_real = (int_func_t)load_func("funchook_test.dll", func_name);
+#elif __APPLE__
+        func_real = (int_func_t)load_func("libfunchook_test.dylib", func_name);
 #else
         func_real = (int_func_t)load_func("libfunchook_test.so", func_name);
 #endif
