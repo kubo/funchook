@@ -18,7 +18,10 @@
 #define mode_t int
 #define ssize_t int
 #define open _open
-#define read _read
+/* cast the third argument of _read to suppress warning C4267 */
+#define read(fd, buf, count) _read((fd), (buf), (unsigned int)(count))
+/* cast the second argument of fgets to suppress warning C4267 */
+#define fgets(s, size, fp) fgets((s), (int)(size), (fp))
 #define close _close
 #else
 #include <unistd.h>
