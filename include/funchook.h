@@ -34,17 +34,16 @@
  * Only functions with FUNCHOOK_EXPORT are visible from outside of funchook.dll
  * or libfunchook.so. Others are invisible.
  */
-#ifdef WIN32
 #ifdef FUNCHOOK_EXPORTS
+#if defined(WIN32)
 #define FUNCHOOK_EXPORT __declspec(dllexport)
-#else /* FUNCHOOK_EXPORTS */
-#define FUNCHOOK_EXPORT __declspec(dllimport)
-#endif /* FUNCHOOK_EXPORTS */
 #elif defined(__GNUC__)
 #define FUNCHOOK_EXPORT __attribute__((visibility("default")))
-#else
+#endif
+#endif /* FUNCHOOK_EXPORTS */
+#ifndef FUNCHOOK_EXPORT
 #define FUNCHOOK_EXPORT
-#endif /* WIN32 */
+#endif
 
 typedef struct funchook funchook_t;
 
