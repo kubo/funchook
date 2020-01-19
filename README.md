@@ -3,7 +3,7 @@ Funchook - an API hook library
 
 This library depends on [diStorm3][].
 
-[![Build Status](https://travis-ci.org/kubo/funchook.svg?branch=master)](https://travis-ci.org/kubo/funchook) [![Build status](https://ci.appveyor.com/api/projects/status/molkbu0csbshbnmh/branch/master?svg=true)](https://ci.appveyor.com/project/kubo/funchook/branch/master)
+[![Build Status](https://travis-ci.org/kubo/funchook.svg?branch=master)](https://travis-ci.org/kubo/funchook)
 
 TODO
 ----
@@ -13,29 +13,67 @@ TODO
 Supported Platforms
 -------------------
 
-* Linux x86_64 (*1)
-* Linux x86 (*1)
-* macOS x86_64 (*1) (Functions in executables cannot be hooked when Xcode version >= 11.0. (*3))
-* macOS x86 (*1) (Xcode version <= 10.1(*4))
-* Windows x64 (*2) (except C-runtime functions under [Wine][])
-* Windows 32-bit (*2)
+Tested on [Travis CI](https://travis-ci.org/kubo/funchook)  
 
-*1 tested on [Travis CI](https://travis-ci.org/kubo/funchook)  
-*2 tested on [AppVeyor](https://ci.appveyor.com/project/kubo/funchook/branch/master)  
-*3 [`mprotect`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html) fails with EACCES.
-*4 Xcode 10.2 dropped support for building 32-bit apps.
+* Linux x86_64
+* Linux x86
+* macOS x86_64 (Functions in executables cannot be hooked when Xcode version >= 11.0. (*1))
+* macOS x86 (Xcode version <= 10.1(*2))
+* Windows x64 (except C-runtime functions under [Wine][])
+* Windows 32-bit
 
-Compilation
+*1 [`mprotect`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html) fails with EACCES.  
+*2 Xcode 10.2 dropped support for building 32-bit apps.  
+
+Compilation and installation
 -----------
+
+### Unix
 
 ```shell
 $ git clone --recursive https://github.com/kubo/funchook.git
 $ cd funchook
-$ ./autogen.sh
-$ ./configure
+$ mkdir build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/install/directory ..
 $ make
-$ make test
+$ make install
 ```
+
+* Available [`CMAKE_BUILD_TYPE`][] values are empty(default), `Debug`, `Release`, `RelWithDebInfo`(release build with debug information) and `MinSizeRel`.
+* When [`CMAKE_INSTALL_PREFIX`][] isn't set, funchook is installed at `/usr/local`.
+
+  installed files:
+  * `${CMAKE_INSTALL_PREFIX}/include/funchook.h` (header file)
+  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so` (symbolic link to `libfunchook.so.1`)
+  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so.1` ([soname][]; symbolic link to `libfunchook.so.1.0.0`)
+  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so.1.0.0` (shared library)
+  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.a` (static library)
+
+### Windows
+
+Here is an example to compile funchook with Visual Studio 2017 Win64.
+Change the argument of `-G` to use other compilers.
+
+```shell
+$ git clone --recursive https://github.com/kubo/funchook.git
+$ cd funchook
+$ mkdir build
+$ cd build
+$ cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=c:\path\to\install\directory ..
+$ cmake --build . --config Release --target INSTALL
+```
+
+* Available `-G` arguments (generators) are listed in the output of `cmake --help`.
+* Available `--config` arguments are `Debug`(default), `Release`, `RelWithDebInfo` and `MinSizeRel`.
+* When [`CMAKE_INSTALL_PREFIX`][] isn't set, funchook is installed at `c:\Program Files\funchook`.
+
+  installed files:
+  * `${CMAKE_INSTALL_PREFIX}\include\funchook.h` (header file)
+  * `${CMAKE_INSTALL_PREFIX}\bin\funchook.dll` (shared library)
+  * `${CMAKE_INSTALL_PREFIX}\bin\funchook.pdb` (debug file for `funchook.dll` when `--config` is `Debug` or `RelWithDebInfo`)
+  * `${CMAKE_INSTALL_PREFIX}\lib\funchook.lib` (static library)
+  * `${CMAKE_INSTALL_PREFIX}\lib\funchook_dll.lib` (import library for `funchook.dll`)
 
 Example
 -------
@@ -119,3 +157,6 @@ license is compatible with the GPL.
 [GPL linking exception]: https://en.wikipedia.org/wiki/GPL_linking_exception
 [diStorm3]: https://github.com/gdabah/distorm/
 [Wine]: https://www.winehq.org/
+[`CMAKE_BUILD_TYPE`]: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
+[`CMAKE_INSTALL_PREFIX`]: https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html
+[soname]: https://en.wikipedia.org/wiki/Soname

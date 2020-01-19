@@ -4,6 +4,7 @@ AC_PROG_CC
 AC_GNU_SOURCE
 AC_CANONICAL_HOST
 
+CFLAGS="$CFLAGS -DFUNCHOOK_EXPORTS"
 if test "$GCC"; then
    CFLAGS="$CFLAGS -Wall -fvisibility=hidden"
 fi
@@ -23,7 +24,6 @@ IF_OSX='#'
 if test "$EXEEXT"; then
   FUNCHOOK_OS=windows
   LIBFUNCHOOK_SO=funchook.dll
-  CFLAGS="$CFLAGS -DFUNCHOOK_EXPORTS"
   LINK_SHARED="\$(CC) -shared -Wl,--out-implib,funchook.lib"
   IF_WIN32=
 else

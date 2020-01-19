@@ -21,6 +21,10 @@ matrix:
         - ./.travis/run-test.sh i686-linux       "CC=gcc -m32"
         - ./.travis/run-test.sh x86_64-mingw32   "CC=x86_64-w64-mingw32-gcc"
         - ./.travis/run-test.sh i686-mingw32     "CC=i686-w64-mingw32-gcc -static-libgcc"
+        - ./.travis/run-cmake-test.sh x86_64-linux
+        - ./.travis/run-cmake-test.sh i686-linux     -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32
+        - ./.travis/run-cmake-test.sh x86_64-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake
+        - ./.travis/run-cmake-test.sh i686-mingw32   -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake
     - name: alpine linux on docker
       os: linux
       dist: bionic
@@ -34,12 +38,14 @@ matrix:
       script:
         - ./autogen.sh
         - ./.travis/run-test.sh x86_64-darwin
+        - ./.travis/run-cmake-test.sh x86_64-darwin
     - name: Xcode 10.3 (the latest version which can change memory regions in exe)
       os: osx
       osx_image: xcode10.3
       script:
         - ./autogen.sh
         - ./.travis/run-test.sh x86_64-darwin
+        - ./.travis/run-cmake-test.sh x86_64-darwin
     - name: Xcode 10.1 (the latest version supporting 32-bit)
       os: osx
       osx_image: xcode10.1
@@ -47,3 +53,10 @@ matrix:
         - ./autogen.sh
         - ./.travis/run-test.sh x86_64-darwin
         - ./.travis/run-test.sh i686-darwin      "CC=cc -m32"
+        - ./.travis/run-cmake-test.sh x86_64-darwin
+        - ./.travis/run-cmake-test.sh i686-darwin -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32
+    - name: Windows
+      os: windows
+      script:
+        - ./.travis/run-cmake-test.sh x86_64-windows -G "Visual Studio 15 2017 Win64"
+        - ./.travis/run-cmake-test.sh x86-windows -G "Visual Studio 15 2017"
