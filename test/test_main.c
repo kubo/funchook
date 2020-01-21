@@ -51,6 +51,8 @@ typedef int (*int_func_t)(void);
 extern int reset_retval(void);
 DLLEXPORT int get_val_in_exe(void);
 extern int get_val_in_dll(void);
+extern int call_get_val_in_dll(void);
+extern int jump_get_val_in_dll(void);
 extern int x86_test_jump(void);
 extern int x86_test_call_get_pc_thunk_ax(void);
 extern int x86_test_call_get_pc_thunk_bx(void);
@@ -477,10 +479,11 @@ int main()
     TEST_FUNCHOOK_INT(get_val_in_exe, LOAD_TYPE_IN_EXE);
 #endif
     TEST_FUNCHOOK_INT(get_val_in_dll, LOAD_TYPE_IN_DLL);
+    TEST_FUNCHOOK_INT(call_get_val_in_dll, LOAD_TYPE_IN_DLL);
+    TEST_FUNCHOOK_INT(jump_get_val_in_dll, LOAD_TYPE_IN_DLL);
 
 #ifndef _MSC_VER
 #if defined __i386 || defined  _M_I386
-    TEST_FUNCHOOK_INT(x86_test_jump, LOAD_TYPE_NO_LOAD);
     TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump1, FUNCHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
     TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump2, FUNCHOOK_ERROR_FOUND_BACK_JUMP);
 
