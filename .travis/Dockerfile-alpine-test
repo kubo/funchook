@@ -1,5 +1,4 @@
 FROM alpine
-RUN apk add musl-dev gcc autoconf make cmake
+RUN apk add musl-dev gcc make cmake
 COPY . /funchook
-ENTRYPOINT ["/funchook/.travis/run-alpine-tests.sh" ]
-
+ENTRYPOINT ["/funchook/.travis/run-cmake-test.sh", "alpine"]

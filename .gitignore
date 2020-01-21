@@ -3,15 +3,3 @@
 *.o
 *.so
 *~
-/Makefile
-/autom4te.cache
-/config.log
-/config.status
-/configure
-/src/Makefile
-/src/config.h
-/src/config.h.in
-/win32/.vs
-/win32/Debug
-/win32/Release
-/win32/x64
