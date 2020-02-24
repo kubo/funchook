@@ -275,6 +275,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
 {
     void *func = *target_func;
     uint8_t trampoline[TRAMPOLINE_SIZE];
+    size_t trampoline_size;
     rip_displacement_t disp[2] = {{0,},{0,}};
     funchook_page_t *page = NULL;
     funchook_entry_t *entry;
@@ -287,7 +288,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
         return FUNCHOOK_ERROR_ALREADY_INSTALLED;
     }
     func = funchook_resolve_func(funchook, func);
-    rv = funchook_make_trampoline(funchook, disp, func, trampoline);
+    rv = funchook_make_trampoline(funchook, disp, func, trampoline, &trampoline_size);
     if (rv != 0) {
         funchook_log(funchook, "  failed to make trampoline\n");
         return rv;
@@ -323,7 +324,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
         offset_addr = (uint32_t*)(entry->trampoline + disp[1].pos_offset);
         *offset_addr = (uint32_t)(disp[1].dst_addr - src_addr);
     }
-    funchook_log_trampoline(funchook, entry->trampoline);
+    funchook_log_trampoline(funchook, entry->trampoline, trampoline_size);
 
     page->used++;
     *target_func = (void*)entry->trampoline;
