@@ -50,6 +50,29 @@ typedef _DInst funchook_insn_t;
 
 #endif
 
+#ifdef DISASM_ZYDIS
+#include <Zydis/Zydis.h>
+
+typedef struct {
+    ZydisDecodedInstruction insn;
+    size_t next_address;
+} funchook_insn_t;
+
+typedef struct funchook_disasm {
+    funchook_t *funchook;
+    ZydisDecoder decoder;
+    ZydisFormatter formatter;
+    funchook_insn_t insn;
+    const uint8_t *code;
+    const uint8_t *code_end;
+} funchook_disasm_t;
+
+#define funchook_insn_size(insn) ((insn)->insn.length)
+#define funchook_insn_address(insn) ((insn)->next_address - (insn)->insn.length)
+#define funchook_insn_branch_address(insn) ((insn)->next_address + (intptr_t)(insn)->insn.raw.imm[0].value.s)
+
+#endif
+
 /* RIP-relative address information */
 typedef struct {
     uint8_t *addr; /* absolute address */

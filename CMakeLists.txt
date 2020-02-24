@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
+# GIT_SHALLOW requires cmake 3.6.
+cmake_minimum_required(VERSION 3.6)
 
 project(funchook LANGUAGES C ASM)
 set(PROJECT_VERSION 1.1.0-dev)
@@ -32,6 +33,8 @@ check_c_compiler_flag(-fvisibility=hidden HAVE_FVISIBILITY_HIDDEN)
 
 if (FUNCHOOK_DISASM STREQUAL distorm)
   set(DISASM_DISTORM 1)
+elseif (FUNCHOOK_DISASM STREQUAL zydis)
+  set(DISASM_ZYDIS 1)
 else ()
   message(FATAL_ERROR "Unknown FUNCHOOK_DISASM type: ${FUNCHOOK_DISASM}")
 endif ()
@@ -70,6 +73,31 @@ if (DISASM_DISTORM)
 endif ()
 
 #
+# zydis
+#
+if (DISASM_ZYDIS)
+  include(ExternalProject)
+  ExternalProject_Add(Zydis_src
+    GIT_REPOSITORY    https://github.com/zyantific/zydis.git
+    GIT_TAG           v3.1.0
+    GIT_SHALLOW       TRUE
+    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE}
+                      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
+                      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+                      -DZYDIS_BUILD_SHARED_LIB=OFF
+                      -DZYDIS_BUILD_EXAMPLES=OFF
+                      -DZYDIS_BUILD_TOOLS=OFF
+    INSTALL_COMMAND  ${CMAKE_COMMAND} --build . --target install && ${CMAKE_COMMAND} --build zycore --target install
+  )
+  include_directories(${CMAKE_BINARY_DIR}/include)
+  link_directories(${CMAKE_BINARY_DIR}/lib)
+  set(DISASM Zydis)
+endif ()
+
+#
 # funchook
 #
 
@@ -94,6 +122,9 @@ configure_file(src/cmake_config.h.in config.h)
 
 function (add_funchook_library target_name target_type)
   add_library(${target_name} ${target_type} ${FUNCHOOK_SOURCES})
+  if (NOT DISASM STREQUAL distorm)
+    add_dependencies(${target_name} ${DISASM}_src)
+  endif ()
   set_target_properties(${target_name} PROPERTIES ${FUNCHOOK_PROPERTIES})
   target_include_directories(${target_name} PUBLIC include)
   target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}) # to include config.h
