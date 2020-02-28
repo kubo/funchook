@@ -50,6 +50,24 @@ typedef _DInst funchook_insn_t;
 
 #endif
 
+#ifdef DISASM_CAPSTONE
+#include <capstone/capstone.h>
+
+typedef struct funchook_disasm {
+    funchook_t *funchook;
+    csh handle;
+    cs_insn *insns;
+    size_t index;
+    size_t count;
+} funchook_disasm_t;
+
+typedef cs_insn funchook_insn_t;
+
+#define funchook_insn_size(insn) ((insn)->size)
+#define funchook_insn_address(insn) ((size_t)(insn)->address)
+#define funchook_insn_branch_address(insn) ((size_t)(insn)->detail->x86.operands[0].imm)
+#endif
+
 #ifdef DISASM_ZYDIS
 #include <Zydis/Zydis.h>
 

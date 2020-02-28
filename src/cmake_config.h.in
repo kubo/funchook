@@ -1,4 +1,5 @@
 #cmakedefine _GNU_SOURCE
 #cmakedefine GNU_SPECIFIC_STRERROR_R 1
+#cmakedefine DISASM_CAPSTONE 1
 #cmakedefine DISASM_DISTORM 1
 #cmakedefine DISASM_ZYDIS 1

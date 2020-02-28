@@ -31,7 +31,9 @@ endif ()
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fvisibility=hidden HAVE_FVISIBILITY_HIDDEN)
 
-if (FUNCHOOK_DISASM STREQUAL distorm)
+if (FUNCHOOK_DISASM STREQUAL capstone)
+  set(DISASM_CAPSTONE 1)
+elseif (FUNCHOOK_DISASM STREQUAL distorm)
   set(DISASM_DISTORM 1)
 elseif (FUNCHOOK_DISASM STREQUAL zydis)
   set(DISASM_ZYDIS 1)
@@ -43,6 +45,46 @@ if (CMAKE_TOOLCHAIN_FILE)
   get_filename_component(TOOLCHAIN_FILE "${CMAKE_TOOLCHAIN_FILE}" ABSOLUTE BASE_DIR "${CMAKE_BINARY_DIR}")
 else ()
   set(TOOLCHAIN_FILE "")
+endif ()
+
+#
+# capstone
+#
+if (DISASM_CAPSTONE)
+  include(ExternalProject)
+  ExternalProject_Add(capstone_src
+    GIT_REPOSITORY    https://github.com/aquynh/capstone.git
+    GIT_TAG           4.0.1
+    GIT_SHALLOW       TRUE
+    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE}
+                      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
+                      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+                      -DCAPSTONE_BUILD_SHARED=OFF
+                      -DCAPSTONE_BUILD_STATIC_RUNTIME=OFF
+                      -DCAPSTONE_BUILD_TESTS=OFF
+                      -DCAPSTONE_BUILD_CSTOOL=OFF
+                      -DCAPSTONE_ARM_SUPPORT=OFF
+                      -DCAPSTONE_ARM64_SUPPORT=OFF
+                      -DCAPSTONE_EVM_SUPPORT=OFF
+                      -DCAPSTONE_M680X_SUPPORT=OFF
+                      -DCAPSTONE_M68K_SUPPORT=OFF
+                      -DCAPSTONE_MIPS_SUPPORT=OFF
+                      -DCAPSTONE_PPC_SUPPORT=OFF
+                      -DCAPSTONE_SPARC_SUPPORT=OFF
+                      -DCAPSTONE_SYSZ_SUPPORT=OFF
+                      -DCAPSTONE_TMS320C64X_SUPPORT=OFF
+                      -DCAPSTONE_XCORE_SUPPORT=OFF
+                      -DCAPSTONE_X86_SUPPORT=ON
+    INSTALL_COMMAND   ""
+  )
+  ExternalProject_Get_Property(capstone_src SOURCE_DIR)
+  include_directories(${SOURCE_DIR}/include)
+  ExternalProject_Get_Property(capstone_src BINARY_DIR)
+  link_directories(${BINARY_DIR})
+  set(DISASM capstone)
 endif ()
 
 #

@@ -7,3 +7,5 @@ set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
 
 # target environment on the build host system
 set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
+
+set(CMAKE_C_FLAGS -D_WIN32_WINNT=0x600 CACHE STRING "" FORCE)
