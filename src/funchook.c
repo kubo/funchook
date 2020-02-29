@@ -43,7 +43,6 @@
 #endif
 #endif
 #include "funchook.h"
-#include "funchook_io.h"
 #include "funchook_internal.h"
 
 #define FUNCHOOK_MAX_ERROR_MESSAGE_LEN 200
@@ -69,7 +68,7 @@ struct funchook {
     int installed;
     funchook_page_t *page_list;
     char error_message[FUNCHOOK_MAX_ERROR_MESSAGE_LEN];
-    funchook_io_t io;
+    FILE *fp;
 };
 
 char funchook_debug_file[PATH_MAX];
@@ -178,7 +177,8 @@ const char *funchook_error_message(const funchook_t *funchook)
 int funchook_set_debug_file(const char *name)
 {
     if (name != NULL) {
-        strlcpy(funchook_debug_file, name, sizeof(funchook_debug_file));
+        strncpy(funchook_debug_file, name, sizeof(funchook_debug_file) - 1);
+        funchook_debug_file[sizeof(funchook_debug_file) - 1] = '\0';
     } else {
         funchook_debug_file[0] = '\0';
     }
@@ -198,7 +198,7 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    funchook_vsnprintf(funchook->error_message, FUNCHOOK_MAX_ERROR_MESSAGE_LEN, fmt, ap);
+    vsnprintf(funchook->error_message, FUNCHOOK_MAX_ERROR_MESSAGE_LEN, fmt, ap);
     va_end(ap);
     va_start(ap, fmt);
     funchook_logv(funchook, 1, fmt, ap);
@@ -207,34 +207,33 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...)
 
 static void funchook_logv(funchook_t *funchook, int set_error, const char *fmt, va_list ap)
 {
-    funchook_io_t iobuf;
-    funchook_io_t *io = &iobuf;
+    FILE *fp;
 
     if (*funchook_debug_file == '\0') {
         return;
     }
     if (funchook == NULL) {
-        funchook_io_open(&iobuf, funchook_debug_file, FUNCHOOK_IO_APPEND);
-    } else if (funchook->io.file == INVALID_FILE_HANDLE) {
-        funchook_io_open(&funchook->io, funchook_debug_file, FUNCHOOK_IO_APPEND);
-        io = &funchook->io;
+        fp = fopen(funchook_debug_file, "a");
+    } else if (funchook->fp == NULL) {
+        funchook->fp = fopen(funchook_debug_file, "a");
+        fp = funchook->fp;
     } else {
-        io = &funchook->io;
+        fp = funchook->fp;
     }
-    if (io->file == INVALID_FILE_HANDLE) {
+    if (fp == NULL) {
         return;
     }
     if (set_error) {
-        funchook_io_puts("  ", io);
+        fputs("  ", fp);
     }
-    funchook_io_vprintf(io, fmt, ap);
+    vfprintf(fp, fmt, ap);
     if (set_error) {
-        funchook_io_putc('\n', io);
+        fputc('\n', fp);
     }
     if (funchook == NULL) {
-        funchook_io_close(io);
+        fclose(fp);
     } else {
-        funchook_io_flush(io);
+        fflush(fp);
     }
 }
 
@@ -244,8 +243,9 @@ static void funchook_log_end(funchook_t *funchook, const char *fmt, ...)
     va_start(ap, fmt);
     funchook_logv(funchook, 0, fmt, ap);
     va_end(ap);
-    if (funchook != NULL && funchook->io.file != INVALID_FILE_HANDLE) {
-        funchook_io_close(&funchook->io);
+    if (funchook != NULL && funchook->fp != NULL) {
+        fclose(funchook->fp);
+        funchook->fp = NULL;
     }
 }
 
@@ -255,7 +255,6 @@ static funchook_t *funchook_create_internal(void)
     if (funchook == NULL) {
         return NULL;
     }
-    funchook->io.file = INVALID_FILE_HANDLE;
     if (num_entries_in_page == 0) {
         num_entries_in_page = (page_size - offsetof(funchook_page_t, entries)) / sizeof(funchook_entry_t);
         funchook_log(funchook,
@@ -411,7 +410,9 @@ static int funchook_destroy_internal(funchook_t *funchook)
         page_next = page->next;
         funchook_page_free(funchook, page);
     }
-    funchook_io_close(&funchook->io);
+    if (funchook->fp != NULL) {
+        fclose(funchook->fp);
+    }
     funchook_free(funchook);
     return 0;
 }

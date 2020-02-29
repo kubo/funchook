@@ -31,7 +31,6 @@
 #ifndef FUNCHOOK_INTERNAL_H
 #define FUNCHOOK_INTERNAL_H 1
 #include "funchook.h"
-#include "os_func.h"
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -138,7 +137,6 @@ int funchook_unprotect_begin(funchook_t *funchook, mem_state_t *mstate, void *ad
 int funchook_unprotect_end(funchook_t *funchook, const mem_state_t *mstate);
 
 void *funchook_resolve_func(funchook_t *funchook, void *func);
-const char *funchook_strerror(int errnum, char *buf, size_t buflen);
 
 /* Functions in funchook_x86.c */
 

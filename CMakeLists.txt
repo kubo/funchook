@@ -9,15 +9,8 @@ option(FUNCHOOK_BUILD_STATIC "build static library" ON)
 option(FUNCHOOK_BUILD_TESTS "Build tests" ON)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE) #used for _sys_nerr and _sys_errlist
   set(_GNU_SOURCE 1)
 endif ()
-
-include(CheckSymbolExists)
-check_symbol_exists(_sys_nerr "stdio.h" HAVE_DECL__SYS_NERR)
-check_symbol_exists(_sys_errlist "stdio.h" HAVE_DECL__SYS_ERRLIST)
-check_symbol_exists(sys_nerr "stdio.h" HAVE_DECL_SYS_NERR)
-check_symbol_exists(sys_errlist "stdio.h" HAVE_DECL_SYS_ERRLIST)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fvisibility=hidden HAVE_FVISIBILITY_HIDDEN)
@@ -59,11 +52,7 @@ else ()
   set(FUNCHOOK_DEPS dl)
 endif ()
 
-set(FUNCHOOK_SOURCES src/funchook.c src/funchook_io.c src/funchook_x86.c src/os_func.c src/printf_base.c
-    src/funchook_${FUNCHOOK_OS}.c src/os_func_${FUNCHOOK_OS}.c)
-if (UNIX)
-  set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/funchook_syscall.S)
-endif ()
+set(FUNCHOOK_SOURCES src/funchook.c src/funchook_x86.c src/funchook_${FUNCHOOK_OS}.c)
 
 set(FUNCHOOK_PROPERTIES
     OUTPUT_NAME funchook

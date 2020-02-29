@@ -45,7 +45,6 @@
 #include <stdlib.h>
 #include <mach/mach.h>
 #endif
-#include "funchook_io.h"
 #include "funchook_internal.h"
 
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -53,6 +52,20 @@
 #endif
 
 const size_t page_size = PAGE_SIZE;
+
+const char *funchook_strerror(int errnum, char *buf, size_t buflen)
+{
+#if defined(__linux) && defined(_GNU_SOURCE)
+    /* GNU-specific strerror */
+    return strerror_r(errnum, buf, buflen);
+#else
+    /* XSI-compliant strerror */
+    if (strerror_r(errnum, buf, buflen) != 0) {
+        snprintf(buf, buflen, "errno %d", errnum);
+    }
+    return buf;
+#endif
+}
 
 funchook_t *funchook_alloc(void)
 {
@@ -100,13 +113,14 @@ static char scan_address(const char **str, size_t *addr_p)
 }
 
 struct memory_map {
-    funchook_io_t io;
+    FILE *fp;
 };
 
 static int memory_map_open(funchook_t *funchook, memory_map_t *mm)
 {
     char buf[64];
-    if (funchook_io_open(&mm->io, "/proc/self/maps", FUNCHOOK_IO_READ) != 0) {
+    mm->fp = fopen("/proc/self/maps", "r");
+    if (mm->fp == NULL) {
         funchook_set_error_message(funchook, "Failed to open /proc/self/maps (%s)",
                                    funchook_strerror(errno, buf, sizeof(buf)));
         return FUNCHOOK_ERROR_INTERNAL_ERROR;
@@ -119,7 +133,7 @@ static int memory_map_next(memory_map_t *mm, size_t *start, size_t *end)
     char buf[PATH_MAX];
     const char *str = buf;
 
-    if (funchook_io_gets(buf, sizeof(buf), &mm->io) == NULL) {
+    if (fgets(buf, sizeof(buf), mm->fp) == NULL) {
         return -1;
     }
     if (scan_address(&str, start) != '-') {
@@ -133,7 +147,7 @@ static int memory_map_next(memory_map_t *mm, size_t *start, size_t *end)
 
 static void memory_map_close(memory_map_t *mm)
 {
-    funchook_io_close(&mm->io);
+    fclose(mm->fp);
 }
 
 #elif defined(__APPLE__)
@@ -443,38 +457,4 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
     }
 #endif
     return func;
-}
-
-#ifndef HAVE_DECL__SYS_NERR
-#define HAVE_DECL__SYS_NERR 0
-#endif
-#ifndef HAVE_DECL__SYS_ERRLIST
-#define HAVE_DECL__SYS_ERRLIST 0
-#endif
-#ifndef HAVE_DECL_SYS_NERR
-#define HAVE_DECL_SYS_NERR 0
-#endif
-#ifndef HAVE_DECL_SYS_ERRLIST
-#define HAVE_DECL_SYS_ERRLIST 0
-#endif
-
-const char *funchook_strerror(int errnum, char *buf, size_t buflen)
-{
-#if HAVE_DECL__SYS_NERR && HAVE_DECL__SYS_ERRLIST
-    if (0 <= errnum && errnum < _sys_nerr) {
-        return _sys_errlist[errnum];
-    }
-#elif HAVE_DECL_SYS_NERR && HAVE_DECL_SYS_ERRLIST
-    if (0 <= errnum && errnum < sys_nerr) {
-        return sys_errlist[errnum];
-    }
-#else
-    switch (errnum) {
-#undef E
-#define E(err, msg) case err: return msg;
-#include "__strerror.h" /* header file copied from musl libc */
-    }
-#endif
-    funchook_snprintf(buf, buflen, "Unknown error (%d)", errnum);
-    return buf;
 }

@@ -1,6 +1,2 @@
-#cmakedefine HAVE_DECL__SYS_NERR 1
-#cmakedefine HAVE_DECL__SYS_ERRLIST 1
-#cmakedefine HAVE_DECL_SYS_NERR 1
-#cmakedefine HAVE_DECL_SYS_ERRLIST 1
 #cmakedefine _GNU_SOURCE
 
