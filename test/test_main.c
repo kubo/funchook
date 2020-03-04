@@ -48,12 +48,10 @@
 
 typedef int (*int_func_t)(void);
 
-extern int reset_retval(void);
 DLLEXPORT int get_val_in_exe(void);
 extern int get_val_in_dll(void);
 extern int call_get_val_in_dll(void);
 extern int jump_get_val_in_dll(void);
-extern int x86_test_jump(void);
 extern int x86_test_call_get_pc_thunk_ax(void);
 extern int x86_test_call_get_pc_thunk_bx(void);
 extern int x86_test_call_get_pc_thunk_cx(void);
@@ -71,25 +69,18 @@ extern int x86_test_call_and_pop_ebp(void);
 extern int x86_test_error_jump1(void);
 extern int x86_test_error_jump2(void);
 
-#if defined(WIN32) || defined(__APPLE__)
-extern void set_int_val(int val);
-#else
-#define set_int_val(val) do {} while(0)
-#endif
+extern void set_val_in_dll(int val);
 
-#ifdef _MSC_VER
-int reset_retval()
+/* Reset the register for return values.
+ *  %eax for x86.
+ *  %rax for x86_64.
+ */
+NOINLINE int reset_register()
 {
     return 0;
 }
-#endif
 
-#if defined(WIN32)
-__declspec(dllexport) int int_val = 0xbaceba11;
-#else
 int int_val = 0xbaceba11;
-#endif
-
 
 static int test_cnt;
 static int error_cnt;
@@ -169,8 +160,8 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     }
 
     expected = ++int_val;
-    set_int_val(int_val);
-    reset_retval();
+    set_val_in_dll(int_val);
+    reset_register();
     result = func();
     if (expected != result) {
         printf("ERROR: %s should return %d but %d before hooking.\n", func_name, expected, result);
@@ -178,7 +169,7 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
         return;
     }
     if (func_real != NULL) {
-        reset_retval();
+        reset_register();
         result = func_real();
         if (expected != result) {
             printf("ERROR: %s (real) should return %d but %d before hooking.\n", func_name, expected, result);
@@ -202,8 +193,8 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
 
     hook_is_called = 0;
     expected = ++int_val;
-    set_int_val(int_val);
-    reset_retval();
+    set_val_in_dll(int_val);
+    reset_register();
     result = func();
     if (hook_is_called == 0) {
         printf("ERROR: hook_func is not called by %s.\n", func_name);
@@ -217,7 +208,7 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     }
     if (func_real != NULL) {
         hook_is_called = 0;
-        reset_retval();
+        reset_register();
         result = func_real();
         if (hook_is_called == 0) {
             printf("ERROR: hook_func is not called by %s (real).\n", func_name);
@@ -234,8 +225,8 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     funchook_uninstall(funchook, 0);
 
     expected = ++int_val;
-    set_int_val(int_val);
-    reset_retval();
+    set_val_in_dll(int_val);
+    reset_register();
     result = func();
     if (expected != result) {
         printf("ERROR: %s should return %d but %d after hook is removed.\n", func_name, expected, result);
@@ -243,7 +234,7 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
         return;
     }
     if (func_real != NULL) {
-        reset_retval();
+        reset_register();
         result = func_real();
         if (expected != result) {
             printf("ERROR: %s (real) should return %d but %d after hook is removed.\n", func_name, expected, result);
@@ -439,14 +430,18 @@ static void test_hook_many_funcs(void)
 #define S(suffix) \
     dllfunc_##suffix##_func = dllfunc_##suffix; \
     funchook_prepare(funchook, (void**)&dllfunc_##suffix##_func, dllfunc_##suffix##_hook); \
-    putchar('.'); fflush(stdout);
+    putchar('.'); fflush(stdout); \
+    funchook_set_debug_file(NULL); /* disable logging except the first to reduce log size. */
 #include "suffix.list"
+    funchook_set_debug_file("debug.log");
 #undef S
 #ifndef SKIP_TESTS_CHANGING_EXE
 #define S(suffix) \
     exefunc_##suffix##_func = exefunc_##suffix; \
-    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook);
+    funchook_prepare(funchook, (void**)&exefunc_##suffix##_func, exefunc_##suffix##_hook); \
+    funchook_set_debug_file(NULL); /* disable logging except the first to reduce log size. */
 #include "suffix.list"
+    funchook_set_debug_file("debug.log");
 #undef S
 #endif
     putchar('\n');

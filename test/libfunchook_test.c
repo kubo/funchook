@@ -4,20 +4,16 @@
 #define DLLEXPORT
 #endif
 
-#if defined(WIN32) || defined(__APPLE__)
-static int int_val;
+static int val_in_dll;
 
-DLLEXPORT void set_int_val(int val)
+DLLEXPORT void set_val_in_dll(int val)
 {
-    int_val = val;
+    val_in_dll = val;
 }
-#else
-extern int int_val;
-#endif
 
 DLLEXPORT int get_val_in_dll()
 {
-    return int_val;
+    return val_in_dll;
 }
 
 #define S(suffix) DLLEXPORT int dllfunc_##suffix(int a, int b) { return a * b + suffix; }

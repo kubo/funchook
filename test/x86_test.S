@@ -1,7 +1,6 @@
 #if defined(_WIN32) || defined(__APPLE__)
 #define get_val_in_exe _get_val_in_exe
 #define int_val _int_val
-#define reset_retval _reset_retval
 #define x86_test_error_jump1 _x86_test_error_jump1
 #define x86_test_error_jump2 _x86_test_error_jump2
 #define x86_test_call_get_pc_thunk_ax _x86_test_call_get_pc_thunk_ax
@@ -20,12 +19,6 @@
 #define x86_test_call_and_pop_ebp _x86_test_call_and_pop_ebp
 #endif
 	.text
-
-	.p2align 4,,15
-	.globl	reset_retval
-reset_retval:
-	xorl	%eax, %eax
-	ret
 
 	.p2align 4,,15
 	.globl	x86_test_error_jump1
