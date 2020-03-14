@@ -154,7 +154,7 @@ static int alloc_page_info(funchook_t *funchook, page_list_t **pl_out, void *hin
 /*
  * Get one page from page_list, commit it and return it.
  */
-int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
+int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, ip_displacement_t *disp)
 {
     page_list_t *pl;
     funchook_page_t *page = NULL;

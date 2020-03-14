@@ -233,7 +233,7 @@ static int get_free_address(funchook_t *funchook, void *func_addr, void *addrs[2
 
 #endif /* CPU_X86_64 */
 
-int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, rip_displacement_t *disp)
+int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, ip_displacement_t *disp)
 {
 #ifdef CPU_X86_64
     int loop_cnt;

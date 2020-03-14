@@ -38,7 +38,7 @@
 
 typedef struct {
     funchook_t *funchook;
-    rip_displacement_t *rip_disp;
+    ip_displacement_t *rip_disp;
     const uint8_t *src;
     const uint8_t *dst_base;
     uint8_t *dst;
@@ -56,7 +56,7 @@ static int handle_x86_get_pc_by_call_and_pop(make_trampoline_context_t *ctx, con
 
 static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relative_t *rel, size_t insn_size);
 
-int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const uint8_t *dst, uint8_t *out)
+static int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const uint8_t *dst, uint8_t *out)
 {
     out[0] = 0xe9;
     *(int*)(out + 1) = (int)(dst - (src + 5));
@@ -67,7 +67,7 @@ int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const uint8_
 
 #ifdef CPU_X86_64
 
-int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst)
+static int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst)
 {
     src[0] = 0xFF;
     src[1] = 0x25;
@@ -81,20 +81,20 @@ int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst
     return 0;
 }
 
-int funchook_within_32bit_relative(const uint8_t *src, const uint8_t *dst)
+static int funchook_within_32bit_relative(const uint8_t *src, const uint8_t *dst)
 {
     int64_t diff = (int64_t)(dst - src);
     return (INT32_MIN <= diff && diff <= INT32_MAX);
 }
 
-int funchook_jump32_avail(const uint8_t *src, const uint8_t *dst)
+static int funchook_jump32_avail(const uint8_t *src, const uint8_t *dst)
 {
     return funchook_within_32bit_relative(src + 5, dst);
 }
 
 #endif
 
-int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline, size_t *trampoline_size)
+int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline, size_t *trampoline_size)
 {
     make_trampoline_context_t ctx;
     funchook_disasm_t disasm;
@@ -102,6 +102,7 @@ int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, con
     unsigned int i;
     const funchook_insn_t *insn;
 
+    memset(disp, 0, sizeof(*disp));
     memset(trampoline, NOP_INSTRUCTION, TRAMPOLINE_SIZE);
     *trampoline_size = 0;
     ctx.funchook = funchook;
@@ -144,9 +145,9 @@ int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, con
         }
         if (ctx.src - func >= JUMP32_SIZE) {
             ctx.dst[0] = 0xe9; /* unconditional jump */
-            disp[0].dst_addr = ctx.src;
-            disp[0].src_addr_offset = (ctx.dst - ctx.dst_base) + 5;
-            disp[0].pos_offset = (ctx.dst - ctx.dst_base) + 1;
+            disp->disp[0].dst_addr = ctx.src;
+            disp->disp[0].src_addr_offset = (ctx.dst - ctx.dst_base) + 5;
+            disp->disp[0].pos_offset = (ctx.dst - ctx.dst_base) + 1;
             *trampoline_size = (ctx.dst - ctx.dst_base) + 5;
             while ((rv = funchook_disasm_next(&disasm, &insn)) == 0) {
                 funchook_disasm_log_instruction(&disasm, insn);
@@ -177,31 +178,6 @@ int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, con
 cleanup:
     funchook_disasm_cleanup(&disasm);
     return rv;
-}
-
-void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline, size_t trampoline_size)
-{
-    funchook_disasm_t disasm;
-    const funchook_insn_t *insn;
-
-    if (*funchook_debug_file == '\0') {
-        return;
-    }
-
-    funchook_log(funchook, "  Trampoline Instructions:\n");
-    if (funchook_disasm_init(&disasm, funchook, trampoline, trampoline_size, (size_t)trampoline) != 0) {
-        int i;
-        funchook_log(funchook, "  Failed to decode trampoline\n    ");
-        for (i = 0; i < TRAMPOLINE_SIZE; i++) {
-            funchook_log(funchook, " %02x", trampoline[i]);
-        }
-        funchook_log(funchook, "\n");
-        return;
-    }
-    while (funchook_disasm_next(&disasm, &insn) == 0) {
-        funchook_disasm_log_instruction(&disasm, insn);
-    }
-    funchook_disasm_cleanup(&disasm);
 }
 
 #ifndef handle_x86_get_pc_thunk
@@ -342,12 +318,69 @@ static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relativ
                          rel->offset, (uint32_t)rel->raddr, *(int32_t*)(ctx->dst + rel->offset));
             return FUNCHOOK_ERROR_IP_RELATIVE_OFFSET;
         }
-        ctx->rip_disp[1].dst_addr = rel->addr;
-        ctx->rip_disp[1].src_addr_offset = (ctx->dst - ctx->dst_base) + insn_size;
-        ctx->rip_disp[1].pos_offset = (ctx->dst - ctx->dst_base) + rel->offset;
+        ctx->rip_disp->disp[1].dst_addr = rel->addr;
+        ctx->rip_disp->disp[1].src_addr_offset = (ctx->dst - ctx->dst_base) + insn_size;
+        ctx->rip_disp->disp[1].pos_offset = (ctx->dst - ctx->dst_base) + rel->offset;
     } else if (rel->size != 0) {
         funchook_set_error_message(ctx->funchook, "Could not fix ip-relative address. The size is not 32.");
         return FUNCHOOK_ERROR_CANNOT_FIX_IP_RELATIVE;
     }
     return 0;
 }
+
+int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp, const void *func, const void *hook_func)
+{
+    uint8_t *src_addr;
+    uint32_t *offset_addr;
+
+#ifdef CPU_X86_64
+    if (funchook_jump32_avail(func, hook_func)) {
+        funchook_write_jump32(funchook, func, hook_func, entry->new_code);
+        entry->transit[0] = 0;
+    } else {
+        funchook_write_jump32(funchook, func, entry->transit, entry->new_code);
+        funchook_write_jump64(funchook, entry->transit, hook_func);
+    }
+#else
+    funchook_write_jump32(funchook, func, hook_func, entry->new_code);
+#endif
+    /* fix rip-relative offsets */
+    src_addr = entry->trampoline + disp->disp[0].src_addr_offset;
+    offset_addr = (uint32_t*)(entry->trampoline + disp->disp[0].pos_offset);
+    *offset_addr = (uint32_t)(disp->disp[0].dst_addr - src_addr);
+    if (disp->disp[1].dst_addr != 0) {
+        src_addr = entry->trampoline + disp->disp[1].src_addr_offset;
+        offset_addr = (uint32_t*)(entry->trampoline + disp->disp[1].pos_offset);
+        *offset_addr = (uint32_t)(disp->disp[1].dst_addr - src_addr);
+    }
+    return 0;
+}
+
+#ifdef CPU_X86_64
+int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, uint8_t *addr, ip_displacement_t *disp)
+{
+    funchook_entry_t *entry = &page->entries[idx];
+    const uint8_t *src;
+    const uint8_t *dst;
+
+    if (!funchook_jump32_avail(addr, entry->trampoline)) {
+        funchook_log(funchook, "  could not jump function %p to trampoline %p\n", addr, entry->trampoline);
+        return 0;
+    }
+    src = entry->trampoline + disp->disp[0].src_addr_offset;
+    dst = disp->disp[0].dst_addr;
+    if (!funchook_within_32bit_relative(src, dst)) {
+        funchook_log(funchook, "  could not jump trampoline %p to function %p\n",
+                     src, dst);
+        return 0;
+    }
+    src = entry->trampoline + disp->disp[1].src_addr_offset;
+    dst = disp->disp[1].dst_addr;
+    if (dst != 0 && !funchook_within_32bit_relative(src, dst)) {
+        funchook_log(funchook, "  could not make 32-bit relative address from %p to %p\n",
+                     src, dst);
+        return 0;
+    }
+    return 1;
+}
+#endif
