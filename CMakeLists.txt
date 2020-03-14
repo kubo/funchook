@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
 project(funchook LANGUAGES C ASM)
-set(PROJECT_VERSION 2.0.0-dev)
-set(PROJECT_VERSION_MAJOR 2)
+set(PROJECT_VERSION 1.1.0-dev)
+set(PROJECT_VERSION_MAJOR 1)
 
 option(FUNCHOOK_BUILD_SHARED "build shared library" ON)
 option(FUNCHOOK_BUILD_STATIC "build static library" ON)
