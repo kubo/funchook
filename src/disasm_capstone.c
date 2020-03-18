@@ -35,11 +35,18 @@
 #include "funchook_internal.h"
 #include "disasm.h"
 
-#define CS_ARCH CS_ARCH_X86
+#ifdef CPU_ARM64
+#define CS_ARCH CS_ARCH_ARM64
+#define CS_MODE CS_MODE_LITTLE_ENDIAN
+#endif
 
 #ifdef CPU_X86_64
+#define CS_ARCH CS_ARCH_X86
 #define CS_MODE CS_MODE_64
-#else
+#endif
+
+#ifdef CPU_X86
+#define CS_ARCH CS_ARCH_X86
 #define CS_MODE CS_MODE_32
 #endif
 
@@ -47,7 +54,7 @@
 
 #define HEX(x) ((x) < 10 ? (x) + '0' : (x) - 10 + 'A')
 
-int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const uint8_t *code, size_t code_size, size_t address)
+int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const insn_t *code, size_t code_size, size_t address)
 {
     cs_err err;
 
@@ -62,7 +69,7 @@ int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const 
         cs_close(&disasm->handle);
         return FUNCHOOK_ERROR_INTERNAL_ERROR;
     }
-    if ((disasm->count = cs_disasm(disasm->handle, code, code_size, address, 0, &disasm->insns)) == 0) {
+    if ((disasm->count = cs_disasm(disasm->handle, (const uint8_t*)code, code_size * sizeof(insn_t), address, 0, &disasm->insns)) == 0) {
         err = cs_errno(disasm->handle);
         funchook_set_error_message(funchook, "disassemble error: %s", cs_strerror(err));
         cs_close(&disasm->handle);
@@ -145,6 +152,7 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
         }
         funchook_log(funchook, "\n");
     }
+#if defined(CPU_X86_64) || defined(CPU_X86)
     cs_x86 *x86 = &detail->x86;
     if (x86->encoding.modrm_offset != 0) {
         funchook_log(funchook, "        encoding.modrm_offset: %u\n", x86->encoding.modrm_offset);
@@ -213,9 +221,101 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
             }
         }
     }
-#endif
+#endif /* defined(CPU_X86_64) || defined(CPU_X86) */
+#endif /* LOG_DETAIL */
 }
 
+#if defined(CPU_ARM64)
+// Check only registers in FUNCHOOK_ARM64_CORRUPTIBLE_REGS
+static uint32_t cs2funchook_reg(uint16_t reg)
+{
+    switch (reg) {
+    case ARM64_REG_W9:
+    case ARM64_REG_X9:
+        return FUNCHOOK_ARM64_REG_X9;
+    case ARM64_REG_W10:
+    case ARM64_REG_X10:
+        return FUNCHOOK_ARM64_REG_X10;
+    case ARM64_REG_W11:
+    case ARM64_REG_X11:
+        return FUNCHOOK_ARM64_REG_X11;
+    case ARM64_REG_W12:
+    case ARM64_REG_X12:
+        return FUNCHOOK_ARM64_REG_X12;
+    case ARM64_REG_W13:
+    case ARM64_REG_X13:
+        return FUNCHOOK_ARM64_REG_X13;
+    case ARM64_REG_W14:
+    case ARM64_REG_X14:
+        return FUNCHOOK_ARM64_REG_X14;
+    case ARM64_REG_W15:
+    case ARM64_REG_X15:
+        return FUNCHOOK_ARM64_REG_X15;
+    default:
+        return 0;
+    }
+}
+
+funchook_insn_info_t funchook_disasm_arm64_insn_info(funchook_disasm_t *disasm, const funchook_insn_t *insn)
+{
+    const cs_detail *detail = insn->detail;
+    funchook_insn_info_t info = {0,};
+    cs_regs rregs, wregs;
+    uint8_t rregs_cnt, wregs_cnt, i;
+
+    switch (insn->id) {
+    case ARM64_INS_ADR:
+        info.insn_id = FUNCHOOK_ARM64_INSN_ADR;
+        break;
+    case ARM64_INS_ADRP:
+        info.insn_id = FUNCHOOK_ARM64_INSN_ADRP;
+        break;
+    case ARM64_INS_B:
+        if (detail->arm64.cc == ARM64_CC_INVALID) {
+            info.insn_id = FUNCHOOK_ARM64_INSN_B;
+        } else {
+            info.insn_id = FUNCHOOK_ARM64_INSN_B_cond;
+        }
+        break;
+    case ARM64_INS_BL:
+        info.insn_id = FUNCHOOK_ARM64_INSN_BL;
+        break;
+    case ARM64_INS_CBNZ:
+        info.insn_id = FUNCHOOK_ARM64_INSN_CBNZ;
+        break;
+    case ARM64_INS_CBZ:
+        info.insn_id = FUNCHOOK_ARM64_INSN_CBZ;
+        break;
+    case ARM64_INS_LDR:
+        info.insn_id = FUNCHOOK_ARM64_INSN_LDR;
+        break;
+    case ARM64_INS_LDRSW:
+        info.insn_id = FUNCHOOK_ARM64_INSN_LDRSW;
+        break;
+    case ARM64_INS_PRFM:
+        info.insn_id = FUNCHOOK_ARM64_INSN_PRFM;
+        break;
+    case ARM64_INS_TBNZ:
+        info.insn_id = FUNCHOOK_ARM64_INSN_TBNZ;
+        break;
+    case ARM64_INS_TBZ:
+        info.insn_id = FUNCHOOK_ARM64_INSN_TBZ;
+        break;
+    }
+
+    if (!cs_regs_access(disasm->handle, insn, rregs, &rregs_cnt, wregs, &wregs_cnt)) {
+        for (i = 0; i < rregs_cnt; i++) {
+            info.regs |= cs2funchook_reg(rregs[i]);
+        }
+        for (i = 0; i < wregs_cnt; i++) {
+            info.regs |= cs2funchook_reg(wregs[i]);
+        }
+    }
+    return info;
+}
+#endif /* defined(CPU_ARM64) */
+
+#if defined(CPU_X86) || defined(CPU_X86_64)
 void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_insn_t *insn, rip_relative_t *rel_disp, rip_relative_t *rel_imm)
 {
     int disp_offset = 0;
@@ -263,3 +363,4 @@ void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_
         }
     }
 }
+#endif /* defined(CPU_X86) || defined(CPU_X86_64) */

@@ -63,7 +63,7 @@ typedef struct funchook_disasm {
 
 typedef cs_insn funchook_insn_t;
 
-#define funchook_insn_size(insn) ((insn)->size)
+#define funchook_insn_size(insn) ((insn)->size / sizeof(insn_t))
 #define funchook_insn_address(insn) ((size_t)(insn)->address)
 #define funchook_insn_branch_address(insn) ((size_t)(insn)->detail->x86.operands[0].imm)
 #endif
@@ -91,20 +91,27 @@ typedef struct funchook_disasm {
 
 #endif
 
+#define FUNCHOOK_ERROR_END_OF_INSTRUCTION -2
+
+int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const insn_t *code, size_t code_size, size_t address);
+void funchook_disasm_cleanup(funchook_disasm_t *disasm);
+int funchook_disasm_next(funchook_disasm_t *disasm, const funchook_insn_t **next_insn);
+void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_insn_t *insn);
+
+#if defined(CPU_ARM64)
+funchook_insn_info_t funchook_disasm_arm64_insn_info(funchook_disasm_t *disasm, const funchook_insn_t *insn);
+#endif
+
+#if defined(CPU_X86) || defined(CPU_X86_64)
 /* RIP-relative address information */
 typedef struct {
-    uint8_t *addr; /* absolute address */
+    insn_t *addr; /* absolute address */
     intptr_t raddr; /* relative address */
     int offset;
     int size;
 } rip_relative_t;
 
-#define FUNCHOOK_ERROR_END_OF_INSTRUCTION -2
-
-int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const uint8_t *code, size_t code_size, size_t address);
-void funchook_disasm_cleanup(funchook_disasm_t *disasm);
-int funchook_disasm_next(funchook_disasm_t *disasm, const funchook_insn_t **next_insn);
-void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_insn_t *insn);
 void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_insn_t *insn, rip_relative_t *rel_disp, rip_relative_t *rel_imm);
+#endif
 
 #endif

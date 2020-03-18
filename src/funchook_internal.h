@@ -72,17 +72,29 @@
 #define ROUND_DOWN(num, unit) ((num) & ~((unit) - 1))
 #define ROUND_UP(num, unit) (((num) + (unit) - 1) & ~((unit) - 1))
 
-#if defined _M_AMD64 || defined __x86_64__
-#define CPU_X86_64
+#if defined __aarch64__
+#define CPU_ARM64
+#define CPU_64BIT
 #endif
 
-#if defined _M_IX86 || defined __i686__
+#if defined _M_AMD64 || defined __x86_64__
+#define CPU_X86_64
+#define CPU_64BIT
+#endif
+
+#if defined _M_IX86 || defined __i686__ || defined __i386__
 #define CPU_X86
 #endif
 
+#if defined(CPU_ARM64)
+#include "funchook_arm64.h"
+#endif
 #if defined(CPU_X86) || defined(CPU_X86_64)
 #include "funchook_x86.h"
 #endif
+
+#define JUMP32_BYTE_SIZE (JUMP32_SIZE * sizeof(insn_t))
+#define TRAMPOLINE_BYTE_SIZE (TRAMPOLINE_SIZE * sizeof(insn_t))
 
 /* This must be same with sysconf(_SC_PAGE_SIZE) on Unix
  * or the dwPageSize member of the SYSTEM_INFO structure on Windows.
@@ -104,9 +116,14 @@ typedef struct {
 } mem_state_t;
 
 typedef struct funchook_page {
+#ifdef FUNCHOOK_ENTRY_AT_PAGE_BOUNDARY
+    funchook_entry_t entries[1]; /* This contains at most one. */
+#endif
     struct funchook_page *next;
     uint16_t used;
+#ifndef FUNCHOOK_ENTRY_AT_PAGE_BOUNDARY
     funchook_entry_t entries[1]; /* This contains zero or more. */
+#endif
 } funchook_page_t;
 
 /* Functions in funchook.c */
@@ -132,9 +149,8 @@ int funchook_unprotect_end(funchook_t *funchook, const mem_state_t *mstate);
 
 void *funchook_resolve_func(funchook_t *funchook, void *func);
 
-/* Functions in funchook_x86.c */
-
-int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline, size_t *trampoline_size);
+/* Functions in funchook_{CPU_NAME}.c */
+int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, const insn_t *func, insn_t *trampoline, size_t *trampoline_size);
 int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp, const void *func, const void *hook_func);
 #ifdef CPU_X86_64
 int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, uint8_t *addr, ip_displacement_t *disp);

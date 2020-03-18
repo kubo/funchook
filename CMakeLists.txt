@@ -5,10 +5,25 @@ project(funchook LANGUAGES C ASM)
 set(PROJECT_VERSION 1.1.0-dev)
 set(PROJECT_VERSION_MAJOR 1)
 
+set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
+if (FUNCHOOK_CPU STREQUAL x86_64 OR FUNCHOOK_CPU MATCHES "i.86" OR FUNCHOOK_CPU STREQUAL AMD64)
+    set(FUNCHOOK_CPU x86)
+endif ()
+if (FUNCHOOK_CPU STREQUAL aarch64)
+    set(FUNCHOOK_CPU arm64)
+endif ()
+
+
+if (FUNCHOOK_CPU STREQUAL arm64)
+  set(FUNCHOOK_DEFAULT_DISASM "capstone")
+else ()
+  set(FUNCHOOK_DEFAULT_DISASM "distorm")
+endif ()
+
 option(FUNCHOOK_BUILD_SHARED "build shared library" ON)
 option(FUNCHOOK_BUILD_STATIC "build static library" ON)
 option(FUNCHOOK_BUILD_TESTS "Build tests" ON)
-set(FUNCHOOK_DISASM distorm CACHE STRING "disassembler engine")
+set(FUNCHOOK_DISASM ${FUNCHOOK_DEFAULT_DISASM})
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(_GNU_SOURCE 1)
@@ -51,6 +66,10 @@ endif ()
 # capstone
 #
 if (DISASM_CAPSTONE)
+  set(CAPSTONE_arm64_SUPPORT OFF)
+  set(CAPSTONE_x86_SUPPORT OFF)
+  set(CAPSTONE_${FUNCHOOK_CPU}_SUPPORT ON)
+
   include(ExternalProject)
   ExternalProject_Add(capstone_src
     GIT_REPOSITORY    https://github.com/aquynh/capstone.git
@@ -67,7 +86,7 @@ if (DISASM_CAPSTONE)
                       -DCAPSTONE_BUILD_TESTS=OFF
                       -DCAPSTONE_BUILD_CSTOOL=OFF
                       -DCAPSTONE_ARM_SUPPORT=OFF
-                      -DCAPSTONE_ARM64_SUPPORT=OFF
+                      -DCAPSTONE_ARM64_SUPPORT=${CAPSTONE_arm64_SUPPORT}
                       -DCAPSTONE_EVM_SUPPORT=OFF
                       -DCAPSTONE_M680X_SUPPORT=OFF
                       -DCAPSTONE_M68K_SUPPORT=OFF
@@ -77,7 +96,7 @@ if (DISASM_CAPSTONE)
                       -DCAPSTONE_SYSZ_SUPPORT=OFF
                       -DCAPSTONE_TMS320C64X_SUPPORT=OFF
                       -DCAPSTONE_XCORE_SUPPORT=OFF
-                      -DCAPSTONE_X86_SUPPORT=ON
+                      -DCAPSTONE_X86_SUPPORT=${CAPSTONE_x86_SUPPORT}
     INSTALL_COMMAND   ""
   )
   ExternalProject_Get_Property(capstone_src SOURCE_DIR)
@@ -151,7 +170,7 @@ else ()
   set(FUNCHOOK_DEPS dl)
 endif ()
 
-set(FUNCHOOK_SOURCES src/funchook.c src/funchook_x86.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
+set(FUNCHOOK_SOURCES src/funchook.c src/funchook_${FUNCHOOK_CPU}.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
 
 set(FUNCHOOK_PROPERTIES
     OUTPUT_NAME funchook
@@ -159,7 +178,6 @@ set(FUNCHOOK_PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
     DEFINE_SYMBOL FUNCHOOK_EXPORTS)
 
-set_source_files_properties(src/printf_base.c PROPERTIES COMPILE_FLAGS "-DDPFB_NO_EXTERNAL_FUNC -DPFB_MSVC_FORMAT -DPFB_NO_FLOATING_POINT_FORMAT -DPFB_NO_WIDE_CHAR_FORMAT")
 configure_file(src/cmake_config.h.in config.h)
 
 function (add_funchook_library target_name target_type)

@@ -63,6 +63,7 @@ typedef struct funchook funchook_t;
 #define FUNCHOOK_ERROR_MEMORY_ALLOCATION       8 /* memory allocation error */
 #define FUNCHOOK_ERROR_MEMORY_FUNCTION         9 /* other memory function errors */
 #define FUNCHOOK_ERROR_NOT_INSTALLED          10
+#define FUNCHOOK_ERROR_NO_AVAILABLE_REGISTERS 11
 
 /**
  * Create a funchook handle

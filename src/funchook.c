@@ -65,7 +65,7 @@ static void funchook_logv(funchook_t *funchook, int set_error, const char *fmt, 
 static void funchook_log_end(funchook_t *funchook, const char *fmt, ...);
 static funchook_t *funchook_create_internal(void);
 static int funchook_prepare_internal(funchook_t *funchook, void **target_func, void *hook_func);
-static void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline, size_t trampoline_size);
+static void funchook_log_trampoline(funchook_t *funchook, const insn_t *trampoline, size_t trampoline_size);
 static int funchook_install_internal(funchook_t *funchook, int flags);
 static int funchook_uninstall_internal(funchook_t *funchook, int flags);
 static int funchook_destroy_internal(funchook_t *funchook);
@@ -210,7 +210,11 @@ static funchook_t *funchook_create_internal(void)
         return NULL;
     }
     if (num_entries_in_page == 0) {
+#ifdef FUNCHOOK_ENTRY_AT_PAGE_BOUNDARY
+        num_entries_in_page = 1;
+#else
         num_entries_in_page = (page_size - offsetof(funchook_page_t, entries)) / sizeof(funchook_entry_t);
+#endif
         funchook_log(funchook,
 #ifdef WIN32
                      "  allocation_unit=%"SIZE_T_FMT"u\n"
@@ -228,12 +232,12 @@ static funchook_t *funchook_create_internal(void)
 static int funchook_prepare_internal(funchook_t *funchook, void **target_func, void *hook_func)
 {
     void *func = *target_func;
-    uint8_t trampoline[TRAMPOLINE_SIZE];
+    insn_t trampoline[TRAMPOLINE_SIZE];
     size_t trampoline_size;
     ip_displacement_t disp;
     funchook_page_t *page = NULL;
     funchook_entry_t *entry;
-    uint8_t *src_addr;
+    insn_t *src_addr;
     uint32_t *offset_addr;
     int rv;
 
@@ -256,18 +260,27 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     /* fill members */
     entry->target_func = func;
     entry->hook_func = hook_func;
-    memcpy(entry->trampoline, trampoline, TRAMPOLINE_SIZE);
-    memcpy(entry->old_code, func, JUMP32_SIZE);
+    memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
+    memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
 
     funchook_fix_code(funchook, entry, &disp, func, hook_func);
     funchook_log_trampoline(funchook, entry->trampoline, trampoline_size);
+#ifdef CPU_ARM64
+    int i;
+    for (i = 0; i < LITERAL_POOL_NUM; i++) {
+        size_t *addr = (size_t*)(entry->trampoline + LITERAL_POOL_OFFSET + i * 2);
+        if (*addr != 0) {
+            funchook_log(funchook, "    %016lx : 0x%lx\n", (size_t)addr, *addr);
+        }
+    }
+#endif
 
     page->used++;
     *target_func = (void*)entry->trampoline;
     return 0;
 }
 
-static void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline, size_t trampoline_size)
+static void funchook_log_trampoline(funchook_t *funchook, const insn_t *trampoline, size_t trampoline_size)
 {
     funchook_disasm_t disasm;
     const funchook_insn_t *insn;
@@ -311,12 +324,12 @@ static int funchook_install_internal(funchook_t *funchook, int flags)
         for (i = 0; i < page->used; i++) {
             funchook_entry_t *entry = &page->entries[i];
             mem_state_t mstate;
-            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, JUMP32_SIZE);
+            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, JUMP32_BYTE_SIZE);
 
             if (rv != 0) {
                 return rv;
             }
-            memcpy(entry->target_func, entry->new_code, JUMP32_SIZE);
+            memcpy(entry->target_func, entry->new_code, JUMP32_BYTE_SIZE);
             rv = funchook_unprotect_end(funchook, &mstate);
             if (rv != 0) {
                 return rv;
@@ -341,12 +354,12 @@ static int funchook_uninstall_internal(funchook_t *funchook, int flags)
         for (i = 0; i < page->used; i++) {
             funchook_entry_t *entry = &page->entries[i];
             mem_state_t mstate;
-            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, JUMP32_SIZE);
+            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, JUMP32_BYTE_SIZE);
 
             if (rv != 0) {
                 return rv;
             }
-            memcpy(entry->target_func, entry->old_code, JUMP32_SIZE);
+            memcpy(entry->target_func, entry->old_code, JUMP32_BYTE_SIZE);
             rv = funchook_unprotect_end(funchook, &mstate);
             if (rv != 0) {
                 return rv;

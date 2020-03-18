@@ -84,7 +84,7 @@ int funchook_free(funchook_t *funchook)
     return 0;
 }
 
-#ifdef CPU_X86_64
+#if defined(CPU_64BIT)
 
 typedef struct memory_map memory_map_t;
 static int memory_map_open(funchook_t *funchook, memory_map_t *mmap);
@@ -202,8 +202,8 @@ static int get_free_address(funchook_t *funchook, void *func_addr, void *addrs[2
     addrs[0] = addrs[1] = NULL;
 
     while (memory_map_next(&mm, &start, &end) == 0) {
-        funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
-                     start, end);
+        funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x, prev_end=%lx,addr={%lx,%lx},psz=%x\n",
+                     start, end, prev_end, (size_t)addrs[0], (size_t)addrs[1], page_size);
         if (prev_end + page_size <= start) {
             if (start < (size_t)func_addr) {
                 size_t addr = start - page_size;
@@ -225,17 +225,27 @@ static int get_free_address(funchook_t *funchook, void *func_addr, void *addrs[2
         }
         prev_end = end;
     }
+    if ((size_t)func_addr < prev_end) {
+        if (prev_end - (size_t)func_addr < INT32_MAX) {
+            /* unused memory region after func_addr. */
+            addrs[1] = (void*)prev_end;
+        }
+        funchook_log(funchook, "  -- Use address %p or %p for function %p\n",
+                     addrs[0], addrs[1], func_addr);
+        memory_map_close(&mm);
+        return 0;
+    }
     memory_map_close(&mm);
     funchook_set_error_message(funchook, "Could not find a free region near %p",
                                func_addr);
     return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 }
 
-#endif /* CPU_X86_64 */
+#endif /* defined(CPU_64BIT) */
 
 int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, ip_displacement_t *disp)
 {
-#ifdef CPU_X86_64
+#if defined(CPU_64BIT)
     int loop_cnt;
 
     /* Loop three times just to avoid rare cases such as

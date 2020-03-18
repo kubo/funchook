@@ -11,6 +11,8 @@
 
 #define TRAMPOLINE_SIZE (JUMP32_SIZE + (MAX_INSN_LEN - 1) + JUMP32_SIZE)
 
+typedef uint8_t insn_t;
+
 typedef struct funchook_entry {
     void *target_func;
     void *hook_func;
@@ -23,7 +25,7 @@ typedef struct funchook_entry {
 } funchook_entry_t;
 
 typedef struct {
-    const uint8_t *dst_addr;
+    const insn_t *dst_addr;
     intptr_t src_addr_offset;
     intptr_t pos_offset;
 } ip_displacement_entry_t;

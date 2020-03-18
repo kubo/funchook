@@ -330,7 +330,7 @@ static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relativ
 
 int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp, const void *func, const void *hook_func)
 {
-    uint8_t *src_addr;
+    insn_t *src_addr;
     uint32_t *offset_addr;
 
 #ifdef CPU_X86_64
