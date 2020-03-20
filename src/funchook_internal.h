@@ -31,6 +31,9 @@
 #ifndef FUNCHOOK_INTERNAL_H
 #define FUNCHOOK_INTERNAL_H 1
 #include "funchook.h"
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -147,7 +150,7 @@ int funchook_within_32bit_relative(const uint8_t *src, const uint8_t *dst);
 int funchook_jump32_avail(const uint8_t *src, const uint8_t *dst);
 #endif
 
-int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline);
-void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline);
+int funchook_make_trampoline(funchook_t *funchook, rip_displacement_t *disp, const uint8_t *func, uint8_t *trampoline, size_t *trampoline_size);
+void funchook_log_trampoline(funchook_t *funchook, const uint8_t *trampoline, size_t trampoline_size);
 
 #endif

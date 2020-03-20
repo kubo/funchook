@@ -40,28 +40,30 @@ build_and_test() {
   fi
 }
 
-case "$GENERATOR_TYPE" in
-  multi_config)
-    mkdir test-$dir
-    cd test-$dir
-    message "cmake"
-    echodo cmake "$@" ..
-    build_and_test Release Release
-    build_and_test Debug Debug
-    cd ..
-    ;;
-  single_config)
-    mkdir test-$dir-release
-    cd test-$dir-release
-    message "cmake Release"
-    echodo cmake -DCMAKE_BUILD_TYPE=Release "$@" ..
-    build_and_test Release
-    cd ..
-    mkdir test-$dir-debug
-    cd test-$dir-debug
-    message "cmake Debug"
-    echodo cmake -DCMAKE_BUILD_TYPE=Debug "$@" ..
-    build_and_test Debug
-    cd ..
-    ;;
-esac
+for disasm in distorm zydis capstone; do
+  case "$GENERATOR_TYPE" in
+    multi_config)
+      mkdir test-$dir-$disasm
+      cd test-$dir-$disasm
+      message "cmake (using $disasm as disassembler)"
+      echodo cmake "$@" -DFUNCHOOK_DISASM=$disasm ..
+      build_and_test Release Release
+      build_and_test Debug Debug
+      cd ..
+      ;;
+    single_config)
+      mkdir test-$dir-$disasm-release
+      cd test-$dir-$disasm-release
+      message "cmake Release (using $disasm as disassembler)"
+      echodo cmake -DCMAKE_BUILD_TYPE=Release "$@" -DFUNCHOOK_DISASM=$disasm ..
+      build_and_test Release
+      cd ..
+      mkdir test-$dir-$disasm-debug
+      cd test-$dir-$disasm-debug
+      message "cmake Debug (using $disasm as disassembler)"
+      echodo cmake -DCMAKE_BUILD_TYPE=Debug "$@" -DFUNCHOOK_DISASM=$disasm ..
+      build_and_test Debug
+      cd ..
+      ;;
+  esac
+done
