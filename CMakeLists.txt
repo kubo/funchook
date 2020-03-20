@@ -23,7 +23,7 @@ endif ()
 option(FUNCHOOK_BUILD_SHARED "build shared library" ON)
 option(FUNCHOOK_BUILD_STATIC "build static library" ON)
 option(FUNCHOOK_BUILD_TESTS "Build tests" ON)
-set(FUNCHOOK_DISASM ${FUNCHOOK_DEFAULT_DISASM})
+set(FUNCHOOK_DISASM ${FUNCHOOK_DEFAULT_DISASM} CACHE STRING "disassembler engine")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(_GNU_SOURCE 1)
