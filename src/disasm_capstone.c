@@ -113,7 +113,6 @@ static const char *group_name(csh handle, unsigned int grp_id)
 void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_insn_t *insn)
 {
     funchook_t *funchook = disasm->funchook;
-    csh handle = disasm->handle;
     char hex[sizeof(insn->bytes) * 3];
     uint16_t i;
 
@@ -153,6 +152,7 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
         funchook_log(funchook, "\n");
     }
 #if defined(CPU_X86_64) || defined(CPU_X86)
+    csh handle = disasm->handle;
     cs_x86 *x86 = &detail->x86;
     if (x86->encoding.modrm_offset != 0) {
         funchook_log(funchook, "        encoding.modrm_offset: %u\n", x86->encoding.modrm_offset);
@@ -318,8 +318,6 @@ funchook_insn_info_t funchook_disasm_arm64_insn_info(funchook_disasm_t *disasm, 
 #if defined(CPU_X86) || defined(CPU_X86_64)
 void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_insn_t *insn, rip_relative_t *rel_disp, rip_relative_t *rel_imm)
 {
-    int disp_offset = 0;
-    int imm_offset = 0;
     int i;
     cs_x86 *x86 = &insn->detail->x86;
 

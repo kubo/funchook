@@ -46,6 +46,10 @@ endif ()
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fvisibility=hidden HAVE_FVISIBILITY_HIDDEN)
 
+if (CMAKE_COMPILER_IS_GNUCC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+endif ()
+
 if (FUNCHOOK_DISASM STREQUAL capstone)
   set(DISASM_CAPSTONE 1)
 elseif (FUNCHOOK_DISASM STREQUAL distorm)

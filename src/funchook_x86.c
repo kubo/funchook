@@ -99,7 +99,6 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
     make_trampoline_context_t ctx;
     funchook_disasm_t disasm;
     int rv;
-    unsigned int i;
     const funchook_insn_t *insn;
 
     memset(disp, 0, sizeof(*disp));

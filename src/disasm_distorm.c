@@ -37,13 +37,12 @@
 
 int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const uint8_t *code, size_t code_size, size_t address)
 {
-    unsigned int di_cnt = 0;
     _DecodeResult decres;
 
     disasm->funchook = funchook;
     disasm->ci.codeOffset = address;
     disasm->ci.code = code;
-    disasm->ci.codeLen = code_size;
+    disasm->ci.codeLen = (int)code_size;
 #ifdef CPU_X86_64
     disasm->ci.dt = Decode64Bits;
 #else
