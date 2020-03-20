@@ -217,10 +217,10 @@ static funchook_t *funchook_create_internal(void)
 #endif
         funchook_log(funchook,
 #ifdef WIN32
-                     "  allocation_unit=%"SIZE_T_FMT"u\n"
+                     "  allocation_unit=%"PRIuPTR"\n"
 #endif
-                     "  page_size=%"SIZE_T_FMT"u\n"
-                     "  num_entries_in_page=%"SIZE_T_FMT"u\n",
+                     "  page_size=%"PRIuPTR"\n"
+                     "  num_entries_in_page=%"PRIuPTR"\n",
 #ifdef WIN32
                      allocation_unit,
 #endif

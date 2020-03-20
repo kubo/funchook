@@ -123,7 +123,7 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
         hex[i * 3 + 2] = ' ';
     }
     hex[insn->size * 3 - 1] = '\0';
-    funchook_log(funchook, "    %0"SIZE_T_WIDTH SIZE_T_FMT"x (%02d) %-24s %s%s%s\n",
+    funchook_log(funchook, "    "ADDR_FMT" (%02d) %-24s %s%s%s\n",
                  (size_t)insn->address, insn->size, hex,
                  insn->mnemonic, insn->op_str[0] ? " " : "", insn->op_str);
 #if LOG_DETAIL

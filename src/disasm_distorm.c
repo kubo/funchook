@@ -78,7 +78,7 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
 {
     _DecodedInst dec;
     distorm_format64(&disasm->ci, insn, &dec);
-    funchook_log(disasm->funchook, "    %0"SIZE_T_WIDTH SIZE_T_FMT"x (%02d) %-24s %s%s%s\n",
+    funchook_log(disasm->funchook, "    "ADDR_FMT" (%02d) %-24s %s%s%s\n",
                  (size_t)dec.offset, dec.size, (char*)dec.instructionHex.p,
                  (char*)dec.mnemonic.p, dec.operands.length != 0 ? " " : "", (char*)dec.operands.p);
 }
@@ -300,12 +300,12 @@ void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_
 
     if (rel_disp->size > 0) {
         rel_disp->offset = insn->size - opsiz + disp_offset;
-        funchook_log(disasm->funchook, "      ip-relative %08x, absolute address= %0"SIZE_T_WIDTH SIZE_T_FMT"x, offset=%d, size=%d\n",
+        funchook_log(disasm->funchook, "      ip-relative %08x, absolute address= "ADDR_FMT", offset=%d, size=%d\n",
                      (uint32_t)rel_disp->raddr, (size_t)rel_disp->addr, rel_disp->offset, rel_disp->size);
     }
     if (rel_imm->size > 0) {
         rel_imm->offset = insn->size - opsiz + imm_offset;
-        funchook_log(disasm->funchook, "      ip-relative %08x, absolute address= %0"SIZE_T_WIDTH SIZE_T_FMT"x, offset=%d, size=%d\n",
+        funchook_log(disasm->funchook, "      ip-relative %08x, absolute address= "ADDR_FMT", offset=%d, size=%d\n",
                      (uint32_t)rel_imm->raddr, (size_t)rel_imm->addr, rel_imm->offset, rel_imm->size);
     }
 }
