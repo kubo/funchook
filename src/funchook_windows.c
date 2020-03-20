@@ -125,24 +125,24 @@ static int alloc_page_info(funchook_t *funchook, page_list_t **pl_out, void *hin
         DWORD err = GetLastError();
         char errbuf[128];
 
-        funchook_set_error_message(funchook, "Failed to reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u, errro=%lu(%s))",
+        funchook_set_error_message(funchook, "Failed to reserve memory %p (hint=%p, size=%"PRIuPTR", errro=%lu(%s))",
                                    pl, hint, allocation_unit,
                                    err, to_errmsg(err, errbuf, sizeof(errbuf)));
         return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
     }
-    funchook_log(funchook, "  reserve memory %p (hint=%p, size=%"SIZE_T_FMT"u)\n", pl, hint, allocation_unit);
+    funchook_log(funchook, "  reserve memory %p (hint=%p, size=%"PRIuPTR")\n", pl, hint, allocation_unit);
     addr = VirtualAlloc(pl, page_size, MEM_COMMIT, PAGE_READWRITE);
     if (addr == NULL) {
         DWORD err = GetLastError();
         char errbuf[128];
 
-        funchook_set_error_message(funchook, "Failed to commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u, error=%lu(%s))",
+        funchook_set_error_message(funchook, "Failed to commit memory %p for read-write (hint=%p, size=%"PRIuPTR", error=%lu(%s))",
                                    addr, pl, page_size,
                                    err, to_errmsg(err, errbuf, sizeof(errbuf)));
         VirtualFree(pl, 0, MEM_RELEASE);
         return FUNCHOOK_ERROR_MEMORY_FUNCTION;
     }
-    funchook_log(funchook, "  commit memory %p for read-write (hint=%p, size=%"SIZE_T_FMT"u)\n", addr, pl, page_size);
+    funchook_log(funchook, "  commit memory %p for read-write (hint=%p, size=%"PRIuPTR")\n", addr, pl, page_size);
     pl->next = page_list.next;
     pl->prev = &page_list;
     page_list.next->prev = pl;
@@ -185,14 +185,14 @@ exit_loop:
         DWORD err = GetLastError();
         char errbuf[128];
 
-        funchook_set_error_message(funchook, "Failed to commit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u, error=%lu(%s))",
+        funchook_set_error_message(funchook, "Failed to commit page %p (base=%p(used=%d), idx=%"PRIuPTR", size=%"PRIuPTR", error=%lu(%s))",
                                    page, pl, pl->num_used, i, page_size,
                                    err, to_errmsg(err, errbuf, sizeof(errbuf)));
         return FUNCHOOK_ERROR_MEMORY_FUNCTION;
     }
     pl->used[i] = 1;
     pl->num_used++;
-    funchook_log(funchook, "  commit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u)\n",
+    funchook_log(funchook, "  commit page %p (base=%p(used=%d), idx=%"PRIuPTR", size=%"PRIuPTR")\n",
                  page, pl, pl->num_used, i, page_size);
     *page_out = page;
     return 0;
@@ -212,12 +212,12 @@ int funchook_page_free(funchook_t *funchook, funchook_page_t *page)
         DWORD err = GetLastError();
         char errbuf[128];
 
-        funchook_set_error_message(funchook, "Failed to decommit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u, error=%lu(%s))",
+        funchook_set_error_message(funchook, "Failed to decommit page %p (base=%p(used=%d), idx=%"PRIuPTR", size=%"PRIuPTR", error=%lu(%s))",
                                    page, pl, pl->num_used, idx, page_size,
                                    err, to_errmsg(err, errbuf, sizeof(errbuf)));
         return FUNCHOOK_ERROR_MEMORY_FUNCTION;
     }
-    funchook_log(funchook, "  decommit page %p (base=%p(used=%d), idx=%"SIZE_T_FMT"u, size=%"SIZE_T_FMT"u)\n",
+    funchook_log(funchook, "  decommit page %p (base=%p(used=%d), idx=%"PRIuPTR", size=%"PRIuPTR")\n",
                  page, pl, pl->num_used, idx, page_size);
     pl->num_used--;
     pl->used[idx] = 0;
@@ -232,12 +232,12 @@ int funchook_page_free(funchook_t *funchook, funchook_page_t *page)
         DWORD err = GetLastError();
         char errbuf[128];
 
-        funchook_set_error_message(funchook, "Failed to release memory %p (size=%"SIZE_T_FMT"u, error=%lu(%s))",
+        funchook_set_error_message(funchook, "Failed to release memory %p (size=%"PRIuPTR", error=%lu(%s))",
                                    pl, allocation_unit,
                                    err, to_errmsg(err, errbuf, sizeof(errbuf)));
         return FUNCHOOK_ERROR_MEMORY_FUNCTION;
     }
-    funchook_log(funchook, "  release memory %p (size=%"SIZE_T_FMT"u)\n",
+    funchook_log(funchook, "  release memory %p (size=%"PRIuPTR")\n",
                  pl, allocation_unit);
     return 0;
 }
@@ -249,11 +249,11 @@ int funchook_page_protect(funchook_t *funchook, funchook_page_t *page)
     BOOL ok = VirtualProtect(page, page_size, PAGE_EXECUTE_READ, &oldprot);
 
     if (ok) {
-        funchook_log(funchook, "  protect page %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
+        funchook_log(funchook, "  protect page %p (size=%"PRIuPTR", prot=read,exec)\n",
                      page, page_size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to protect page %p (size=%"SIZE_T_FMT"u, prot=read,exec, error=%lu(%s))",
+    funchook_set_error_message(funchook, "Failed to protect page %p (size=%"PRIuPTR", prot=read,exec, error=%lu(%s))",
                                page, page_size,
                                GetLastError(), to_errmsg(GetLastError(), errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -266,11 +266,11 @@ int funchook_page_unprotect(funchook_t *funchook, funchook_page_t *page)
     BOOL ok = VirtualProtect(page, page_size, PAGE_READWRITE, &oldprot);
 
     if (ok) {
-        funchook_log(funchook, "  unprotect page %p (size=%"SIZE_T_FMT"u, prot=read,write)\n",
+        funchook_log(funchook, "  unprotect page %p (size=%"PRIuPTR", prot=read,write)\n",
                      page, page_size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to unprotect page %p (size=%"SIZE_T_FMT"u, prot=read,write, error=%lu(%s))",
+    funchook_set_error_message(funchook, "Failed to unprotect page %p (size=%"PRIuPTR", prot=read,write, error=%lu(%s))",
                                page, page_size,
                                GetLastError(), to_errmsg(GetLastError(), errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -287,11 +287,11 @@ int funchook_unprotect_begin(funchook_t *funchook, mem_state_t *mstate, void *st
     mstate->size = ROUND_UP(mstate->size, page_size);
     ok = VirtualProtect(mstate->addr, mstate->size, PAGE_EXECUTE_READWRITE, &mstate->protect);
     if (ok) {
-        funchook_log(funchook, "  unprotect memory %p (size=%"SIZE_T_FMT"u) <- %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  unprotect memory %p (size=%"PRIuPTR") <- %p (size=%"PRIuPTR")\n",
                      mstate->addr, mstate->size, start, len);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to unprotect memory %p (size=%"SIZE_T_FMT"u) <- %p (size=%"SIZE_T_FMT"u, error=%lu(%s))",
+    funchook_set_error_message(funchook, "Failed to unprotect memory %p (size=%"PRIuPTR") <- %p (size=%"PRIuPTR", error=%lu(%s))",
                                mstate->addr, mstate->size, start, len,
                                GetLastError(), to_errmsg(GetLastError(), errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -304,11 +304,11 @@ int funchook_unprotect_end(funchook_t *funchook, const mem_state_t *mstate)
     BOOL ok = VirtualProtect(mstate->addr, mstate->size, mstate->protect, &oldprot);
 
     if (ok) {
-        funchook_log(funchook, "  protect memory %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  protect memory %p (size=%"PRIuPTR")\n",
                      mstate->addr, mstate->size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to protect memory %p (size=%"SIZE_T_FMT"u, error=%lu(%s))",
+    funchook_set_error_message(funchook, "Failed to protect memory %p (size=%"PRIuPTR", error=%lu(%s))",
                                mstate->addr, mstate->size,
                                GetLastError(), to_errmsg(GetLastError(), errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;

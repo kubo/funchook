@@ -202,7 +202,7 @@ static int get_free_address(funchook_t *funchook, void *func_addr, void *addrs[2
     addrs[0] = addrs[1] = NULL;
 
     while (memory_map_next(&mm, &start, &end) == 0) {
-        funchook_log(funchook, "  process map: %0"SIZE_T_WIDTH SIZE_T_FMT"x-%0"SIZE_T_WIDTH SIZE_T_FMT"x, prev_end=%lx,addr={%lx,%lx},psz=%x\n",
+        funchook_log(funchook, "  process map: "ADDR_FMT"-"ADDR_FMT", prev_end=%"PRIxPTR",addr={%"PRIxPTR",%"PRIxPTR"},psz=%"PRIxPTR"\n",
                      start, end, prev_end, (size_t)addrs[0], (size_t)addrs[1], page_size);
         if (prev_end + page_size <= start) {
             if (start < (size_t)func_addr) {
@@ -269,7 +269,7 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
             }
             *page_out = mmap(addrs[i], page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             if (*page_out == addrs[i]) {
-                funchook_log(funchook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+                funchook_log(funchook, "  allocate page %p (size=%"PRIuPTR")\n", *page_out, page_size);
                 return 0;
             }
             if (*page_out == MAP_FAILED) {
@@ -279,7 +279,7 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
                                            funchook_strerror(errno, errbuf, sizeof(errbuf)));
                 return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
             }
-            funchook_log(funchook, "  try to allocate %p but %p (size=%"SIZE_T_FMT"u)\n", addrs[i], *page_out, page_size);
+            funchook_log(funchook, "  try to allocate %p but %p (size=%"PRIuPTR")\n", addrs[i], *page_out, page_size);
             munmap(*page_out, page_size);
         }
     }
@@ -290,7 +290,7 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
 
     *page_out = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (*page_out != MAP_FAILED) {
-        funchook_log(funchook, "  allocate page %p (size=%"SIZE_T_FMT"u)\n", *page_out, page_size);
+        funchook_log(funchook, "  allocate page %p (size=%"PRIuPTR")\n", *page_out, page_size);
         return 0;
     }
     funchook_set_error_message(funchook, "mmap failed: %s", funchook_strerror(errno, errbuf, sizeof(errbuf)));
@@ -304,11 +304,11 @@ int funchook_page_free(funchook_t *funchook, funchook_page_t *page)
     int rv = munmap(page, page_size);
 
     if (rv == 0) {
-        funchook_log(funchook, " deallocate page %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, " deallocate page %p (size=%"PRIuPTR")\n",
                      page, page_size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to deallocate page %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to deallocate page %p (size=%"PRIuPTR", error=%s)",
                                page, page_size,
                                funchook_strerror(errno, errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -320,11 +320,11 @@ int funchook_page_protect(funchook_t *funchook, funchook_page_t *page)
     int rv = mprotect(page, page_size, PROT_READ | PROT_EXEC);
 
     if (rv == 0) {
-        funchook_log(funchook, "  protect page %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  protect page %p (size=%"PRIuPTR")\n",
                      page, page_size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to protect page %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to protect page %p (size=%"PRIuPTR", error=%s)",
                                page, page_size,
                                funchook_strerror(errno, errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -336,11 +336,11 @@ int funchook_page_unprotect(funchook_t *funchook, funchook_page_t *page)
     int rv = mprotect(page, page_size, PROT_READ | PROT_WRITE);
 
     if (rv == 0) {
-        funchook_log(funchook, "  unprotect page %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  unprotect page %p (size=%"PRIuPTR")\n",
                      page, page_size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to unprotect page %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to unprotect page %p (size=%"PRIuPTR", error=%s)",
                                page, page_size,
                                funchook_strerror(errno, errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -358,7 +358,7 @@ int funchook_unprotect_begin(funchook_t *funchook, mem_state_t *mstate, void *st
     mstate->size = ROUND_UP(mstate->size, page_size);
     rv = mprotect(mstate->addr, mstate->size, prot);
     if (rv == 0) {
-        funchook_log(funchook, "  unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write%s) <- %p (size=%"SIZE_T_FMT"u)\n",
+        funchook_log(funchook, "  unprotect memory %p (size=%"PRIuPTR", prot=read,write%s) <- %p (size=%"PRIuPTR")\n",
                      mstate->addr, mstate->size, (prot & PROT_EXEC) ? ",exec" : "", start, len);
         return 0;
     }
@@ -366,12 +366,12 @@ int funchook_unprotect_begin(funchook_t *funchook, mem_state_t *mstate, void *st
         rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_WRITE);
         if (rv == 0) {
             prot = PROT_READ | PROT_WRITE;
-            funchook_log(funchook, "  unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write) <- %p (size=%"SIZE_T_FMT"u)\n",
+            funchook_log(funchook, "  unprotect memory %p (size=%"PRIuPTR", prot=read,write) <- %p (size=%"PRIuPTR")\n",
                          mstate->addr, mstate->size, start, len);
             return 0;
         }
     }
-    funchook_set_error_message(funchook, "Failed to unprotect memory %p (size=%"SIZE_T_FMT"u, prot=read,write%s) <- %p (size=%"SIZE_T_FMT"u, error=%s)",
+    funchook_set_error_message(funchook, "Failed to unprotect memory %p (size=%"PRIuPTR", prot=read,write%s) <- %p (size=%"PRIuPTR", error=%s)",
                                mstate->addr, mstate->size, (prot & PROT_EXEC) ? ",exec" : "", start, len,
                                funchook_strerror(errno, errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;
@@ -383,11 +383,11 @@ int funchook_unprotect_end(funchook_t *funchook, const mem_state_t *mstate)
     int rv = mprotect(mstate->addr, mstate->size, PROT_READ | PROT_EXEC);
 
     if (rv == 0) {
-        funchook_log(funchook, "  protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec)\n",
+        funchook_log(funchook, "  protect memory %p (size=%"PRIuPTR", prot=read,exec)\n",
                      mstate->addr, mstate->size);
         return 0;
     }
-    funchook_set_error_message(funchook, "Failed to protect memory %p (size=%"SIZE_T_FMT"u, prot=read,exec, error=%s)",
+    funchook_set_error_message(funchook, "Failed to protect memory %p (size=%"PRIuPTR", prot=read,exec, error=%s)",
                                mstate->addr, mstate->size,
                                funchook_strerror(errno, errbuf, sizeof(errbuf)));
     return FUNCHOOK_ERROR_MEMORY_FUNCTION;

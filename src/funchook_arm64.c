@@ -109,7 +109,7 @@ static int funchook_write_jump32(funchook_t *funchook, const uint32_t *src, cons
     out[0] = 0x90000009 | (immlo << 29) | (immhi << 5);
     /* br x9 */
     out[1] = 0xd61f0120;
-    funchook_log(funchook, "  Write jump32 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump32 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
@@ -127,7 +127,7 @@ static int funchook_write_jump64(funchook_t *funchook, uint32_t *src, const uint
     src[1] = 0xd61f0120 | TO_RN(regno);
     /* addr */
     *(const uint32_t**)(src + 2) = dst;
-    funchook_log(funchook, "  Write jump64 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump64 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }

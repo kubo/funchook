@@ -23,7 +23,7 @@ endif ()
 option(FUNCHOOK_BUILD_SHARED "build shared library" ON)
 option(FUNCHOOK_BUILD_STATIC "build static library" ON)
 option(FUNCHOOK_BUILD_TESTS "Build tests" ON)
-set(FUNCHOOK_DISASM ${FUNCHOOK_DEFAULT_DISASM})
+set(FUNCHOOK_DISASM ${FUNCHOOK_DEFAULT_DISASM} CACHE STRING "disassembler engine")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(_GNU_SOURCE 1)
@@ -45,6 +45,10 @@ endif ()
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fvisibility=hidden HAVE_FVISIBILITY_HIDDEN)
+
+if (CMAKE_COMPILER_IS_GNUCC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+endif ()
 
 if (FUNCHOOK_DISASM STREQUAL capstone)
   set(DISASM_CAPSTONE 1)

@@ -3,3 +3,4 @@
 #cmakedefine DISASM_CAPSTONE 1
 #cmakedefine DISASM_DISTORM 1
 #cmakedefine DISASM_ZYDIS 1
+#define SIZEOF_VOID_P @CMAKE_SIZEOF_VOID_P@

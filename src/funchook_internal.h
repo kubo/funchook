@@ -35,6 +35,16 @@
 #include <windows.h>
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1700
+#ifdef _WIN64
+#define PRIxPTR "I64"
+#else
+#define PRIxPTR ""
+#endif
+#else
+#include <inttypes.h>
+#endif
+
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -43,34 +53,18 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-#ifdef WIN32
-#ifdef _WIN64
-#define SIZE_T_FMT "I64"
-#define SIZE_T_WIDTH "16"
-#else
-#define SIZE_T_FMT ""
-#define SIZE_T_WIDTH "8"
-#endif /* _WIN64 */
-#else /* WIN32 */
-#if defined(__LP64__) || defined(_LP64)
-#define SIZE_T_FMT "l"
-#define SIZE_T_WIDTH "16"
-#else
-#ifdef __APPLE__
-#define SIZE_T_FMT "z"
-#else
-#define SIZE_T_FMT ""
-#endif
-#define SIZE_T_WIDTH "8"
-#endif /* defined(__LP64__) || defined(_LP64) */
-#endif /* WIN32 */
-
 #ifndef __GNUC__
 #define __attribute__(arg)
 #endif
 
 #define ROUND_DOWN(num, unit) ((num) & ~((unit) - 1))
 #define ROUND_UP(num, unit) (((num) + (unit) - 1) & ~((unit) - 1))
+
+#if SIZEOF_VOID_P == 8
+#define ADDR_FMT "%016" PRIxPTR
+#else
+#define ADDR_FMT "%08" PRIxPTR
+#endif
 
 #if defined __aarch64__
 #define CPU_ARM64

@@ -60,7 +60,7 @@ static int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const
 {
     out[0] = 0xe9;
     *(int*)(out + 1) = (int)(dst - (src + 5));
-    funchook_log(funchook, "  Write jump32 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump32 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
@@ -76,7 +76,7 @@ static int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8
     src[4] = 0x00;
     src[5] = 0x00;
     *(const uint8_t**)(src + 6) = dst;
-    funchook_log(funchook, "  Write jump64 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x -> 0x%0"SIZE_T_WIDTH SIZE_T_FMT"x\n",
+    funchook_log(funchook, "  Write jump64 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
@@ -99,7 +99,6 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
     make_trampoline_context_t ctx;
     funchook_disasm_t disasm;
     int rv;
-    unsigned int i;
     const funchook_insn_t *insn;
 
     memset(disp, 0, sizeof(*disp));
