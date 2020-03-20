@@ -1,4 +1,5 @@
 set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR i686)
 set(TOOLCHAIN_PREFIX i686-w64-mingw32)
 
 # cross compilers to use for C and C++

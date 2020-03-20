@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 3.5)
 project(libfunchook_test LANGUAGES C ASM)
 
-if (CMAKE_SIZEOF_VOID_P MATCHES "4")
-  set(FUNCHOOK_CPU "x86")
-elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
+
+if (FUNCHOOK_CPU STREQUAL AMD64)
   set(FUNCHOOK_CPU "x86_64")
-else ()
-  message(FATAL_ERROR "Unsupported architecture detected!")
+endif ()
+
+if (FUNCHOOK_CPU STREQUAL x86_64)
+  if (CMAKE_SIZEOF_VOID_P EQUAL "4")
+    set(FUNCHOOK_CPU "x86")
+  endif ()
+endif ()
+
+if (FUNCHOOK_CPU MATCHES "i.86")
+  set(FUNCHOOK_CPU "x86")
 endif ()
 
 set(TEST_EXE_SOURCES test_main.c)

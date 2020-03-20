@@ -8,6 +8,8 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -47,11 +49,26 @@
 #endif
 
 typedef int (*int_func_t)(void);
+typedef uint64_t (*uint64_func_t)(uint64_t);
 
 DLLEXPORT int get_val_in_exe(void);
 extern int get_val_in_dll(void);
 extern int call_get_val_in_dll(void);
 extern int jump_get_val_in_dll(void);
+extern uint64_t arm64_test_adr(uint64_t);
+extern uint64_t arm64_test_beq(uint64_t);
+extern uint64_t arm64_test_bne(uint64_t);
+extern uint64_t arm64_test_cbnz(uint64_t);
+extern uint64_t arm64_test_cbz(uint64_t);
+extern uint64_t arm64_test_ldr_w(uint64_t);
+extern uint64_t arm64_test_ldr_x(uint64_t);
+extern uint64_t arm64_test_ldrsw(uint64_t);
+extern uint64_t arm64_test_ldr_s(uint64_t);
+extern uint64_t arm64_test_ldr_d(uint64_t);
+extern uint64_t arm64_test_ldr_q(uint64_t);
+extern uint64_t arm64_test_prfm(uint64_t);
+extern uint64_t arm64_test_tbnz(uint64_t);
+extern uint64_t arm64_test_tbz(uint64_t);
 extern int x86_test_call_get_pc_thunk_ax(void);
 extern int x86_test_call_get_pc_thunk_bx(void);
 extern int x86_test_call_get_pc_thunk_cx(void);
@@ -86,6 +103,7 @@ static int test_cnt;
 static int error_cnt;
 static int hook_is_called;
 static int_func_t orig_func;
+static uint64_func_t uint64_orig_func;
 
 int get_val_in_exe(void)
 {
@@ -96,6 +114,12 @@ static int hook_func(void)
 {
     hook_is_called = 1;
     return orig_func();
+}
+
+static uint64_t uint64_hook_func(uint64_t arg)
+{
+    hook_is_called = 1;
+    return uint64_orig_func(arg);
 }
 
 #define TEST_FUNCHOOK_INT(func, load_type) test_funchook_int(func, #func, load_type)
@@ -244,6 +268,73 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     }
 
     funchook_destroy(funchook);
+}
+
+#define TEST_FUNCHOOK_UINT64(func) test_funchook_uint64(func, #func)
+void test_funchook_uint64(volatile uint64_func_t func, const char *func_name)
+{
+    funchook_t *funchook = funchook_create();
+    uint64_t test_data[] = {0, 0xFFFFFFFFFFFFFFFF, 0x8000000000000000, 0x2};
+    uint64_t results[sizeof(test_data)/sizeof(test_data[0])];
+    uint64_t result;
+    size_t i, num_test_data = sizeof(test_data)/sizeof(test_data[0]);
+    int rv;
+
+    test_cnt++;
+    printf("[%d] test_funchook_uint64: %s\n", test_cnt, func_name);
+
+    for (i = 0; i < num_test_data; i++) {
+        results[i] = func(test_data[i]);
+        //fprintf(stderr, "%s(0x%"PRIx64") -> 0x%"PRIx64"\n", func_name, test_data[i], results[i]);
+    }
+
+    uint64_orig_func = func;
+    rv = funchook_prepare(funchook, (void**)&uint64_orig_func, uint64_hook_func);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook %s. (%s)\n", func_name, funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hook %s. (%s)\n", func_name, funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    for (i = 0; i < num_test_data; i++) {
+        hook_is_called = 0;
+        reset_register();
+        result = func(test_data[i]);
+        if (hook_is_called == 0) {
+            printf("ERROR: hook_func is not called by %s.\n", func_name);
+            error_cnt++;
+            return;
+        }
+        if (results[i] != result) {
+            printf("ERROR: %s should return 0x%"PRIx64" but 0x%"PRIx64" after hooking.\n", func_name, results[i], result);
+            error_cnt++;
+            return;
+        }
+    }
+
+    funchook_uninstall(funchook, 0);
+
+    for (i = 0; i < num_test_data; i++) {
+        hook_is_called = 0;
+        reset_register();
+        result = func(test_data[i]);
+        if (hook_is_called != 0) {
+            printf("ERROR: hook_func is called after uninstall by %s.\n", func_name);
+            error_cnt++;
+            return;
+        }
+        if (results[i] != result) {
+            printf("ERROR: %s should return 0x%"PRIx64" but 0x%"PRIx64" after uninstall.\n", func_name, results[i], result);
+            error_cnt++;
+            return;
+        }
+    }
 }
 
 #define TEST_FUNCHOOK_EXPECT_ERROR(func, errcode) test_funchook_expect_error(func, errcode, #func, __LINE__)
@@ -476,6 +567,23 @@ int main()
     TEST_FUNCHOOK_INT(get_val_in_dll, LOAD_TYPE_IN_DLL);
     TEST_FUNCHOOK_INT(call_get_val_in_dll, LOAD_TYPE_IN_DLL);
     TEST_FUNCHOOK_INT(jump_get_val_in_dll, LOAD_TYPE_IN_DLL);
+
+#ifdef __aarch64__
+    TEST_FUNCHOOK_UINT64(arm64_test_adr);
+    TEST_FUNCHOOK_UINT64(arm64_test_beq);
+    TEST_FUNCHOOK_UINT64(arm64_test_bne);
+    TEST_FUNCHOOK_UINT64(arm64_test_cbnz);
+    TEST_FUNCHOOK_UINT64(arm64_test_cbz);
+    TEST_FUNCHOOK_UINT64(arm64_test_ldr_w);
+    TEST_FUNCHOOK_UINT64(arm64_test_ldr_x);
+    TEST_FUNCHOOK_UINT64(arm64_test_ldrsw);
+    TEST_FUNCHOOK_UINT64(arm64_test_ldr_s);
+    TEST_FUNCHOOK_UINT64(arm64_test_ldr_d);
+    TEST_FUNCHOOK_UINT64(arm64_test_ldr_q);
+    TEST_FUNCHOOK_UINT64(arm64_test_prfm);
+    TEST_FUNCHOOK_UINT64(arm64_test_tbnz);
+    TEST_FUNCHOOK_UINT64(arm64_test_tbz);
+#endif
 
 #ifndef _MSC_VER
 #if defined __i386 || defined  _M_I386

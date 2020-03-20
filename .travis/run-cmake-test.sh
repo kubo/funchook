@@ -13,6 +13,12 @@ else
   GENERATOR_TYPE=single_config
 fi
 
+if test "`uname -m`" = aarch64; then
+  DISASM_BACKENDS="capstone"
+else
+  DISASM_BACKENDS="distorm zydis capstone"
+fi
+
 message() {
   echo "################# $* #################"
 }
@@ -40,7 +46,7 @@ build_and_test() {
   fi
 }
 
-for disasm in distorm zydis capstone; do
+for disasm in $DISASM_BACKENDS; do
   case "$GENERATOR_TYPE" in
     multi_config)
       mkdir test-$dir-$disasm
