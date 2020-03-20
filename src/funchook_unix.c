@@ -55,11 +55,11 @@ const size_t page_size = PAGE_SIZE;
 
 const char *funchook_strerror(int errnum, char *buf, size_t buflen)
 {
-#if defined(__linux) && defined(_GNU_SOURCE)
-    /* GNU-specific strerror */
+#ifdef GNU_SPECIFIC_STRERROR_R
+    /* GNU-specific version */
     return strerror_r(errnum, buf, buflen);
 #else
-    /* XSI-compliant strerror */
+    /* XSI-compliant version */
     if (strerror_r(errnum, buf, buflen) != 0) {
         snprintf(buf, buflen, "errno %d", errnum);
     }

@@ -1,2 +1,2 @@
 #cmakedefine _GNU_SOURCE
-
+#cmakedefine GNU_SPECIFIC_STRERROR_R 1

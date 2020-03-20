@@ -10,6 +10,20 @@ option(FUNCHOOK_BUILD_TESTS "Build tests" ON)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   set(_GNU_SOURCE 1)
+  include(CheckCSourceCompiles)
+  # musl libc doesn't provide the GNU-specific version of strerror_r
+  # even when _GNU_SOURCE is defined.
+  check_c_source_compiles(
+    "#define _GNU_SOURCE 1
+     #include <string.h>
+     int main()
+     {
+         char dummy[128];
+         return *strerror_r(0, dummy, sizeof(dummy));
+     }
+    "
+    GNU_SPECIFIC_STRERROR_R
+  )
 endif ()
 
 include(CheckCCompilerFlag)
