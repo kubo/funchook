@@ -20,6 +20,12 @@ matrix:
         - ./.travis/run-cmake-test.sh i686-linux     -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32
         - ./.travis/run-cmake-test.sh x86_64-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake
         - ./.travis/run-cmake-test.sh i686-mingw32   -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake
+    - name: linux arm64
+      os: linux
+      dist: bionic
+      arch: arm64
+      script:
+        - ./.travis/run-cmake-test.sh aarch64-linux
     - name: alpine linux on docker
       os: linux
       dist: bionic
