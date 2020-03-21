@@ -1,14 +1,37 @@
 Funchook - an API hook library
 ==============================
 
-This library depends on [diStorm3][].
-
 [![Build Status](https://travis-ci.org/kubo/funchook.svg?branch=master)](https://travis-ci.org/kubo/funchook)
+
+This library depends on one of the following disassemblers.
+
+On x86_64 and x86
+* [diStorm3][] (default)
+* [zydis][] (when `-DFUNCHOOK_DISASM=zydis` is passed to the `cmake` command)
+* [capstone][] (when `-DFUNCHOOK_DISASM=capstone` is passed to the `cmake` command)
+
+On arm64
+* [capstone][]
 
 TODO
 ----
 
 * write documents.
+
+News
+----
+
+### 1.1.0 (2020-03-22)
+
+* Arm64 Linux support. [capstone][] is used as the disassembler library on arm64.
+* Options to use [zydis][] and [capstone][] as a disassembler library on x86_64 and x86.
+* `extern "C"` was added in funchook.h for C++. ([#15][])
+* Libc-compatible functions were removed to simplify code.
+
+### 1.0.0 (2020-01-19)
+
+* [diStorm3][] is used as the disassembler library.
+* Libc-compatible functions were implemented on Linux in order not to hook function calls issued by funchook itself.
 
 Supported Platforms
 -------------------
@@ -17,6 +40,7 @@ Tested on [Travis CI](https://travis-ci.org/kubo/funchook)
 
 * Linux x86_64
 * Linux x86
+* Linux arm64 (since 1.1.0)
 * macOS x86_64 (Functions in executables cannot be hooked when Xcode version >= 11.0. (*1))
 * macOS x86 (Xcode version <= 10.1(*2))
 * Windows x64 (except C-runtime functions under [Wine][])
@@ -32,10 +56,9 @@ Compilation and installation
 
 ```shell
 $ git clone --recursive https://github.com/kubo/funchook.git
-$ cd funchook
 $ mkdir build
 $ cd build
-$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/install/directory ..
+$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/install/directory ../funchook
 $ make
 $ make install
 ```
@@ -46,8 +69,8 @@ $ make install
   installed files:
   * `${CMAKE_INSTALL_PREFIX}/include/funchook.h` (header file)
   * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so` (symbolic link to `libfunchook.so.1`)
-  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so.1` ([soname][]; symbolic link to `libfunchook.so.1.0.0`)
-  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so.1.0.0` (shared library)
+  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so.1` ([soname][]; symbolic link to `libfunchook.so.1.1.0`)
+  * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.so.1.1.0` (shared library)
   * `${CMAKE_INSTALL_PREFIX}/lib/libfunchook.a` (static library)
 
 ### Windows
@@ -57,10 +80,9 @@ Change the argument of `-G` to use other compilers.
 
 ```shell
 $ git clone --recursive https://github.com/kubo/funchook.git
-$ cd funchook
 $ mkdir build
 $ cd build
-$ cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=c:\path\to\install\directory ..
+$ cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=c:\path\to\install\directory ..\funchook
 $ cmake --build . --config Release --target INSTALL
 ```
 
@@ -151,12 +173,15 @@ If you modify funchook itself and release it, the modifed part must be
 open under the GPL with or without the linking exception because funchook
 itself is under the GPL.
 
-[diStorm3][] has been released under 3-clause BSD since Nov 19, 2016. The
-license is compatible with the GPL.
+[diStorm3][] and [capstone][] are released under the 3-clause BSD license.
+[zydis][] is released under the MIT license. They are compatible with the GPL.
 
 [GPL linking exception]: https://en.wikipedia.org/wiki/GPL_linking_exception
 [diStorm3]: https://github.com/gdabah/distorm/
+[zydis]: https://github.com/zyantific/zydis
+[capstone]: https://github.com/aquynh/capstone
 [Wine]: https://www.winehq.org/
 [`CMAKE_BUILD_TYPE`]: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
 [`CMAKE_INSTALL_PREFIX`]: https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html
 [soname]: https://en.wikipedia.org/wiki/Soname
+[#15]: https://github.com/kubo/funchook/issues/15
