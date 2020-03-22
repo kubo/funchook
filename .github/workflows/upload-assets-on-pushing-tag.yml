@@ -1,0 +1,62 @@
+on:
+  push:
+    tags:
+    - 'v*'
+
+name: Upload Assets
+jobs:
+  build:
+    name: Upload Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Make Assets
+        id: assets
+        run: |
+          DIR_NAME=funchook-$(gawk -F '[ ()]' '/set\(PROJECT_VERSION / {print $3}' CMakeLists.txt)
+          TGZ_FILE_NAME=$DIR_NAME.tar.gz
+          ZIP_FILE_NAME=$DIR_NAME.zip
+          git clone --recursive . $DIR_NAME
+          rm -rf $DIR_NAME/.dockerignore
+          rm -rf $DIR_NAME/.git*
+          rm -rf $DIR_NAME/.travis*
+          rm -rf $DIR_NAME/distorm/.git
+          rm -rf $DIR_NAME/distorm/MANIFEST*
+          rm -rf $DIR_NAME/distorm/disOps
+          rm -rf $DIR_NAME/distorm/examples
+          rm -rf $DIR_NAME/distorm/make
+          rm -rf $DIR_NAME/distorm/python
+          rm -rf $DIR_NAME/distorm/setup*
+          tar cfz $TGZ_FILE_NAME $DIR_NAME
+          zip -rq $ZIP_FILE_NAME $DIR_NAME
+          echo "::set-output name=tgz_file_name::$TGZ_FILE_NAME"
+          echo "::set-output name=zip_file_name::$ZIP_FILE_NAME"
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload tar.gz asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.assets.outputs.tgz_file_name }}
+          asset_name: ${{ steps.assets.outputs.tgz_file_name }}
+          asset_content_type: application/gzip
+      - name: Upload zip asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.assets.outputs.zip_file_name }}
+          asset_name: ${{ steps.assets.outputs.zip_file_name }}
+          asset_content_type: application/zip
