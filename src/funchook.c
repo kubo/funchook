@@ -235,7 +235,7 @@ static funchook_t *funchook_create_internal(void)
 static int funchook_prepare_internal(funchook_t *funchook, void **target_func, void *hook_func)
 {
     void *func = *target_func;
-    insn_t trampoline[TRAMPOLINE_SIZE];
+    insn_t trampoline[TRAMPOLINE_SIZE] __attribute__((aligned(4))); // align for ARM thumb
     size_t trampoline_size;
     ip_displacement_t disp;
     funchook_page_t *page = NULL;
@@ -262,22 +262,39 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     entry->target_func = func;
     entry->hook_func = hook_func;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
+#ifdef __thumb__
+    memcpy(entry->old_code, (void*)((size_t)func & ~1), JUMP32_BYTE_SIZE);
+#else
     memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
+#endif
 
     funchook_fix_code(funchook, entry, &disp, func, hook_func);
     funchook_log_trampoline(funchook, entry->trampoline, trampoline_size);
+#if defined(LITERAL_POOL_NUM) && defined(LITERAL_POOL_OFFSET)
+    {
+        size_t *addr = (size_t*)(entry->trampoline + LITERAL_POOL_OFFSET);
+        size_t *end = addr + LITERAL_POOL_NUM;
+#ifdef CPU_ARM
+        const char *directive = ".word";
+#endif
 #ifdef CPU_ARM64
-    int i;
-    for (i = 0; i < LITERAL_POOL_NUM; i++) {
-        size_t *addr = (size_t*)(entry->trampoline + LITERAL_POOL_OFFSET + i * 2);
-        if (*addr != 0) {
-            funchook_log(funchook, "    %016lx : 0x%lx\n", (size_t)addr, *addr);
+        const char *directive = ".dword";
+#endif
+        while (addr < end) {
+            if (*addr != 0) {
+                funchook_log(funchook, "    "ADDR_FMT" : %s 0x"ADDR_FMT"\n", (size_t)addr, directive, *addr);
+            }
+            addr++;
         }
     }
 #endif
 
     page->used++;
+#ifdef __thumb__
+    *target_func = (void*)((size_t)entry->trampoline + 1);
+#else
     *target_func = (void*)entry->trampoline;
+#endif
     return 0;
 }
 
@@ -330,7 +347,11 @@ static int funchook_install_internal(funchook_t *funchook, int flags)
             if (rv != 0) {
                 return rv;
             }
+#ifdef __thumb__
+            memcpy((void*)((size_t)entry->target_func & ~1), entry->new_code, JUMP32_BYTE_SIZE);
+#else
             memcpy(entry->target_func, entry->new_code, JUMP32_BYTE_SIZE);
+#endif
             rv = funchook_unprotect_end(funchook, &mstate);
             if (rv != 0) {
                 return rv;
@@ -360,7 +381,11 @@ static int funchook_uninstall_internal(funchook_t *funchook, int flags)
             if (rv != 0) {
                 return rv;
             }
+#ifdef __thumb__
+            memcpy((void*)((size_t)entry->target_func & ~1), entry->old_code, JUMP32_BYTE_SIZE);
+#else
             memcpy(entry->target_func, entry->old_code, JUMP32_BYTE_SIZE);
+#endif
             rv = funchook_unprotect_end(funchook, &mstate);
             if (rv != 0) {
                 return rv;

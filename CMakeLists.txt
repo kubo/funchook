@@ -17,7 +17,7 @@ if(NOT FUNCHOOK_CPU)
   endif ()
 endif ()
 
-if (FUNCHOOK_CPU MATCHES "arm64")
+if (FUNCHOOK_CPU MATCHES "arm64" OR FUNCHOOK_CPU STREQUAL arm)
   set(FUNCHOOK_DEFAULT_DISASM "capstone")
 else ()
   set(FUNCHOOK_DEFAULT_DISASM "distorm")

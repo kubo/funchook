@@ -49,12 +49,15 @@
 #endif
 
 typedef int (*int_func_t)(void);
+typedef uint32_t (*uint32_func_t)(uint32_t);
 typedef uint64_t (*uint64_func_t)(uint64_t);
 
 DLLEXPORT int get_val_in_exe(void);
 extern int get_val_in_dll(void);
 extern int call_get_val_in_dll(void);
 extern int jump_get_val_in_dll(void);
+extern uint32_t arm_test_beq_1(uint32_t);
+extern uint32_t arm_test_beq_2(uint32_t);
 extern uint64_t arm64_test_adr(uint64_t);
 extern uint64_t arm64_test_beq(uint64_t);
 extern uint64_t arm64_test_bne(uint64_t);
@@ -103,6 +106,7 @@ static int test_cnt;
 static int error_cnt;
 static int hook_is_called;
 static int_func_t orig_func;
+static uint32_func_t uint32_orig_func;
 static uint64_func_t uint64_orig_func;
 
 int get_val_in_exe(void)
@@ -114,6 +118,12 @@ static int hook_func(void)
 {
     hook_is_called = 1;
     return orig_func();
+}
+
+static uint32_t uint32_hook_func(uint32_t arg)
+{
+    hook_is_called = 1;
+    return uint32_orig_func(arg);
 }
 
 static uint64_t uint64_hook_func(uint64_t arg)
@@ -268,6 +278,73 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     }
 
     funchook_destroy(funchook);
+}
+
+#define TEST_FUNCHOOK_UINT32(func) test_funchook_uint32(func, #func)
+void test_funchook_uint32(volatile uint32_func_t func, const char *func_name)
+{
+    funchook_t *funchook = funchook_create();
+    uint32_t test_data[] = {0, 0xFFFFFFFF, 0x80000000, 0x2};
+    uint32_t results[sizeof(test_data)/sizeof(test_data[0])];
+    uint32_t result;
+    size_t i, num_test_data = sizeof(test_data)/sizeof(test_data[0]);
+    int rv;
+
+    test_cnt++;
+    printf("[%d] test_funchook_uint32: %s\n", test_cnt, func_name);
+
+    for (i = 0; i < num_test_data; i++) {
+        results[i] = func(test_data[i]);
+        //fprintf(stderr, "%s(0x%"PRIx64") -> 0x%"PRIx64"\n", func_name, test_data[i], results[i]);
+    }
+
+    uint32_orig_func = func;
+    rv = funchook_prepare(funchook, (void**)&uint32_orig_func, uint32_hook_func);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook %s. (%s)\n", func_name, funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hook %s. (%s)\n", func_name, funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    for (i = 0; i < num_test_data; i++) {
+        hook_is_called = 0;
+        reset_register();
+        result = func(test_data[i]);
+        if (hook_is_called == 0) {
+            printf("ERROR: hook_func is not called by %s.\n", func_name);
+            error_cnt++;
+            return;
+        }
+        if (results[i] != result) {
+            printf("ERROR: %s should return 0x%"PRIx32" but 0x%"PRIx32" after hooking.\n", func_name, results[i], result);
+            error_cnt++;
+            return;
+        }
+    }
+
+    funchook_uninstall(funchook, 0);
+
+    for (i = 0; i < num_test_data; i++) {
+        hook_is_called = 0;
+        reset_register();
+        result = func(test_data[i]);
+        if (hook_is_called != 0) {
+            printf("ERROR: hook_func is called after uninstall by %s.\n", func_name);
+            error_cnt++;
+            return;
+        }
+        if (results[i] != result) {
+            printf("ERROR: %s should return 0x%"PRIx32" but 0x%"PRIx32" after uninstall.\n", func_name, results[i], result);
+            error_cnt++;
+            return;
+        }
+    }
 }
 
 #define TEST_FUNCHOOK_UINT64(func) test_funchook_uint64(func, #func)
@@ -578,6 +655,11 @@ int main()
     TEST_FUNCHOOK_INT(get_val_in_dll, LOAD_TYPE_IN_DLL);
     TEST_FUNCHOOK_INT(call_get_val_in_dll, LOAD_TYPE_IN_DLL);
     TEST_FUNCHOOK_INT(jump_get_val_in_dll, LOAD_TYPE_IN_DLL);
+
+#ifdef __thumb__
+    TEST_FUNCHOOK_UINT32(arm_test_beq_1);
+    TEST_FUNCHOOK_UINT32(arm_test_beq_2);
+#endif
 
 #ifdef __aarch64__
     TEST_FUNCHOOK_UINT64(arm64_test_adr);

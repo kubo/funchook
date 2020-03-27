@@ -71,6 +71,10 @@
 #define CPU_64BIT
 #endif
 
+#if defined __arm__
+#define CPU_ARM
+#endif
+
 #if defined _M_AMD64 || defined __x86_64__
 #define CPU_X86_64
 #define CPU_64BIT
@@ -80,6 +84,9 @@
 #define CPU_X86
 #endif
 
+#if defined(CPU_ARM)
+#include "funchook_arm.h"
+#endif
 #if defined(CPU_ARM64)
 #include "funchook_arm64.h"
 #endif

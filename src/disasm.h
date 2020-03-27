@@ -98,6 +98,10 @@ void funchook_disasm_cleanup(funchook_disasm_t *disasm);
 int funchook_disasm_next(funchook_disasm_t *disasm, const funchook_insn_t **next_insn);
 void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_insn_t *insn);
 
+#if defined(CPU_ARM)
+funchook_insn_info_t funchook_disasm_arm_insn_info(funchook_disasm_t *disasm, const funchook_insn_t *insn);
+#endif
+
 #if defined(CPU_ARM64)
 funchook_insn_info_t funchook_disasm_arm64_insn_info(funchook_disasm_t *disasm, const funchook_insn_t *insn);
 #endif

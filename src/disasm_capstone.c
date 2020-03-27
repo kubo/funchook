@@ -35,6 +35,11 @@
 #include "funchook_internal.h"
 #include "disasm.h"
 
+#ifdef CPU_ARM
+#define CS_ARCH CS_ARCH_ARM
+#define CS_MODE CS_MODE_THUMB
+#endif
+
 #ifdef CPU_ARM64
 #define CS_ARCH CS_ARCH_ARM64
 #define CS_MODE CS_MODE_LITTLE_ENDIAN
@@ -224,6 +229,69 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
 #endif /* defined(CPU_X86_64) || defined(CPU_X86) */
 #endif /* LOG_DETAIL */
 }
+
+#if defined(CPU_ARM)
+
+static funchook_arm_cond_t cs2funchook_cond(funchook_arm_cond_t cond)
+{
+    switch (cond) {
+    case ARM_CC_EQ:
+        return FUNCHOOK_ARM_COND_EQ;
+    case ARM_CC_NE:
+        return FUNCHOOK_ARM_COND_NE;
+    case ARM_CC_HS:
+        return FUNCHOOK_ARM_COND_CS;
+    case ARM_CC_LO:
+        return FUNCHOOK_ARM_COND_CC;
+    case ARM_CC_MI:
+        return FUNCHOOK_ARM_COND_MI;
+    case ARM_CC_PL:
+        return FUNCHOOK_ARM_COND_PL;
+    case ARM_CC_VS:
+        return FUNCHOOK_ARM_COND_VS;
+    case ARM_CC_VC:
+        return FUNCHOOK_ARM_COND_VC;
+    case ARM_CC_HI:
+        return FUNCHOOK_ARM_COND_HI;
+    case ARM_CC_LS:
+        return FUNCHOOK_ARM_COND_LS;
+    case ARM_CC_GE:
+        return FUNCHOOK_ARM_COND_GE;
+    case ARM_CC_LT:
+        return FUNCHOOK_ARM_COND_LT;
+    case ARM_CC_GT:
+        return FUNCHOOK_ARM_COND_GT;
+    case ARM_CC_LE:
+        return FUNCHOOK_ARM_COND_LE;
+    case ARM_CC_AL:
+        return FUNCHOOK_ARM_COND_AL;
+    default:
+        return FUNCHOOK_ARM_COND_INVALID;
+    }
+}
+
+funchook_insn_info_t funchook_disasm_arm_insn_info(funchook_disasm_t *disasm, const funchook_insn_t *insn)
+{
+    const cs_detail *detail = insn->detail;
+    const cs_arm *arm = &detail->arm;
+    funchook_insn_info_t info = {0, FUNCHOOK_ARM_COND_INVALID, 0};
+    uint32_t idx;
+
+    switch (insn->id) {
+    case ARM_INS_B:
+        info.insn_id = FUNCHOOK_ARM_INSN_B;
+        info.cond = cs2funchook_cond(arm->cc);
+        for (idx = 0; idx < arm->op_count; idx++) {
+            if (arm->operands[idx].type == ARM_OP_IMM) {
+                info.addr = arm->operands[idx].imm;
+                break;
+            }
+        }
+        break;
+    }
+    return info;
+}
+#endif
 
 #if defined(CPU_ARM64)
 // Check only registers in FUNCHOOK_ARM64_CORRUPTIBLE_REGS
