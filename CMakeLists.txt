@@ -66,6 +66,25 @@ else ()
   set(TOOLCHAIN_FILE "")
 endif ()
 
+if(WIN32)
+  set(prefix "")
+  set(suffix ".lib")
+elseif(APPLE)
+  set(prefix "lib")
+  set(suffix ".a")
+else()
+  set(prefix "lib")
+  set(suffix ".a")
+endif()
+
+if (WIN32)
+  set(FUNCHOOK_OS windows)
+  set(FUNCHOOK_DEPS psapi)
+else ()
+  set(FUNCHOOK_OS unix)
+  set(FUNCHOOK_DEPS dl)
+endif ()
+
 #
 # capstone
 #
@@ -104,9 +123,11 @@ if (DISASM_CAPSTONE)
     INSTALL_COMMAND   ""
   )
   ExternalProject_Get_Property(capstone_src SOURCE_DIR)
-  include_directories(${SOURCE_DIR}/include)
   ExternalProject_Get_Property(capstone_src BINARY_DIR)
-  link_directories(${BINARY_DIR})
+  add_library(capstone STATIC IMPORTED)
+  set_property(TARGET capstone PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/${prefix}capstone${suffix})
+  set_property(TARGET capstone PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${SOURCE_DIR}/include)
+  list(APPEND FUNCHOOK_DEPS capstone)
   set(DISASM capstone)
 endif ()
 
@@ -135,6 +156,7 @@ if (DISASM_DISTORM)
     target_compile_options(distorm PRIVATE -fvisibility=hidden)
   endif ()
   set(DISASM distorm)
+  list(APPEND FUNCHOOK_DEPS distorm)
 endif ()
 
 #
@@ -157,22 +179,16 @@ if (DISASM_ZYDIS)
                       -DZYDIS_BUILD_TOOLS=OFF
     INSTALL_COMMAND  ${CMAKE_COMMAND} --build . --target install && ${CMAKE_COMMAND} --build zycore --target install
   )
-  include_directories(${CMAKE_BINARY_DIR}/include)
-  link_directories(${CMAKE_BINARY_DIR}/lib)
+  add_library(Zydis STATIC IMPORTED)
+  set_property(TARGET Zydis PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/${prefix}Zydis${suffix})
+  set_property(TARGET Zydis PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include)
+  list(APPEND FUNCHOOK_DEPS Zydis)
   set(DISASM Zydis)
 endif ()
 
 #
 # funchook
 #
-
-if (WIN32)
-  set(FUNCHOOK_OS windows)
-  set(FUNCHOOK_DEPS psapi)
-else ()
-  set(FUNCHOOK_OS unix)
-  set(FUNCHOOK_DEPS dl)
-endif ()
 
 set(FUNCHOOK_SOURCES src/funchook.c src/funchook_${FUNCHOOK_CPU}.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
 
@@ -192,7 +208,7 @@ function (add_funchook_library target_name target_type)
   set_target_properties(${target_name} PROPERTIES ${FUNCHOOK_PROPERTIES})
   target_include_directories(${target_name} PUBLIC include)
   target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}) # to include config.h
-  target_link_libraries(${target_name} PRIVATE ${DISASM} ${FUNCHOOK_DEPS})
+  target_link_libraries(${target_name} PRIVATE ${FUNCHOOK_DEPS})
   if (HAVE_FVISIBILITY_HIDDEN)
     target_compile_options(${target_name} PRIVATE -fvisibility=hidden)
   endif ()
