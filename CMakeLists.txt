@@ -109,14 +109,12 @@ if (DISASM_CAPSTONE)
                       -DCAPSTONE_TMS320C64X_SUPPORT=OFF
                       -DCAPSTONE_XCORE_SUPPORT=OFF
                       -DCAPSTONE_X86_SUPPORT=${CAPSTONE_x86_SUPPORT}
-    INSTALL_COMMAND   ""
+    INSTALL_COMMAND   ${CMAKE_COMMAND} --build . --target install
   )
-  ExternalProject_Get_Property(capstone_src SOURCE_DIR)
-  ExternalProject_Get_Property(capstone_src BINARY_DIR)
-  file(MAKE_DIRECTORY ${SOURCE_DIR}/include)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
   add_library(capstone STATIC IMPORTED)
-  set_property(TARGET capstone PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}capstone${CMAKE_STATIC_LIBRARY_SUFFIX})
-  set_property(TARGET capstone PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${SOURCE_DIR}/include)
+  set_property(TARGET capstone PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}capstone${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set_property(TARGET capstone PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include)
   list(APPEND FUNCHOOK_DEPS capstone)
   set(DISASM capstone)
 endif ()
