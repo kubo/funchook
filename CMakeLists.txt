@@ -5,6 +5,8 @@ project(funchook LANGUAGES C ASM)
 set(PROJECT_VERSION 1.1.0)
 set(PROJECT_VERSION_MAJOR 1)
 
+include("GNUInstallDirs")
+
 if(NOT FUNCHOOK_CPU) 
   set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
   if (FUNCHOOK_CPU STREQUAL x86_64 OR FUNCHOOK_CPU MATCHES "i.86" OR FUNCHOOK_CPU STREQUAL AMD64)
@@ -63,6 +65,14 @@ else ()
   set(TOOLCHAIN_FILE "")
 endif ()
 
+if (WIN32)
+  set(FUNCHOOK_OS windows)
+  set(FUNCHOOK_DEPS psapi)
+else ()
+  set(FUNCHOOK_OS unix)
+  set(FUNCHOOK_DEPS dl)
+endif ()
+
 #
 # capstone
 #
@@ -98,12 +108,13 @@ if (DISASM_CAPSTONE)
                       -DCAPSTONE_TMS320C64X_SUPPORT=OFF
                       -DCAPSTONE_XCORE_SUPPORT=OFF
                       -DCAPSTONE_X86_SUPPORT=${CAPSTONE_x86_SUPPORT}
-    INSTALL_COMMAND   ""
+    INSTALL_COMMAND   ${CMAKE_COMMAND} --build . --target install
   )
-  ExternalProject_Get_Property(capstone_src SOURCE_DIR)
-  include_directories(${SOURCE_DIR}/include)
-  ExternalProject_Get_Property(capstone_src BINARY_DIR)
-  link_directories(${BINARY_DIR})
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
+  add_library(capstone STATIC IMPORTED)
+  set_property(TARGET capstone PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}capstone${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set_property(TARGET capstone PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include)
+  list(APPEND FUNCHOOK_DEPS capstone)
   set(DISASM capstone)
 endif ()
 
@@ -132,6 +143,7 @@ if (DISASM_DISTORM)
     target_compile_options(distorm PRIVATE -fvisibility=hidden)
   endif ()
   set(DISASM distorm)
+  list(APPEND FUNCHOOK_DEPS distorm)
 endif ()
 
 #
@@ -154,22 +166,17 @@ if (DISASM_ZYDIS)
                       -DZYDIS_BUILD_TOOLS=OFF
     INSTALL_COMMAND  ${CMAKE_COMMAND} --build . --target install && ${CMAKE_COMMAND} --build zycore --target install
   )
-  include_directories(${CMAKE_BINARY_DIR}/include)
-  link_directories(${CMAKE_BINARY_DIR}/lib)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
+  add_library(Zydis STATIC IMPORTED)
+  set_property(TARGET Zydis PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}Zydis${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set_property(TARGET Zydis PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include)
+  list(APPEND FUNCHOOK_DEPS Zydis)
   set(DISASM Zydis)
 endif ()
 
 #
 # funchook
 #
-
-if (WIN32)
-  set(FUNCHOOK_OS windows)
-  set(FUNCHOOK_DEPS psapi)
-else ()
-  set(FUNCHOOK_OS unix)
-  set(FUNCHOOK_DEPS dl)
-endif ()
 
 set(FUNCHOOK_SOURCES src/funchook.c src/funchook_${FUNCHOOK_CPU}.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
 
@@ -189,7 +196,7 @@ function (add_funchook_library target_name target_type)
   set_target_properties(${target_name} PROPERTIES ${FUNCHOOK_PROPERTIES})
   target_include_directories(${target_name} PUBLIC include)
   target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}) # to include config.h
-  target_link_libraries(${target_name} PRIVATE ${DISASM} ${FUNCHOOK_DEPS})
+  target_link_libraries(${target_name} PRIVATE ${FUNCHOOK_DEPS})
   if (HAVE_FVISIBILITY_HIDDEN)
     target_compile_options(${target_name} PRIVATE -fvisibility=hidden)
   endif ()
@@ -224,8 +231,6 @@ endif ()
 #
 # install
 #
-
-include("GNUInstallDirs")
 
 install(FILES include/funchook.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
