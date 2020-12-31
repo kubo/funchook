@@ -1,7 +1,7 @@
 Funchook - an API hook library
 ==============================
 
-[![Build Status](https://travis-ci.org/kubo/funchook.svg?branch=master)](https://travis-ci.org/kubo/funchook)
+[![Build Status](https://travis-ci.com/kubo/funchook.svg?branch=master)](https://travis-ci.com/kubo/funchook)
 
 This library depends on one of the following disassemblers.
 
@@ -36,7 +36,7 @@ News
 Supported Platforms
 -------------------
 
-Tested on [Travis CI](https://travis-ci.org/kubo/funchook)  
+Tested on [Travis CI](https://travis-ci.com/kubo/funchook)  
 
 * Linux x86_64
 * Linux x86
