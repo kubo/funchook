@@ -77,14 +77,12 @@ endif ()
 # capstone
 #
 if (DISASM_CAPSTONE)
-  set(CAPSTONE_arm64_SUPPORT OFF)
-  set(CAPSTONE_x86_SUPPORT OFF)
-  set(CAPSTONE_${FUNCHOOK_CPU}_SUPPORT ON)
+  string(TOUPPER ${FUNCHOOK_CPU} FUNCHOOK_CPU_UPPER)
 
   include(ExternalProject)
   ExternalProject_Add(capstone_src
     GIT_REPOSITORY    https://github.com/aquynh/capstone.git
-    GIT_TAG           4.0.1
+    GIT_TAG           4.0.2
     GIT_SHALLOW       TRUE
     CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                       -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE}
@@ -96,18 +94,8 @@ if (DISASM_CAPSTONE)
                       -DCAPSTONE_BUILD_STATIC_RUNTIME=OFF
                       -DCAPSTONE_BUILD_TESTS=OFF
                       -DCAPSTONE_BUILD_CSTOOL=OFF
-                      -DCAPSTONE_ARM_SUPPORT=OFF
-                      -DCAPSTONE_ARM64_SUPPORT=${CAPSTONE_arm64_SUPPORT}
-                      -DCAPSTONE_EVM_SUPPORT=OFF
-                      -DCAPSTONE_M680X_SUPPORT=OFF
-                      -DCAPSTONE_M68K_SUPPORT=OFF
-                      -DCAPSTONE_MIPS_SUPPORT=OFF
-                      -DCAPSTONE_PPC_SUPPORT=OFF
-                      -DCAPSTONE_SPARC_SUPPORT=OFF
-                      -DCAPSTONE_SYSZ_SUPPORT=OFF
-                      -DCAPSTONE_TMS320C64X_SUPPORT=OFF
-                      -DCAPSTONE_XCORE_SUPPORT=OFF
-                      -DCAPSTONE_X86_SUPPORT=${CAPSTONE_x86_SUPPORT}
+                      -DCAPSTONE_ARCHITECTURE_DEFAULT=OFF
+                      -DCAPSTONE_${FUNCHOOK_CPU_UPPER}_SUPPORT=ON
     INSTALL_COMMAND   ${CMAKE_COMMAND} --build . --target install
   )
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
