@@ -160,6 +160,56 @@ int install_hooks()
 
 ```
 
+Example - Using Python ctypes
+-----------------------------
+```python
+# should work on python 2.7/3 windows/linux
+
+# load funchook
+import ctypes
+fh_lib = ctypes.cdll.LoadLibrary('/path/to/funchook/dll/or/so')
+
+# define signatures
+funchook_create = fh_lib.funchook_create
+funchook_create.restype = ctypes.c_void_p
+funchook_create.argtypes = []
+
+funchook_prepare = fh_lib.funchook_prepare
+funchook_prepare.restype = ctypes.c_ssize_t
+funchook_prepare.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+
+funchook_install = fh_lib.funchook_install
+funchook_install.restype = ctypes.c_ssize_t
+funchook_install.argtypes = [ctypes.c_void_p, ctypes.c_int]
+
+PySys_WriteStdout = ctypes.pythonapi.PySys_WriteStdout
+PySys_WriteStdout.restype = None
+PySys_WriteStdout.argtypes=[ctypes.c_char_p]
+
+# must keep those references alive, or stuff will be GC'd and weird errors will occur
+global orig_write, hook, orig_write_ptr
+
+# create hook (this function will replace the original function)
+hook_type = ctypes.PYFUNCTYPE(None, ctypes.c_char_p)
+orig_write = None
+def hook_impl(msg):
+    print('about to write: ' + str(msg)) # do what we want
+    orig_write(msg)                      # call the original function
+
+hook = hook_type(hook_impl)
+
+fh = funchook_create()
+# create a pointer object with the function address
+orig_write_ptr = ctypes.c_void_p(ctypes.c_void_p.from_address(ctypes.addressof(PySys_WriteStdout)).value)
+# orig_write_ptr.value will get a ptr to the original PySys_WriteStdout and PySys_WriteStdout will now point to the hook
+ret = funchook_prepare(fh, ctypes.addressof(orig_write_ptr), hook)
+assert not ret, 'ret is ' + str(ret)
+ret = funchook_install(fh, 0)
+assert not ret, 'ret is ' + str(ret)
+orig_write = hook_type.from_address(ctypes.addressof(orig_write_ptr))
+PySys_WriteStdout(b'hi there\n')
+```
+
 License
 -------
 
