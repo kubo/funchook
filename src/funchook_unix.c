@@ -241,6 +241,8 @@ static int get_free_address(funchook_t *funchook, void *func_addr, void *addrs[2
     return FUNCHOOK_ERROR_MEMORY_ALLOCATION;
 }
 
+#define SAFE_JUMP_DISTANCE(X, Y)  ((size_t)(X) - (size_t)(Y)) < (INT32_MAX - page_size)
+
 #endif /* defined(CPU_64BIT) */
 
 int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_t *func, ip_displacement_t *disp)
@@ -268,7 +270,8 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
                 continue;
             }
             *page_out = mmap(addrs[i], page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            if (*page_out == addrs[i]) {
+            if (SAFE_JUMP_DISTANCE(func, *page_out) ||
+                    SAFE_JUMP_DISTANCE(*page_out, func)) {
                 funchook_log(funchook, "  allocate page %p (size=%"PRIuPTR")\n", *page_out, page_size);
                 return 0;
             }
