@@ -47,7 +47,7 @@
 #define TO_IMM19(imm19) ((imm19) << 5)
 
 // immhi at bit 23-5 and immlo at bit 30~29, used by ADR and ADRP
-#define IMM_ADR_OFFSET(ins) (IMM19_OFFSET(ins) | ((ins) >> 29) & 0x3)
+#define IMM_ADR_OFFSET(ins) (IMM19_OFFSET(ins) | (((ins) >> 29) & 0x3))
 
 // imm14 at bit 18~5
 #define IMM14_MASK 0x0007FFE0
@@ -165,7 +165,6 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
     make_trampoline_context_t ctx;
     funchook_disasm_t disasm;
     int rv;
-    unsigned int i;
     const funchook_insn_t *insn;
     uint32_t avail_regs = FUNCHOOK_ARM64_CORRUPTIBLE_REGS;
     size_t *literal_pool = (size_t*)(trampoline + LITERAL_POOL_OFFSET);
