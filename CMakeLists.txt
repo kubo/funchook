@@ -114,7 +114,7 @@ if (DISASM_DISTORM)
   set(DISTORM_SRC_DIR ${DISTORM_PATH}/src/)
   set(DISTORM_SOURCES ${DISTORM_SRC_DIR}/decoder.c ${DISTORM_SRC_DIR}/distorm.c ${DISTORM_SRC_DIR}/instructions.c
       ${DISTORM_SRC_DIR}/insts.c ${DISTORM_SRC_DIR}/mnemonics.c ${DISTORM_SRC_DIR}/operands.c
-      ${DISTORM_SRC_DIR}/prefix.c ${DISTORM_SRC_DIR}/textdefs.c ${DISTORM_SRC_DIR}/wstring.c)
+      ${DISTORM_SRC_DIR}/prefix.c ${DISTORM_SRC_DIR}/textdefs.c)
   if (MSVC)
     # Suppress warning C4819:
     #   The file contains a character that cannot be represented in the current code
