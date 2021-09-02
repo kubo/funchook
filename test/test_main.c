@@ -355,7 +355,11 @@ void test_funchook_expect_error(int_func_t func, int errcode, const char *func_s
     funchook_destroy(funchook);
 }
 
+#ifdef __ANDROID__
+static int (*open_func)(const char* const pass_object_size, int, ...);
+#else
 static int (*open_func)(const char *pathname, int flags, mode_t mode);
+#endif
 static FILE *(*fopen_func)(const char *pathname, const char *mode);
 
 static int open_hook(const char *pathname, int flags, mode_t mode)
@@ -442,7 +446,11 @@ static void test_hook_open_and_fopen(void)
 
     /* prepare to hook `open' and `fopen` */
     funchook = funchook_create();
+#ifdef __ANDROID__
+    open_func = (int (*)(const char* const pass_object_size, int, ...))open;
+#else
     open_func = (int (*)(const char*, int, mode_t))open;
+#endif
     funchook_prepare(funchook, (void**)&open_func, open_hook);
     fopen_func = fopen;
     funchook_prepare(funchook, (void**)&fopen_func, fopen_hook);
