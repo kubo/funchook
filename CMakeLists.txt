@@ -77,32 +77,28 @@ endif ()
 # capstone
 #
 if (DISASM_CAPSTONE)
+  configure_file(cmake/capstone.cmake.in capstone-download/CMakeLists.txt)
+  execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/capstone-download"
+  )
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/capstone-download"
+  )
+
   string(TOUPPER ${FUNCHOOK_CPU} FUNCHOOK_CPU_UPPER)
 
-  include(ExternalProject)
-  ExternalProject_Add(capstone_src
-    GIT_REPOSITORY    https://github.com/aquynh/capstone.git
-    GIT_TAG           4.0.2
-    GIT_SHALLOW       TRUE
-    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE}
-                      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-                      -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
-                      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-                      -DCAPSTONE_BUILD_SHARED=OFF
-                      -DCAPSTONE_BUILD_STATIC_RUNTIME=OFF
-                      -DCAPSTONE_BUILD_TESTS=OFF
-                      -DCAPSTONE_BUILD_CSTOOL=OFF
-                      -DCAPSTONE_ARCHITECTURE_DEFAULT=OFF
-                      -DCAPSTONE_${FUNCHOOK_CPU_UPPER}_SUPPORT=ON
-    INSTALL_COMMAND   ${CMAKE_COMMAND} --build . --target install
-  )
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
-  add_library(capstone STATIC IMPORTED)
-  set_property(TARGET capstone PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}capstone${CMAKE_STATIC_LIBRARY_SUFFIX})
-  set_property(TARGET capstone PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include)
-  list(APPEND FUNCHOOK_DEPS capstone)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  set(CAPSTONE_BUILD_SHARED OFF)
+  set(CAPSTONE_BUILD_STATIC_RUNTIME OFF)
+  set(CAPSTONE_BUILD_TESTS OFF)
+  set(CAPSTONE_BUILD_CSTOOL OFF)
+  set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
+  set(CAPSTONE_${FUNCHOOK_CPU_UPPER}_SUPPORT ON)
+  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/capstone-src ${CMAKE_CURRENT_BINARY_DIR}/capstone-build)
+
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/capstone-src/include)
+
+  list(APPEND FUNCHOOK_DEPS capstone-static)
   set(DISASM capstone)
 endif ()
 
@@ -178,8 +174,8 @@ configure_file(src/cmake_config.h.in config.h)
 
 function (add_funchook_library target_name target_type)
   add_library(${target_name} ${target_type} ${FUNCHOOK_SOURCES})
-  if (NOT DISASM STREQUAL distorm)
-    add_dependencies(${target_name} ${DISASM}_src)
+  if (DISASM_ZYDIS)
+    add_dependencies(${target_name} Zydis_src)
   endif ()
   set_target_properties(${target_name} PROPERTIES ${FUNCHOOK_PROPERTIES})
   target_include_directories(${target_name} PUBLIC include)
