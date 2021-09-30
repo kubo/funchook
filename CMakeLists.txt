@@ -96,8 +96,6 @@ if (DISASM_CAPSTONE)
   set(CAPSTONE_${FUNCHOOK_CPU_UPPER}_SUPPORT ON)
   add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/capstone-src ${CMAKE_CURRENT_BINARY_DIR}/capstone-build)
 
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/capstone-src/include)
-
   list(APPEND FUNCHOOK_DEPS capstone-static)
   set(DISASM capstone)
 endif ()
@@ -180,6 +178,9 @@ function (add_funchook_library target_name target_type)
   set_target_properties(${target_name} PROPERTIES ${FUNCHOOK_PROPERTIES})
   target_include_directories(${target_name} PUBLIC include)
   target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}) # to include config.h
+  if (DISASM_CAPSTONE)
+    target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/capstone-src/include)
+  endif()
   target_link_libraries(${target_name} PRIVATE ${FUNCHOOK_DEPS})
   if (HAVE_FVISIBILITY_HIDDEN)
     target_compile_options(${target_name} PRIVATE -fvisibility=hidden)
