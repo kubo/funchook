@@ -493,12 +493,14 @@ static void test_hook_open_and_fopen(void)
 static NOINLINE int call_many_funcs(int installed)
 {
     int rv;
+    int expected;
     int mul = installed ? 2 : 1;
     const char *is_str = installed ? "isn't" : "is";
 #define S(suffix) \
     rv = dllfunc_##suffix(2, 3); \
-    if (rv != (2 * 3 + suffix) * mul) { \
-        printf("ERROR: dllfunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
+    expected = (2 * 3 + suffix) * mul; \
+    if (rv != expected) { \
+        printf("ERROR: dllfunc_%s %s hooked. (expect %d but %d)\n", #suffix, is_str, expected, rv); \
         error_cnt++; \
         return -1; \
     }
@@ -507,8 +509,9 @@ static NOINLINE int call_many_funcs(int installed)
 #ifndef SKIP_TESTS_CHANGING_EXE
 #define S(suffix) \
     rv = exefunc_##suffix(2, 3); \
-    if (rv != (2 * 3 + suffix) * mul) { \
-        printf("ERROR: exefunc_%s %s hooked. (rv=%d)\n", #suffix, is_str, rv); \
+    expected = (2 * 3 + suffix) * mul; \
+    if (rv != expected) { \
+        printf("ERROR: exefunc_%s %s hooked. (expect %d but %d)\n", #suffix, is_str, expected, rv); \
         error_cnt++; \
         return -1; \
     }
