@@ -1,7 +1,7 @@
 Funchook - an API hook library
 ==============================
 
-[![Build Status](https://travis-ci.com/kubo/funchook.svg?branch=master)](https://travis-ci.com/kubo/funchook)
+[![tests](https://github.com/kubo/funchook/actions/workflows/run-tests.yml/badge.svg?branch=master)](https://github.com/kubo/funchook/actions/workflows/run-tests.yml)
 
 This library depends on one of the following disassemblers.
 
@@ -36,18 +36,14 @@ News
 Supported Platforms
 -------------------
 
-Tested on [Travis CI](https://travis-ci.com/kubo/funchook)  
-
 * Linux x86_64
 * Linux x86
 * Linux arm64 (since 1.1.0)
 * macOS x86_64 (Functions in executables cannot be hooked when Xcode version >= 11.0. (*1))
-* macOS x86 (Xcode version <= 10.1(*2))
 * Windows x64 (except C-runtime functions under [Wine][])
 * Windows 32-bit
 
 *1 [`mprotect`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html) fails with EACCES.  
-*2 Xcode 10.2 dropped support for building 32-bit apps.  
 
 Compilation and installation
 -----------
