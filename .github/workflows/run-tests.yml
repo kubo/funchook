@@ -101,11 +101,6 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: true
-    - name: Add msbuild
-      uses: microsoft/setup-msbuild@v1.0.3
-    - name: check version
-      run: |
-        msbuild -version
     - name: x64 tests on Windows
       shell: bash
       run: |
