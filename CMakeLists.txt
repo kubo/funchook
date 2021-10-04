@@ -73,6 +73,11 @@ else ()
   set(FUNCHOOK_DEPS dl)
 endif ()
 
+function(add_subdirectory_pic source_dir binary_dir)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  add_subdirectory(${source_dir} ${binary_dir})
+endfunction(add_subdirectory_pic)
+
 #
 # capstone
 #
@@ -87,14 +92,13 @@ if (DISASM_CAPSTONE)
 
   string(TOUPPER ${FUNCHOOK_CPU} FUNCHOOK_CPU_UPPER)
 
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-  set(CAPSTONE_BUILD_SHARED OFF)
-  set(CAPSTONE_BUILD_STATIC_RUNTIME OFF)
-  set(CAPSTONE_BUILD_TESTS OFF)
-  set(CAPSTONE_BUILD_CSTOOL OFF)
-  set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
-  set(CAPSTONE_${FUNCHOOK_CPU_UPPER}_SUPPORT ON)
-  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/capstone-src ${CMAKE_CURRENT_BINARY_DIR}/capstone-build)
+  set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
+  set(CAPSTONE_BUILD_STATIC_RUNTIME OFF CACHE BOOL "")
+  set(CAPSTONE_BUILD_TESTS OFF CACHE BOOL "")
+  set(CAPSTONE_BUILD_CSTOOL OFF CACHE BOOL "")
+  set(CAPSTONE_ARCHITECTURE_DEFAULT OFF CACHE BOOL "")
+  set(CAPSTONE_${FUNCHOOK_CPU_UPPER}_SUPPORT ON CACHE BOOL "")
+  add_subdirectory_pic(${CMAKE_CURRENT_BINARY_DIR}/capstone-src ${CMAKE_CURRENT_BINARY_DIR}/capstone-build)
 
   list(APPEND FUNCHOOK_DEPS capstone-static)
   set(DISASM capstone)
