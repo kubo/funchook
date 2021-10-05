@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.6)
+
+include(ExternalProject)
+
+project(capstone-download NONE)
+
+ExternalProject_Add(external_capstone
+    GIT_REPOSITORY    https://github.com/aquynh/capstone.git
+    GIT_TAG           4.0.2
+    GIT_SHALLOW       TRUE
+    SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/capstone-src"
+    BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/capstone-build"
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ""
+    INSTALL_COMMAND   ""
+    TEST_COMMAND      ""
+)
