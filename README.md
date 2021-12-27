@@ -43,7 +43,14 @@ Supported Platforms
 * Windows x64 (except C-runtime functions under [Wine][])
 * Windows 32-bit
 
-*1 [`mprotect`](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html) fails with EACCES.  
+*1 [`mprotect`] fails with EACCES.  
+
+Unsupported Platforms
+---------------------
+
+* macOS arm64 (*1)
+
+*1 I received a mail that [`mprotect`] failed with `EINVAL`. Apple seems to prevent executable memory regions from being writable.
 
 Compilation and installation
 -----------
@@ -231,3 +238,4 @@ itself is under the GPL.
 [`CMAKE_INSTALL_PREFIX`]: https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html
 [soname]: https://en.wikipedia.org/wiki/Soname
 [#15]: https://github.com/kubo/funchook/issues/15
+[`mprotect`]: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html
