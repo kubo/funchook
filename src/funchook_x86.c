@@ -327,21 +327,21 @@ static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relativ
     return 0;
 }
 
-int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp, const void *func, const void *hook_func)
+int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp)
 {
     insn_t *src_addr;
     uint32_t *offset_addr;
 
 #ifdef CPU_X86_64
-    if (funchook_jump32_avail(func, hook_func)) {
-        funchook_write_jump32(funchook, func, hook_func, entry->new_code);
+    if (funchook_jump32_avail(entry->target_func, entry->hook_func)) {
+        funchook_write_jump32(funchook, entry->target_func, entry->hook_func, entry->new_code);
         entry->transit[0] = 0;
     } else {
-        funchook_write_jump32(funchook, func, entry->transit, entry->new_code);
-        funchook_write_jump64(funchook, entry->transit, hook_func);
+        funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
+        funchook_write_jump64(funchook, entry->transit, entry->hook_func);
     }
 #else
-    funchook_write_jump32(funchook, func, hook_func, entry->new_code);
+    funchook_write_jump32(funchook, entry->target_func, entry->hook_func, entry->new_code);
 #endif
     /* fix rip-relative offsets */
     src_addr = entry->trampoline + disp->disp[0].src_addr_offset;

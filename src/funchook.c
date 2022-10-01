@@ -264,7 +264,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
     memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
 
-    funchook_fix_code(funchook, entry, &disp, func, hook_func);
+    funchook_fix_code(funchook, entry, &disp);
     funchook_log_trampoline(funchook, entry->trampoline, trampoline_size);
 #ifdef CPU_ARM64
     int i;

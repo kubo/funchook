@@ -358,11 +358,11 @@ cleanup:
     return rv;
 }
 
-int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp, const void *func, const void *hook_func)
+int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp)
 {
     /* func -> transit */
-    funchook_write_jump32(funchook, func, entry->transit, entry->new_code);
+    funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
     /* transit -> hook_func */
-    funchook_write_jump64(funchook, entry->transit, hook_func, FUNCHOOK_ARM64_REG_X9);
+    funchook_write_jump64(funchook, entry->transit, entry->hook_func, FUNCHOOK_ARM64_REG_X9);
     return 0;
 }
