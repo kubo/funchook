@@ -40,7 +40,7 @@ build_and_test() {
   message "build $NAME"
   echodo cmake --build . $CONFIG_OPT
   message "test $NAME"
-  if ! echodo ctest --output-on-failure $BUILD_CONFIG_OPT; then
+  if ! echodo ctest --verbose $BUILD_CONFIG_OPT; then
     cat test/debug.log
     exit 1
   fi
