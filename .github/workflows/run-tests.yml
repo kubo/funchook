@@ -104,15 +104,16 @@ jobs:
     - name: x64 tests on Windows
       shell: bash
       run: |
-        ./.ci/run-cmake-test.sh x86_64-windows -G "Visual Studio 16 2019" -A x64
+        ./.ci/run-cmake-test.sh x86_64-windows -A x64
     - name: x86 tests on Windows
       shell: bash
       run: |
-        ./.ci/run-cmake-test.sh x86-windows -G "Visual Studio 16 2019" -A Win32
+        ./.ci/run-cmake-test.sh x86-windows -A Win32
 
+  # disabled because of unmet package dependencies
   tests_on_wine:
     name: Tests on Wine (x64 and x86)
-    if: github.event.inputs.tests_on_wine == 'true' || github.event.inputs.tests_on_wine == ''
+    if: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
