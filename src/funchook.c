@@ -74,6 +74,17 @@ static int funchook_uninstall_internal(funchook_t *funchook, int flags);
 static int funchook_destroy_internal(funchook_t *funchook);
 static int get_page(funchook_t *funchook, funchook_page_t **page_out, uint8_t *addr, ip_displacement_t *disp);
 
+static void flush_instruction_cache(void *addr, size_t size)
+{
+#if defined __GNUC__
+    __builtin___clear_cache((char*)addr, (char*)addr + size);
+#elif defined WIN32
+    FlushInstructionCache(GetCurrentProcess(), addr, size);
+#else
+#error unsupported OS or compiler
+#endif
+}
+
 funchook_t *funchook_create(void)
 {
     funchook_t *funchook = NULL;
@@ -276,6 +287,12 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     }
 #endif
 
+    /* Just in case though I think this is unnecessary. */
+    flush_instruction_cache(entry->trampoline, sizeof(entry->trampoline));
+#ifdef CPU_64BIT
+    flush_instruction_cache(entry->transit, sizeof(entry->transit));
+#endif
+
     page->used++;
     *target_func = (void*)entry->trampoline;
     return 0;
@@ -335,6 +352,7 @@ static int funchook_install_internal(funchook_t *funchook, int flags)
             if (rv != 0) {
                 return rv;
             }
+            flush_instruction_cache(entry->target_func, JUMP32_BYTE_SIZE);
         }
     }
     funchook->installed = 1;
@@ -365,6 +383,7 @@ static int funchook_uninstall_internal(funchook_t *funchook, int flags)
             if (rv != 0) {
                 return rv;
             }
+            flush_instruction_cache(entry->target_func, JUMP32_BYTE_SIZE);
         }
         funchook_page_unprotect(funchook, page);
     }
