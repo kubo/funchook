@@ -21,6 +21,24 @@ TODO
 News
 ----
 
+### 1.1.1 (2022-10-02)
+
+* More permissive check for page allocation mmap ([#25][])
+* Flush instruction cache for arm64. It does nothing for intel CPU.
+* Disassember engine
+  * Upgrade capstone to 4.0.2
+  * Upgrade distorm to 3.5.2
+* CMakefile
+  * Allow user to specify FUNCHOOK_CPU explicitly ([#19][])
+  * Avoid polluting global include and link dirs ([#20][])
+  * Use target based compile options for gcc's -Wall ([#21][])
+  * Use ExternalProject_add to download captone only ([#30][])
+  * Add option FUNCHOOK_INSTALL ([#31][])
+  * Use "FUNCHOOK_CPU MATCHES <string>" ([#32][])
+* Documentation
+  * added example usage from python ([#22][])
+* Fix tests on Android ([#29][])
+
 ### 1.1.0 (2020-03-22)
 
 * Arm64 Linux support. [capstone][] is used as the disassembler library on arm64.
@@ -238,4 +256,13 @@ itself is under the GPL.
 [`CMAKE_INSTALL_PREFIX`]: https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html
 [soname]: https://en.wikipedia.org/wiki/Soname
 [#15]: https://github.com/kubo/funchook/issues/15
+[#19]: https://github.com/kubo/funchook/pull/19
+[#20]: https://github.com/kubo/funchook/pull/20
+[#21]: https://github.com/kubo/funchook/pull/21
+[#22]: https://github.com/kubo/funchook/pull/22
+[#25]: https://github.com/kubo/funchook/pull/25
+[#29]: https://github.com/kubo/funchook/pull/29
+[#30]: https://github.com/kubo/funchook/pull/30
+[#31]: https://github.com/kubo/funchook/pull/31
+[#32]: https://github.com/kubo/funchook/pull/32
 [`mprotect`]: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html
