@@ -65,6 +65,22 @@ typedef struct funchook funchook_t;
 #define FUNCHOOK_ERROR_NOT_INSTALLED          10
 #define FUNCHOOK_ERROR_NO_AVAILABLE_REGISTERS 11
 
+typedef struct funchook_info {
+    void *original_target_func;
+    void *target_func;
+    void *trampoline_func;
+    void *hook_func;
+    void *user_data;
+} funchook_info_t;
+
+typedef void (*funchook_hook_t)(funchook_info_t *fi);
+
+typedef struct {
+    void *hook_func;
+    funchook_hook_t prehook;
+    void *user_data;
+} funchook_params_t;
+
 /**
  * Create a funchook handle
  *
@@ -81,6 +97,9 @@ FUNCHOOK_EXPORT funchook_t *funchook_create(void);
  * @return             error code. one of FUNCHOOK_ERROR_*.
  */
 FUNCHOOK_EXPORT int funchook_prepare(funchook_t *funchook, void **target_func, void *hook_func);
+
+FUNCHOOK_EXPORT int funchook_prepare_with_params(funchook_t *funchook,
+    void **target_func, const funchook_params_t *params);
 
 /**
  * Install hooks prepared by funchook_prepare().

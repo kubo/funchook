@@ -67,7 +67,8 @@ static size_t num_entries_in_page;
 static void funchook_logv(funchook_t *funchook, int set_error, const char *fmt, va_list ap);
 static void funchook_log_end(funchook_t *funchook, const char *fmt, ...);
 static funchook_t *funchook_create_internal(void);
-static int funchook_prepare_internal(funchook_t *funchook, void **target_func, void *hook_func);
+static int funchook_prepare_internal(funchook_t *funchook, void **target_func,
+                                     const funchook_params_t *params);
 static void funchook_log_trampoline(funchook_t *funchook, const insn_t *trampoline, size_t trampoline_size);
 static int funchook_install_internal(funchook_t *funchook, int flags);
 static int funchook_uninstall_internal(funchook_t *funchook, int flags);
@@ -99,11 +100,26 @@ int funchook_prepare(funchook_t *funchook, void **target_func, void *hook_func)
 {
     int rv;
     void *orig_func;
+    funchook_params_t params = { .hook_func = hook_func, };
 
     funchook_log(funchook, "Enter funchook_prepare(%p, %p, %p)\n", funchook, target_func, hook_func);
     orig_func = *target_func;
-    rv = funchook_prepare_internal(funchook, target_func, hook_func);
+    rv = funchook_prepare_internal(funchook, target_func, &params);
     funchook_log_end(funchook, "Leave funchook_prepare(..., [%p->%p],...) => %d\n", orig_func, *target_func, rv);
+    return rv;
+}
+
+int funchook_prepare_with_params(funchook_t *funchook,
+                               void **target_func, const funchook_params_t *params)
+{
+    int rv;
+    void *orig_func;
+
+    funchook_log(funchook, "Enter funchook_prepare_with_params(%p, %p, {%p, %p, %p})\n",
+                 funchook, target_func, params->hook_func, params->prehook, params->user_data);
+    orig_func = *target_func;
+    rv = funchook_prepare_internal(funchook, target_func, params);
+    funchook_log_end(funchook, "Leave funchook_prepare_with_prehook(..., [%p->%p],...) => %d\n", orig_func, *target_func, rv);
     return rv;
 }
 
@@ -171,6 +187,19 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...)
     va_start(ap, fmt);
     funchook_logv(funchook, 1, fmt, ap);
     va_end(ap);
+}
+
+void funchook_hook_caller(size_t transit_addr)
+{
+    funchook_entry_t *entry = (funchook_entry_t *)(transit_addr - offsetof(funchook_entry_t, transit));
+    funchook_info_t info = {
+        .original_target_func = entry->original_target_func,
+        .target_func = entry->target_func,
+        .trampoline_func = entry->trampoline,
+        .hook_func = entry->hook_func,
+        .user_data = entry->user_data,
+    };
+    entry->prehook(&info);
 }
 
 static void funchook_logv(funchook_t *funchook, int set_error, const char *fmt, va_list ap)
@@ -243,7 +272,8 @@ static funchook_t *funchook_create_internal(void)
     return funchook;
 }
 
-static int funchook_prepare_internal(funchook_t *funchook, void **target_func, void *hook_func)
+static int funchook_prepare_internal(funchook_t *funchook, void **target_func,
+                                     const funchook_params_t *params)
 {
     void *func = *target_func;
     insn_t trampoline[TRAMPOLINE_SIZE];
@@ -270,8 +300,11 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     }
     entry = &page->entries[page->used];
     /* fill members */
+    entry->original_target_func = *target_func;
     entry->target_func = func;
-    entry->hook_func = hook_func;
+    entry->hook_func = params->hook_func;
+    entry->prehook = params->prehook;
+    entry->user_data = params->user_data;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
     memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
 

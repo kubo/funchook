@@ -35,23 +35,21 @@
 #define MAX_INSN_CHECK_SIZE 256
 
 #define JUMP32_SIZE 5
-#ifdef CPU_X86_64
-#define JUMP64_SIZE 14
-#endif
 
 #define TRAMPOLINE_SIZE (JUMP32_SIZE + (MAX_INSN_LEN - 1) + JUMP32_SIZE)
 
 typedef uint8_t insn_t;
 
 typedef struct funchook_entry {
+    void *original_target_func;
     void *target_func;
     void *hook_func;
+    funchook_hook_t prehook;
+    void *user_data;
     uint8_t trampoline[TRAMPOLINE_SIZE];
     uint8_t old_code[JUMP32_SIZE];
     uint8_t new_code[JUMP32_SIZE];
-#ifdef CPU_X86_64
-    uint8_t transit[JUMP64_SIZE];
-#endif
+    uint8_t transit[TRANSIT_CODE_SIZE];
 } funchook_entry_t;
 
 typedef struct {

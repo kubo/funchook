@@ -61,7 +61,6 @@ typedef enum {
 
 #define MAX_INSN_CHECK_SIZE 64
 #define JUMP32_SIZE 2
-#define JUMP64_SIZE 4
 #define LITERAL_POOL_OFFSET (3 * JUMP32_SIZE + 2)
 #define LITERAL_POOL_NUM (JUMP32_SIZE + 1)
 #define TRAMPOLINE_SIZE (LITERAL_POOL_OFFSET + 2 * LITERAL_POOL_NUM)
@@ -71,9 +70,12 @@ typedef enum {
 typedef uint32_t insn_t;
 
 typedef struct funchook_entry {
-    uint32_t transit[JUMP64_SIZE];
+    uint32_t transit[TRANSIT_CODE_SIZE];
+    void *original_target_func;
     void *target_func;
     void *hook_func;
+    funchook_hook_t prehook;
+    void *user_data;
     uint32_t trampoline[TRAMPOLINE_SIZE];
     uint32_t old_code[JUMP32_SIZE];
     uint32_t new_code[JUMP32_SIZE];

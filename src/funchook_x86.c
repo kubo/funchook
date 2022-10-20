@@ -65,6 +65,17 @@ static int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const
     return 0;
 }
 
+static int funchook_write_jump_with_prehook(funchook_t *funchook, funchook_entry_t *entry, const uint8_t *dst)
+{
+    static const char template[TRANSIT_CODE_SIZE] = TRANSIT_CODE_TEMPLATE;
+    memcpy(entry->transit, template, sizeof(template));
+    *(void**)(entry->transit + TRANSIT_HOOK_CALLER_ADDR) = (void*)funchook_hook_caller;
+    *(const uint8_t**)(entry->transit + TRANSIT_HOOK_FUNC_ADDR) = dst;
+    funchook_log(funchook, "  Write jump 0x"ADDR_FMT" -> 0x"ADDR_FMT" with hook caller 0x"ADDR_FMT"\n",
+                 (size_t)entry->transit, (size_t)dst, (size_t)funchook_hook_caller);
+    return 0;
+}
+
 #ifdef CPU_X86_64
 
 static int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst)
@@ -331,18 +342,21 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
 {
     insn_t *src_addr;
     uint32_t *offset_addr;
+    void *hook_func = entry->hook_func ? entry->hook_func : entry->trampoline;
 
-#ifdef CPU_X86_64
-    if (funchook_jump32_avail(entry->target_func, entry->hook_func)) {
-        funchook_write_jump32(funchook, entry->target_func, entry->hook_func, entry->new_code);
-        entry->transit[0] = 0;
-    } else {
+    if (entry->prehook) {
         funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
-        funchook_write_jump64(funchook, entry->transit, entry->hook_func);
-    }
-#else
-    funchook_write_jump32(funchook, entry->target_func, entry->hook_func, entry->new_code);
+        funchook_write_jump_with_prehook(funchook, entry, hook_func);
+#ifdef CPU_X86_64
+    } else if (!funchook_jump32_avail(entry->target_func, hook_func)) {
+        funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
+        funchook_write_jump64(funchook, entry->transit, hook_func);
 #endif
+    } else {
+        funchook_write_jump32(funchook, entry->target_func, hook_func, entry->new_code);
+        entry->transit[0] = 0;
+    }
+
     /* fix rip-relative offsets */
     src_addr = entry->trampoline + disp->disp[0].src_addr_offset;
     offset_addr = (uint32_t*)(entry->trampoline + disp->disp[0].pos_offset);

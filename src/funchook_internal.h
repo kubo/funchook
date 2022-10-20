@@ -80,6 +80,8 @@
 #define CPU_X86
 #endif
 
+#include "template.inc"
+
 #if defined(CPU_ARM64)
 #include "funchook_arm64.h"
 #endif
@@ -125,8 +127,9 @@ extern const size_t funchook_size;
 extern char funchook_debug_file[];
 void funchook_log(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
+void funchook_hook_caller(size_t transit_addr);
 
-/* Functions in funchook_linux.c & funchook_windows.c */
+/* Functions in funchook_unix.c & funchook_windows.c */
 extern const size_t page_size;
 extern const size_t allocation_unit; /* windows only */
 

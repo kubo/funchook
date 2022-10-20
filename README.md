@@ -21,6 +21,10 @@ TODO
 News
 ----
 
+### 2.0.0 (20XX-XX-XX)
+
+* Add `funchook_prepare_with_params()` to support prehook.
+
 ### 1.1.1 (2022-10-02)
 
 * More permissive check for page allocation mmap ([#25][])
@@ -28,7 +32,7 @@ News
 * Disassember engine
   * Upgrade capstone to 4.0.2
   * Upgrade distorm to 3.5.2
-* CMakefile
+* CMake
   * Allow user to specify FUNCHOOK_CPU explicitly ([#19][])
   * Avoid polluting global include and link dirs ([#20][])
   * Use target based compile options for gcc's -Wall ([#21][])

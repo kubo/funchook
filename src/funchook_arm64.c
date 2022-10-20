@@ -132,6 +132,17 @@ static int funchook_write_jump64(funchook_t *funchook, uint32_t *src, const uint
     return 0;
 }
 
+static int funchook_write_jump_with_prehook(funchook_t *funchook, funchook_entry_t *entry, const uint8_t *dst)
+{
+    static const uint32_t template[TRANSIT_CODE_SIZE] = TRANSIT_CODE_TEMPLATE;
+    memcpy(entry->transit, template, sizeof(template));
+    *(void**)(entry->transit + TRANSIT_HOOK_CALLER_ADDR) = (void*)funchook_hook_caller;
+    *(const uint8_t**)(entry->transit + TRANSIT_HOOK_FUNC_ADDR) = dst;
+    funchook_log(funchook, "  Write jump 0x"ADDR_FMT" -> 0x"ADDR_FMT" with hook caller 0x"ADDR_FMT"\n",
+                 (size_t)entry->transit, (size_t)dst, (size_t)funchook_hook_caller);
+    return 0;
+}
+
 static size_t target_addr(size_t addr, uint32_t ins, uint8_t insn_id)
 {
     switch (insn_id) {
@@ -360,9 +371,15 @@ cleanup:
 
 int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp)
 {
+    void *hook_func = entry->hook_func ? entry->hook_func : entry->trampoline;
+
     /* func -> transit */
     funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
     /* transit -> hook_func */
-    funchook_write_jump64(funchook, entry->transit, entry->hook_func, FUNCHOOK_ARM64_REG_X9);
+    if (entry->prehook) {
+        funchook_write_jump_with_prehook(funchook, entry, hook_func);
+    } else {
+        funchook_write_jump64(funchook, entry->transit, hook_func, FUNCHOOK_ARM64_REG_X9);
+    }
     return 0;
 }

@@ -1,9 +1,7 @@
 # GIT_SHALLOW requires cmake 3.6.
 cmake_minimum_required(VERSION 3.6)
 
-project(funchook LANGUAGES C ASM)
-set(PROJECT_VERSION 1.1.1)
-set(PROJECT_VERSION_MAJOR 1)
+project(funchook VERSION 2.0.0 LANGUAGES C ASM)
 
 include("GNUInstallDirs")
 

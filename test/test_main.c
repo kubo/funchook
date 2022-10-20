@@ -30,18 +30,12 @@
 #include <dlfcn.h>
 #endif
 #include <funchook.h>
+#include "test.h"
 
 #ifdef WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
-#endif
-
-#ifdef __GNUC__
-#define NOINLINE __attribute__((noinline))
-#endif
-#ifdef _MSC_VER
-#define NOINLINE __declspec(noinline)
 #endif
 
 #if defined(__APPLE__) && defined(__clang_major__) && __clang_major__ >= 11
@@ -99,8 +93,8 @@ NOINLINE int reset_register()
 
 int int_val = 0xbaceba11;
 
-static int test_cnt;
-static int error_cnt;
+int test_cnt;
+int error_cnt;
 static int hook_is_called;
 static int_func_t orig_func;
 static uint64_func_t uint64_orig_func;
@@ -623,6 +617,7 @@ int main()
 
     test_hook_open_and_fopen();
     test_hook_many_funcs();
+    test_prehook();
 
     if (error_cnt == 0) {
         printf("all %d tests are passed.\n", test_cnt);
