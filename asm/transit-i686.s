@@ -11,7 +11,10 @@ transit:
 	call get_eip
 	lea  transit - . (%eax),%eax
 	// for alignment
-	sub  $0xc, %esp
+	sub  $0x8, %esp
+	// 2nd arg: stack pointer at the beginning of transit
+	lea 0x4(%ebp), %ecx
+	push %ecx
 	// 1st arg: the start address of transit
 	push %eax
 	// call funchook_hook_caller

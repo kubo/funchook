@@ -46,6 +46,7 @@ typedef struct funchook_entry {
     void *hook_func;
     funchook_hook_t prehook;
     void *user_data;
+    char *arg_types;
     uint8_t trampoline[TRAMPOLINE_SIZE];
     uint8_t old_code[JUMP32_SIZE];
     uint8_t new_code[JUMP32_SIZE];

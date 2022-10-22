@@ -1,21 +1,103 @@
-#ifdef WIN32
-#define DLLEXPORT __declspec(dllexport)
-#else
-#define DLLEXPORT
-#endif
+#include <string.h>
+#include "libfunchook_test.h"
 
 static int val_in_dll;
 
-DLLEXPORT void set_val_in_dll(int val)
+void set_val_in_dll(int val)
 {
     val_in_dll = val;
 }
 
-DLLEXPORT int get_val_in_dll()
+int get_val_in_dll()
 {
     return val_in_dll;
 }
 
-#define S(suffix) DLLEXPORT int dllfunc_##suffix(int a, int b) { return a * b + suffix; }
+long long_args_in_target[10];
+
+long long_args(long arg1, long arg2, long arg3, long arg4, long arg5, long arg6, long arg7, long arg8, long arg9, long arg10)
+{
+    long_args_in_target[0] = arg1;
+    long_args_in_target[1] = arg2;
+    long_args_in_target[2] = arg3;
+    long_args_in_target[3] = arg4;
+    long_args_in_target[4] = arg5;
+    long_args_in_target[5] = arg6;
+    long_args_in_target[6] = arg7;
+    long_args_in_target[7] = arg8;
+    long_args_in_target[8] = arg9;
+    long_args_in_target[9] = arg10;
+    return arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7 + arg8 + arg9 + arg10;
+}
+
+double double_args_in_target[10];
+
+double double_args(double arg1, double arg2, double arg3, double arg4, double arg5, double arg6, double arg7, double arg8, double arg9, double arg10)
+{
+    double_args_in_target[0] = arg1;
+    double_args_in_target[1] = arg2;
+    double_args_in_target[2] = arg3;
+    double_args_in_target[3] = arg4;
+    double_args_in_target[4] = arg5;
+    double_args_in_target[5] = arg6;
+    double_args_in_target[6] = arg7;
+    double_args_in_target[7] = arg8;
+    double_args_in_target[8] = arg9;
+    double_args_in_target[9] = arg10;
+    return arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7 + arg8 + arg9 + arg10;
+}
+
+mixed_args_t mixed_args_in_target[2];
+
+mixed_args_t mixed_args(
+    uint8_t u8_1, double dbl1_1, uint16_t u16_1, float flt1_1, uint32_t u32_1, double dbl2_1,
+    long lng_1, float flt2_1, uint64_t u64_1, double dbl3_1, uintptr_t uptr_1, float flt3_1,
+    uint8_t u8_2, double dbl1_2, uint16_t u16_2, float flt1_2, uint32_t u32_2, double dbl2_2,
+    long lng_2, float flt2_2, uint64_t u64_2, double dbl3_2, uintptr_t uptr_2, float flt3_2)
+{
+    mixed_args_t retval = {0,};
+    memset(mixed_args_in_target, MIXED_ARGS_PADDING_BYTE, sizeof(mixed_args_in_target));
+    memset(&retval, MIXED_ARGS_PADDING_BYTE, sizeof(retval));
+    mixed_args_in_target[0].u8 = u8_1;
+    mixed_args_in_target[0].dbl1 = dbl1_1;
+    mixed_args_in_target[0].u16 = u16_1;
+    mixed_args_in_target[0].flt1 = flt1_1;
+    mixed_args_in_target[0].u32 = u32_1;
+    mixed_args_in_target[0].dbl2 = dbl2_1;
+    mixed_args_in_target[0].lng = lng_1;
+    mixed_args_in_target[0].flt2 = flt2_1;
+    mixed_args_in_target[0].u64 = u64_1;
+    mixed_args_in_target[0].dbl3 = dbl3_1;
+    mixed_args_in_target[0].uptr = uptr_1;
+    mixed_args_in_target[0].flt3 = flt3_1;
+    mixed_args_in_target[1].u8 = u8_2;
+    mixed_args_in_target[1].dbl1 = dbl1_2;
+    mixed_args_in_target[1].u16 = u16_2;
+    mixed_args_in_target[1].flt1 = flt1_2;
+    mixed_args_in_target[1].u32 = u32_2;
+    mixed_args_in_target[1].dbl2 = dbl2_2;
+    mixed_args_in_target[1].lng = lng_2;
+    mixed_args_in_target[1].flt2 = flt2_2;
+    mixed_args_in_target[1].u64 = u64_2;
+    mixed_args_in_target[1].dbl3 = dbl3_2;
+    mixed_args_in_target[1].uptr = uptr_2;
+    mixed_args_in_target[1].flt3 = flt3_2;
+    retval.u8 = u8_1 + u8_2;
+    retval.dbl1 = dbl1_1 + dbl1_2;
+    retval.u16 = u16_1 + u16_2;
+    retval.flt1 = flt1_1 + flt1_2;
+    retval.u32 = u32_1 + u32_2;
+    retval.dbl2 = dbl2_1 + dbl2_2;
+    retval.lng = lng_1 + lng_2;
+    retval.flt2 = flt2_1 + flt2_2;
+    retval.u64 = u64_1 + u64_2;
+    retval.dbl3 = dbl3_1 + dbl3_2;
+    retval.uptr = uptr_1 + uptr_2;
+    retval.flt3 = flt3_1 + flt3_2;
+    return retval;
+}
+
+#undef S
+#define S(suffix) int dllfunc_##suffix(int a, int b) { return a * b + suffix; }
 #include "suffix.list"
 #undef S

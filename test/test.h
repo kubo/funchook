@@ -8,6 +8,12 @@
 #define NOINLINE __declspec(noinline)
 #endif
 
+#if defined(WIN32)
+#define DLLIMPORT __declspec(dllimport)
+#else
+#define DLLIMPORT
+#endif
+
 extern int test_cnt;
 extern int error_cnt;
 

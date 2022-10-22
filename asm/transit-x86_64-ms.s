@@ -14,6 +14,8 @@ transit:
 	movdqa %xmm3, 0x50(%rsp)
 	// 1st arg: the start address of transit
 	lea    transit(%rip), %rcx
+	// 2nd arg: stack pointer at the beginning of transit
+	lea    0x68(%rsp), %rdx
 	// call funchook_hook_caller
 	call   *hook_caller_addr(%rip)
 	// restore xmm0 - xmm3

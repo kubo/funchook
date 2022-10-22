@@ -103,6 +103,11 @@
  */
 #define ALLOCATION_UNIT 0x10000 /* 64k */
 
+struct funchook_arg_handle {
+    const size_t *stack_pointer;
+    const char *arg_types;
+};
+
 typedef struct {
     void *addr;
     size_t size;
@@ -127,7 +132,7 @@ extern const size_t funchook_size;
 extern char funchook_debug_file[];
 void funchook_log(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
-void funchook_hook_caller(size_t transit_addr);
+void funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer);
 
 /* Functions in funchook_unix.c & funchook_windows.c */
 extern const size_t page_size;
@@ -149,6 +154,7 @@ void *funchook_resolve_func(funchook_t *funchook, void *func);
 /* Functions in funchook_{CPU_NAME}.c */
 int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, const insn_t *func, insn_t *trampoline, size_t *trampoline_size);
 int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp);
+int funchook_get_arg_offset(const char *arg_types, int pos);
 #ifdef CPU_X86_64
 int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, uint8_t *addr, ip_displacement_t *disp);
 #else

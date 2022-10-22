@@ -15,6 +15,8 @@ transit:
 	stp q7, q6, [sp, #-32]!
 	// 1st arg: the start address of transit
 	adr x0, transit
+	// 2nd arg: stack pointer at the beginning of transit
+	sub x1, x29, 16
 	// call funchook_hook_caller
 	ldr x9, hook_caller_addr
 	blr x9

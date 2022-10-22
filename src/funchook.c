@@ -115,8 +115,9 @@ int funchook_prepare_with_params(funchook_t *funchook,
     int rv;
     void *orig_func;
 
-    funchook_log(funchook, "Enter funchook_prepare_with_params(%p, %p, {%p, %p, %p})\n",
-                 funchook, target_func, params->hook_func, params->prehook, params->user_data);
+    funchook_log(funchook, "Enter funchook_prepare_with_params(%p, %p, {%p, %p, %p, %s})\n",
+                 funchook, target_func, params->hook_func, params->prehook, params->user_data,
+                 params->arg_types ? params->arg_types : "(null)");
     orig_func = *target_func;
     rv = funchook_prepare_internal(funchook, target_func, params);
     funchook_log_end(funchook, "Leave funchook_prepare_with_prehook(..., [%p->%p],...) => %d\n", orig_func, *target_func, rv);
@@ -169,6 +170,44 @@ int funchook_set_debug_file(const char *name)
     return 0;
 }
 
+int funchook_get_arg(const funchook_arg_handle_t *handle, int pos, void *out)
+{
+    if (handle == NULL || pos <= 0) {
+        return -1;
+    }
+    int offset = funchook_get_arg_offset(handle->arg_types, pos);
+    if (offset == INT_MIN) {
+        return -1;
+    }
+    const size_t *addr = handle->stack_pointer + offset;
+    switch (handle->arg_types[pos]) {
+    case 'b':
+        *(int8_t*)out = *(int8_t*)addr;
+        break;
+    case 'h':
+        *(int16_t*)out = *(int16_t*)addr;
+        break;
+    case 'i':
+    case 'f':
+        *(int32_t*)out = *(int32_t*)addr;
+        break;
+    case 'l':
+        *(long*)out = *(long*)addr;
+        break;
+    case 'L':
+    case 'd':
+        *(int64_t*)out = *(int64_t*)addr;
+        break;
+    case 'p':
+    case 'S':
+        *(size_t*)out = *(size_t*)addr;
+        break;
+    default:
+        return -1;
+    }
+    return 0;
+}
+
 void funchook_log(funchook_t *funchook, const char *fmt, ...)
 {
     va_list ap;
@@ -189,15 +228,20 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...)
     va_end(ap);
 }
 
-void funchook_hook_caller(size_t transit_addr)
+void funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer)
 {
     funchook_entry_t *entry = (funchook_entry_t *)(transit_addr - offsetof(funchook_entry_t, transit));
+    funchook_arg_handle_t arg_handle = {
+        .stack_pointer = stack_pointer,
+        .arg_types = entry->arg_types,
+    };
     funchook_info_t info = {
         .original_target_func = entry->original_target_func,
         .target_func = entry->target_func,
         .trampoline_func = entry->trampoline,
         .hook_func = entry->hook_func,
         .user_data = entry->user_data,
+        .arg_handle = entry->arg_types ? &arg_handle : NULL,
     };
     entry->prehook(&info);
 }
@@ -305,6 +349,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func,
     entry->hook_func = params->hook_func;
     entry->prehook = params->prehook;
     entry->user_data = params->user_data;
+    entry->arg_types = params->arg_types ? strdup(params->arg_types) : NULL;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
     memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
 
@@ -435,6 +480,10 @@ static int funchook_destroy_internal(funchook_t *funchook)
         return FUNCHOOK_ERROR_ALREADY_INSTALLED;
     }
     for (page = funchook->page_list; page != NULL; page = page_next) {
+       uint16_t i;
+       for (i = 0; i < page->used; i++) {
+           free(page->entries[i].arg_types);
+       }
         page_next = page->next;
         funchook_page_free(funchook, page);
     }

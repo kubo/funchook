@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 #include "funchook_internal.h"
 #include "disasm.h"
 
@@ -382,4 +383,59 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
         funchook_write_jump64(funchook, entry->transit, hook_func, FUNCHOOK_ARM64_REG_X9);
     }
     return 0;
+}
+
+int funchook_get_arg_offset(const char *arg_types, int pos)
+{
+    const int max_num_int = 8;
+    const int max_num_flt = 8;
+    int num_int = 0;
+    int num_flt = 0;
+    int num_stack = 0;
+    enum {
+        ARG_INTEGER,
+        ARG_FLOATING_POINT,
+        ARG_STACK,
+    } arg_type = ARG_INTEGER;
+    for (int i = 1; i <= pos; i++) {
+        switch (arg_types[i]) {
+        case 'b':
+        case 'h':
+        case 'i':
+        case 'l':
+        case 'L':
+        case 'p':
+        case 'S':
+            if (num_int < max_num_int) {
+                num_int++;
+                arg_type = ARG_INTEGER;
+            } else {
+                arg_type = ARG_STACK;
+                num_stack++;
+            }
+            break;
+        case 'd':
+        case 'f':
+            if (num_flt < max_num_flt) {
+                num_flt++;
+                arg_type = ARG_FLOATING_POINT;
+            } else {
+                arg_type = ARG_STACK;
+                num_stack++;
+            }
+            break;
+        default:
+            return -1;
+        }
+    }
+    switch (arg_type) {
+    case ARG_INTEGER:
+        return - num_int + 2;
+    case ARG_FLOATING_POINT:
+        return - 8 - 2 * num_flt;
+    case ARG_STACK:
+        return 3 + num_stack;
+    }
+    /* never reach here */
+    return INT_MIN;
 }

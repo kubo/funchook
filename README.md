@@ -24,6 +24,7 @@ News
 ### 2.0.0 (20XX-XX-XX)
 
 * Add `funchook_prepare_with_params()` to support prehook.
+* Add `funchook_get_arg()` to get arguments in prehook.
 
 ### 1.1.1 (2022-10-02)
 

@@ -31,6 +31,7 @@ else ()
 endif ()
 
 add_library(funchook_test SHARED libfunchook_test.c libfunchook_test_${FUNCHOOK_CPU}${FUNCHOOK_ASM_SUFFIX})
+target_compile_definitions(funchook_test PRIVATE FUNCHOOK_TEST_EXPORTS)
 if (MSVC)
   set_target_properties(funchook_test PROPERTIES OUTPUT_NAME funchook_test_dll)
   if (CMAKE_SIZEOF_VOID_P MATCHES "4")

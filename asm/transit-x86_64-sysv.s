@@ -26,6 +26,8 @@ transit:
 	movdqa %xmm7, -0xc0(%rbp)
 	// 1st arg: the start address of transit
 	lea    transit(%rip), %rdi
+	// 2nd arg: stack pointer at the beginning of transit
+	lea    0x8(%rbp), %rsi
 	// call funchook_hook_caller
 	call   *hook_caller_addr(%rip)
 	// restore saved registers

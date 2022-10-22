@@ -31,6 +31,7 @@
 #endif
 #include <funchook.h>
 #include "test.h"
+#include "libfunchook_test.h"
 
 #ifdef WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -46,7 +47,6 @@ typedef int (*int_func_t)(void);
 typedef uint64_t (*uint64_func_t)(uint64_t);
 
 DLLEXPORT int get_val_in_exe(void);
-extern int get_val_in_dll(void);
 extern int call_get_val_in_dll(void);
 extern int jump_get_val_in_dll(void);
 extern uint64_t arm64_test_adr(uint64_t);
@@ -79,8 +79,6 @@ extern int x86_test_call_and_pop_edi(void);
 extern int x86_test_call_and_pop_ebp(void);
 extern int x86_test_error_jump1(void);
 extern int x86_test_error_jump2(void);
-
-extern void set_val_in_dll(int val);
 
 /* Reset the register for return values.
  *  %eax for x86.
@@ -471,7 +469,6 @@ static void test_hook_open_and_fopen(void)
 }
 
 #define S(suffix) \
-    extern int dllfunc_##suffix(int, int); \
     static int (*dllfunc_##suffix##_func)(int, int); \
     static int dllfunc_##suffix##_hook(int a, int b) { \
         return dllfunc_##suffix##_func(a, b) * 2; \

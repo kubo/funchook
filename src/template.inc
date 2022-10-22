@@ -16,18 +16,18 @@
   /*   24: */ 0x66,0x0f,0x7f,0x54,0x24,0x40,      /* movdqa %xmm2,0x40(%rsp) */ \
   /*   2a: */ 0x66,0x0f,0x7f,0x5c,0x24,0x50,      /* movdqa %xmm3,0x50(%rsp) */ \
   /*   30: */ 0x48,0x8d,0x0d,0xc9,0xff,0xff,0xff, /* lea    -0x37(%rip),%rcx        # 0 <transit> */ \
-  /*   37: */ 0xff,0x15,0x3b,0x00,0x00,0x00,      /* callq  *0x3b(%rip)        # 78 <hook_caller_addr> */ \
-  /*   3d: */ 0x66,0x0f,0x6f,0x44,0x24,0x20,      /* movdqa 0x20(%rsp),%xmm0 */ \
-  /*   43: */ 0x66,0x0f,0x6f,0x4c,0x24,0x30,      /* movdqa 0x30(%rsp),%xmm1 */ \
-  /*   49: */ 0x66,0x0f,0x6f,0x54,0x24,0x40,      /* movdqa 0x40(%rsp),%xmm2 */ \
-  /*   4f: */ 0x66,0x0f,0x6f,0x5c,0x24,0x50,      /* movdqa 0x50(%rsp),%xmm3 */ \
-  /*   55: */ 0x48,0x83,0xc4,0x68,                /* add    $0x68,%rsp */ \
-  /*   59: */ 0x48,0x8b,0x4c,0x24,0x08,           /* mov    0x8(%rsp),%rcx */ \
-  /*   5e: */ 0x48,0x8b,0x54,0x24,0x10,           /* mov    0x10(%rsp),%rdx */ \
-  /*   63: */ 0x4c,0x8b,0x44,0x24,0x18,           /* mov    0x18(%rsp),%r8 */ \
-  /*   68: */ 0x4c,0x8b,0x4c,0x24,0x20,           /* mov    0x20(%rsp),%r9 */ \
-  /*   6d: */ 0xff,0x25,0x0d,0x00,0x00,0x00,      /* jmpq   *0xd(%rip)        # 80 <hook_func_addr> */ \
-  /*   73: */ 0x0f,0x1f,0x44,0x00,0x00,           /* nopl   0x0(%rax,%rax,1) */ \
+  /*   37: */ 0x48,0x8d,0x54,0x24,0x68,           /* lea    0x68(%rsp),%rdx */ \
+  /*   3c: */ 0xff,0x15,0x36,0x00,0x00,0x00,      /* callq  *0x36(%rip)        # 78 <hook_caller_addr> */ \
+  /*   42: */ 0x66,0x0f,0x6f,0x44,0x24,0x20,      /* movdqa 0x20(%rsp),%xmm0 */ \
+  /*   48: */ 0x66,0x0f,0x6f,0x4c,0x24,0x30,      /* movdqa 0x30(%rsp),%xmm1 */ \
+  /*   4e: */ 0x66,0x0f,0x6f,0x54,0x24,0x40,      /* movdqa 0x40(%rsp),%xmm2 */ \
+  /*   54: */ 0x66,0x0f,0x6f,0x5c,0x24,0x50,      /* movdqa 0x50(%rsp),%xmm3 */ \
+  /*   5a: */ 0x48,0x83,0xc4,0x68,                /* add    $0x68,%rsp */ \
+  /*   5e: */ 0x48,0x8b,0x4c,0x24,0x08,           /* mov    0x8(%rsp),%rcx */ \
+  /*   63: */ 0x48,0x8b,0x54,0x24,0x10,           /* mov    0x10(%rsp),%rdx */ \
+  /*   68: */ 0x4c,0x8b,0x44,0x24,0x18,           /* mov    0x18(%rsp),%r8 */ \
+  /*   6d: */ 0x4c,0x8b,0x4c,0x24,0x20,           /* mov    0x20(%rsp),%r9 */ \
+  /*   72: */ 0xff,0x25,0x08,0x00,0x00,0x00,      /* jmpq   *0x8(%rip)        # 80 <hook_func_addr> */ \
   /* 0000000000000078 <hook_caller_addr>: */ \
   /*   78: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
   /*   7c: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
@@ -68,40 +68,41 @@
   /*   57: */ 0x66,0x0f,0x7f,0xbd,0x40,0xff,0xff, /* movdqa %xmm7,-0xc0(%rbp) */ \
   /*   5e: */ 0xff,                               /*  */ \
   /*   5f: */ 0x48,0x8d,0x3d,0x9a,0xff,0xff,0xff, /* lea    -0x66(%rip),%rdi        # 0 <transit> */ \
-  /*   66: */ 0xff,0x15,0x5c,0x00,0x00,0x00,      /* callq  *0x5c(%rip)        # c8 <hook_caller_addr> */ \
-  /*   6c: */ 0x48,0x8b,0x7d,0xf8,                /* mov    -0x8(%rbp),%rdi */ \
-  /*   70: */ 0x48,0x8b,0x75,0xf0,                /* mov    -0x10(%rbp),%rsi */ \
-  /*   74: */ 0x48,0x8b,0x55,0xe8,                /* mov    -0x18(%rbp),%rdx */ \
-  /*   78: */ 0x48,0x8b,0x4d,0xe0,                /* mov    -0x20(%rbp),%rcx */ \
-  /*   7c: */ 0x4c,0x8b,0x45,0xd8,                /* mov    -0x28(%rbp),%r8 */ \
-  /*   80: */ 0x4c,0x8b,0x4d,0xd0,                /* mov    -0x30(%rbp),%r9 */ \
-  /*   84: */ 0x48,0x8b,0x45,0xc8,                /* mov    -0x38(%rbp),%rax */ \
-  /*   88: */ 0x4c,0x8b,0x55,0xc0,                /* mov    -0x40(%rbp),%r10 */ \
-  /*   8c: */ 0x66,0x0f,0x6f,0x45,0xb0,           /* movdqa -0x50(%rbp),%xmm0 */ \
-  /*   91: */ 0x66,0x0f,0x6f,0x4d,0xa0,           /* movdqa -0x60(%rbp),%xmm1 */ \
-  /*   96: */ 0x66,0x0f,0x6f,0x55,0x90,           /* movdqa -0x70(%rbp),%xmm2 */ \
-  /*   9b: */ 0x66,0x0f,0x6f,0x5d,0x80,           /* movdqa -0x80(%rbp),%xmm3 */ \
-  /*   a0: */ 0x66,0x0f,0x6f,0xa5,0x70,0xff,0xff, /* movdqa -0x90(%rbp),%xmm4 */ \
-  /*   a7: */ 0xff,                               /*  */ \
-  /*   a8: */ 0x66,0x0f,0x6f,0xad,0x60,0xff,0xff, /* movdqa -0xa0(%rbp),%xmm5 */ \
-  /*   af: */ 0xff,                               /*  */ \
-  /*   b0: */ 0x66,0x0f,0x6f,0xb5,0x50,0xff,0xff, /* movdqa -0xb0(%rbp),%xmm6 */ \
-  /*   b7: */ 0xff,                               /*  */ \
-  /*   b8: */ 0x66,0x0f,0x6f,0xbd,0x40,0xff,0xff, /* movdqa -0xc0(%rbp),%xmm7 */ \
-  /*   bf: */ 0xff,                               /*  */ \
-  /*   c0: */ 0xc9,                               /* leaveq  */ \
-  /*   c1: */ 0xff,0x25,0x09,0x00,0x00,0x00,      /* jmpq   *0x9(%rip)        # d0 <hook_func_addr> */ \
-  /*   c7: */ 0x90,                               /* nop */ \
-  /* 00000000000000c8 <hook_caller_addr>: */ \
-  /*   c8: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
-  /*   cc: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
-  /* 00000000000000d0 <hook_func_addr>: */ \
+  /*   66: */ 0x48,0x8d,0x75,0x08,                /* lea    0x8(%rbp),%rsi */ \
+  /*   6a: */ 0xff,0x15,0x60,0x00,0x00,0x00,      /* callq  *0x60(%rip)        # d0 <hook_caller_addr> */ \
+  /*   70: */ 0x48,0x8b,0x7d,0xf8,                /* mov    -0x8(%rbp),%rdi */ \
+  /*   74: */ 0x48,0x8b,0x75,0xf0,                /* mov    -0x10(%rbp),%rsi */ \
+  /*   78: */ 0x48,0x8b,0x55,0xe8,                /* mov    -0x18(%rbp),%rdx */ \
+  /*   7c: */ 0x48,0x8b,0x4d,0xe0,                /* mov    -0x20(%rbp),%rcx */ \
+  /*   80: */ 0x4c,0x8b,0x45,0xd8,                /* mov    -0x28(%rbp),%r8 */ \
+  /*   84: */ 0x4c,0x8b,0x4d,0xd0,                /* mov    -0x30(%rbp),%r9 */ \
+  /*   88: */ 0x48,0x8b,0x45,0xc8,                /* mov    -0x38(%rbp),%rax */ \
+  /*   8c: */ 0x4c,0x8b,0x55,0xc0,                /* mov    -0x40(%rbp),%r10 */ \
+  /*   90: */ 0x66,0x0f,0x6f,0x45,0xb0,           /* movdqa -0x50(%rbp),%xmm0 */ \
+  /*   95: */ 0x66,0x0f,0x6f,0x4d,0xa0,           /* movdqa -0x60(%rbp),%xmm1 */ \
+  /*   9a: */ 0x66,0x0f,0x6f,0x55,0x90,           /* movdqa -0x70(%rbp),%xmm2 */ \
+  /*   9f: */ 0x66,0x0f,0x6f,0x5d,0x80,           /* movdqa -0x80(%rbp),%xmm3 */ \
+  /*   a4: */ 0x66,0x0f,0x6f,0xa5,0x70,0xff,0xff, /* movdqa -0x90(%rbp),%xmm4 */ \
+  /*   ab: */ 0xff,                               /*  */ \
+  /*   ac: */ 0x66,0x0f,0x6f,0xad,0x60,0xff,0xff, /* movdqa -0xa0(%rbp),%xmm5 */ \
+  /*   b3: */ 0xff,                               /*  */ \
+  /*   b4: */ 0x66,0x0f,0x6f,0xb5,0x50,0xff,0xff, /* movdqa -0xb0(%rbp),%xmm6 */ \
+  /*   bb: */ 0xff,                               /*  */ \
+  /*   bc: */ 0x66,0x0f,0x6f,0xbd,0x40,0xff,0xff, /* movdqa -0xc0(%rbp),%xmm7 */ \
+  /*   c3: */ 0xff,                               /*  */ \
+  /*   c4: */ 0xc9,                               /* leaveq  */ \
+  /*   c5: */ 0xff,0x25,0x0d,0x00,0x00,0x00,      /* jmpq   *0xd(%rip)        # d8 <hook_func_addr> */ \
+  /*   cb: */ 0x0f,0x1f,0x44,0x00,0x00,           /* nopl   0x0(%rax,%rax,1) */ \
+  /* 00000000000000d0 <hook_caller_addr>: */ \
   /*   d0: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
   /*   d4: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
+  /* 00000000000000d8 <hook_func_addr>: */ \
+  /*   d8: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
+  /*   dc: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%rax) */ \
   }
-#define TRANSIT_HOOK_CALLER_ADDR 0xc8
-#define TRANSIT_HOOK_FUNC_ADDR 0xd0
-#define TRANSIT_CODE_SIZE 0xd8
+#define TRANSIT_HOOK_CALLER_ADDR 0xd0
+#define TRANSIT_HOOK_FUNC_ADDR 0xd8
+#define TRANSIT_CODE_SIZE 0xe0
 
 #elif defined(CPU_X86)
 
@@ -112,30 +113,32 @@
   /*    1: */ 0x89,0xe5,                          /* mov    %esp,%ebp */ \
   /*    3: */ 0x51,                               /* push   %ecx */ \
   /*    4: */ 0x52,                               /* push   %edx */ \
-  /*    5: */ 0xe8,0x1e,0x00,0x00,0x00,           /* call   28 <get_eip> */ \
+  /*    5: */ 0xe8,0x22,0x00,0x00,0x00,           /* call   2c <get_eip> */ \
   /*    a: */ 0x8d,0x40,0xf6,                     /* lea    -0xa(%eax),%eax */ \
-  /*    d: */ 0x83,0xec,0x0c,                     /* sub    $0xc,%esp */ \
-  /*   10: */ 0x50,                               /* push   %eax */ \
-  /*   11: */ 0x8d,0x80,0x2c,0x00,0x00,0x00,      /* lea    0x2c(%eax),%eax */ \
-  /*   17: */ 0xff,0x10,                          /* call   *(%eax) */ \
-  /*   19: */ 0x58,                               /* pop    %eax */ \
-  /*   1a: */ 0x83,0xc4,0x0c,                     /* add    $0xc,%esp */ \
-  /*   1d: */ 0x5a,                               /* pop    %edx */ \
-  /*   1e: */ 0x59,                               /* pop    %ecx */ \
-  /*   1f: */ 0xc9,                               /* leave   */ \
-  /*   20: */ 0x8d,0x80,0x30,0x00,0x00,0x00,      /* lea    0x30(%eax),%eax */ \
-  /*   26: */ 0xff,0x20,                          /* jmp    *(%eax) */ \
-  /* 00000028 <get_eip>: */ \
-  /*   28: */ 0x8b,0x04,0x24,                     /* mov    (%esp),%eax */ \
-  /*   2b: */ 0xc3,                               /* ret     */ \
-  /* 0000002c <hook_caller_addr>: */ \
-  /*   2c: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%eax) */ \
-  /* 00000030 <hook_func_addr>: */ \
+  /*    d: */ 0x83,0xec,0x08,                     /* sub    $0x8,%esp */ \
+  /*   10: */ 0x8d,0x4d,0x04,                     /* lea    0x4(%ebp),%ecx */ \
+  /*   13: */ 0x51,                               /* push   %ecx */ \
+  /*   14: */ 0x50,                               /* push   %eax */ \
+  /*   15: */ 0x8d,0x80,0x30,0x00,0x00,0x00,      /* lea    0x30(%eax),%eax */ \
+  /*   1b: */ 0xff,0x10,                          /* call   *(%eax) */ \
+  /*   1d: */ 0x58,                               /* pop    %eax */ \
+  /*   1e: */ 0x83,0xc4,0x0c,                     /* add    $0xc,%esp */ \
+  /*   21: */ 0x5a,                               /* pop    %edx */ \
+  /*   22: */ 0x59,                               /* pop    %ecx */ \
+  /*   23: */ 0xc9,                               /* leave   */ \
+  /*   24: */ 0x8d,0x80,0x34,0x00,0x00,0x00,      /* lea    0x34(%eax),%eax */ \
+  /*   2a: */ 0xff,0x20,                          /* jmp    *(%eax) */ \
+  /* 0000002c <get_eip>: */ \
+  /*   2c: */ 0x8b,0x04,0x24,                     /* mov    (%esp),%eax */ \
+  /*   2f: */ 0xc3,                               /* ret     */ \
+  /* 00000030 <hook_caller_addr>: */ \
   /*   30: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%eax) */ \
+  /* 00000034 <hook_func_addr>: */ \
+  /*   34: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%eax) */ \
   }
-#define TRANSIT_HOOK_CALLER_ADDR 0x2c
-#define TRANSIT_HOOK_FUNC_ADDR 0x30
-#define TRANSIT_CODE_SIZE 0x34
+#define TRANSIT_HOOK_CALLER_ADDR 0x30
+#define TRANSIT_HOOK_FUNC_ADDR 0x34
+#define TRANSIT_CODE_SIZE 0x38
 
 #elif defined(CPU_ARM64)
 
@@ -154,29 +157,31 @@
   /*   24: */ 0xadbf13e5,                         /* stp q5, q4, [sp, #-32]! */ \
   /*   28: */ 0xadbf1be7,                         /* stp q7, q6, [sp, #-32]! */ \
   /*   2c: */ 0x10fffea0,                         /* adr x0, 0 <transit> */ \
-  /*   30: */ 0x580001c9,                         /* ldr x9, 68 <hook_caller_addr> */ \
-  /*   34: */ 0xd63f0120,                         /* blr x9 */ \
-  /*   38: */ 0xacc11be7,                         /* ldp q7, q6, [sp], #32 */ \
-  /*   3c: */ 0xacc113e5,                         /* ldp q5, q4, [sp], #32 */ \
-  /*   40: */ 0xacc10be3,                         /* ldp q3, q2, [sp], #32 */ \
-  /*   44: */ 0xacc103e1,                         /* ldp q1, q0, [sp], #32 */ \
-  /*   48: */ 0xa8c14be8,                         /* ldp x8, x18, [sp], #16 */ \
-  /*   4c: */ 0xa8c11be7,                         /* ldp x7, x6, [sp], #16 */ \
-  /*   50: */ 0xa8c113e5,                         /* ldp x5, x4, [sp], #16 */ \
-  /*   54: */ 0xa8c10be3,                         /* ldp x3, x2, [sp], #16 */ \
-  /*   58: */ 0xa8c103e1,                         /* ldp x1, x0, [sp], #16 */ \
-  /*   5c: */ 0xa8c17bfd,                         /* ldp x29, x30, [sp], #16 */ \
-  /*   60: */ 0x58000089,                         /* ldr x9, 70 <hook_func_addr> */ \
-  /*   64: */ 0xd61f0120,                         /* br x9 */ \
-  /* 0000000000000068 <hook_caller_addr>: */ \
-  /*   68: */ 0xd503201f,                         /* nop */ \
+  /*   30: */ 0xd10043a1,                         /* sub x1, x29, #0x10 */ \
+  /*   34: */ 0x580001e9,                         /* ldr x9, 70 <hook_caller_addr> */ \
+  /*   38: */ 0xd63f0120,                         /* blr x9 */ \
+  /*   3c: */ 0xacc11be7,                         /* ldp q7, q6, [sp], #32 */ \
+  /*   40: */ 0xacc113e5,                         /* ldp q5, q4, [sp], #32 */ \
+  /*   44: */ 0xacc10be3,                         /* ldp q3, q2, [sp], #32 */ \
+  /*   48: */ 0xacc103e1,                         /* ldp q1, q0, [sp], #32 */ \
+  /*   4c: */ 0xa8c14be8,                         /* ldp x8, x18, [sp], #16 */ \
+  /*   50: */ 0xa8c11be7,                         /* ldp x7, x6, [sp], #16 */ \
+  /*   54: */ 0xa8c113e5,                         /* ldp x5, x4, [sp], #16 */ \
+  /*   58: */ 0xa8c10be3,                         /* ldp x3, x2, [sp], #16 */ \
+  /*   5c: */ 0xa8c103e1,                         /* ldp x1, x0, [sp], #16 */ \
+  /*   60: */ 0xa8c17bfd,                         /* ldp x29, x30, [sp], #16 */ \
+  /*   64: */ 0x580000a9,                         /* ldr x9, 78 <hook_func_addr> */ \
+  /*   68: */ 0xd61f0120,                         /* br x9 */ \
   /*   6c: */ 0xd503201f,                         /* nop */ \
-  /* 0000000000000070 <hook_func_addr>: */ \
+  /* 0000000000000070 <hook_caller_addr>: */ \
   /*   70: */ 0xd503201f,                         /* nop */ \
   /*   74: */ 0xd503201f,                         /* nop */ \
+  /* 0000000000000078 <hook_func_addr>: */ \
+  /*   78: */ 0xd503201f,                         /* nop */ \
+  /*   7c: */ 0xd503201f,                         /* nop */ \
   }
-#define TRANSIT_HOOK_CALLER_ADDR 0x1a
-#define TRANSIT_HOOK_FUNC_ADDR 0x1c
-#define TRANSIT_CODE_SIZE 0x1e
+#define TRANSIT_HOOK_CALLER_ADDR 0x1c
+#define TRANSIT_HOOK_FUNC_ADDR 0x1e
+#define TRANSIT_CODE_SIZE 0x20
 
 #endif

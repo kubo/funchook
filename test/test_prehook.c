@@ -2,14 +2,12 @@
 #include <string.h>
 #include <funchook.h>
 #include "test.h"
+#include "libfunchook_test.h"
 #ifdef WIN32
 #include <windows.h>
 #else
 #include <dlfcn.h>
 #endif
-
-extern int dllfunc_1(int a, int b);
-extern int dllfunc_2(int a, int b);
 
 static int (*dllfunc_1_func)(int a, int b);
 static int (*dllfunc_2_func)(int a, int b);
@@ -28,12 +26,12 @@ static void prehook(funchook_info_t *info)
     saved_func_info = *info;
 }
 
-void test_prehook(void)
+static void test_dllfunc(void)
 {
     funchook_t *funchook;
     int rv;
-    void *dllfunc_1_user_data = (void*)0xdeadbeef;
-    void *dllfunc_2_user_data = (void*)0xcafebabe;
+    void *dllfunc_1_user_data = (void*)(size_t)0xdeadbeef;
+    void *dllfunc_2_user_data = (void*)(size_t)0xcafebabe;
 #ifdef WIN32
     HANDLE hMod = GetModuleHandleA("funchook_test_dll.dll");
     if (hMod == NULL) {
@@ -48,10 +46,9 @@ void test_prehook(void)
     dlclose(dlhandle);
 #endif
 
-    printf("[%d] test_prehook\n", ++test_cnt);
+    printf("[%d] test_prehook: func_info\n", ++test_cnt);
 
     funchook = funchook_create();
-    funchook_set_debug_file("debug.log");
 
     dllfunc_1_func = dllfunc_1;
     const funchook_params_t params1 = {
@@ -143,4 +140,253 @@ void test_prehook(void)
 
     funchook_uninstall(funchook, 0);
     funchook_destroy(funchook);
+}
+
+static long (*long_args_func)(long arg1, long arg2, long arg3, long arg4, long arg5, long arg6, long arg7, long arg8, long arg9, long arg10);
+long long_args_in_prehook[10];
+static void long_args_prehook(funchook_info_t *info)
+{
+    for (int i = 0; i < 10; i++) {
+      long val;
+      if (funchook_get_arg(info->arg_handle, i + 1, &val) == 0) {
+          long_args_in_prehook[i] = val;
+      }
+    }
+}
+
+static void test_long_args(void)
+{
+    funchook_t *funchook;
+    int rv;
+
+    printf("[%d] test_prehook: long_args\n", ++test_cnt);
+
+    funchook = funchook_create();
+
+    long_args_func = long_args;
+    const funchook_params_t long_args_params = {
+        .prehook = long_args_prehook,
+        .arg_types = "lllllllllll",
+    };
+    rv = funchook_prepare_with_params(funchook, (void**)&long_args_func, &long_args_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook long_args with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    long retval = long_args(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    for (int i = 0; i < 10; i++) {
+        if (long_args_in_prehook[i] != i + 1 || long_args_in_target[i] != i + 1) {
+            printf("ERROR: unexpected arguments in long_args\n"
+                   "          expected [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ]\n"
+                   "   args in prehook [");
+            for (i = 0; i < 10; i++) {
+                printf("%lu, ", long_args_in_prehook[i]);
+            }
+            printf("]\n"
+                   "    args in target [");
+            for (i = 0; i < 10; i++) {
+                printf("%lu, ", long_args_in_target[i]);
+            }
+            printf("]\n");
+            error_cnt++;
+            return;
+        }
+    }
+
+    funchook_uninstall(funchook, 0);
+    funchook_destroy(funchook);
+}
+
+static double (*double_args_func)(double arg1, double arg2, double arg3, double arg4, double arg5, double arg6, double arg7, double arg8, double arg9, double arg10);
+double double_args_in_prehook[10];
+static void double_args_prehook(funchook_info_t *info)
+{
+    for (int i = 0; i < 10; i++) {
+      double val;
+      if (funchook_get_arg(info->arg_handle, i + 1, &val) == 0) {
+          double_args_in_prehook[i] = val;
+      }
+    }
+}
+
+static void test_double_args(void)
+{
+    funchook_t *funchook;
+    int rv;
+
+    printf("[%d] test_prehook: double_args\n", ++test_cnt);
+
+    funchook = funchook_create();
+
+    double_args_func = double_args;
+    const funchook_params_t double_args_params = {
+        .prehook = double_args_prehook,
+        .arg_types = "ddddddddddd",
+    };
+    rv = funchook_prepare_with_params(funchook, (void**)&double_args_func, &double_args_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook double_args with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    double retval = double_args(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    for (int i = 0; i < 10; i++) {
+        if (double_args_in_prehook[i] != i + 1 || double_args_in_target[i] != i + 1) {
+            printf("ERROR: unexpected arguments in double_args\n"
+                   "          expected [%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, ]\n"
+                   "   args in prehook [",
+                   1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0);
+            for (i = 0; i < 10; i++) {
+                printf("%f, ", double_args_in_prehook[i]);
+            }
+            printf("]\n"
+                   "    args in target [");
+            for (i = 0; i < 10; i++) {
+                printf("%f, ", double_args_in_target[i]);
+            }
+            printf("]\n");
+            error_cnt++;
+            return;
+        }
+    }
+
+    funchook_uninstall(funchook, 0);
+    funchook_destroy(funchook);
+}
+
+static mixed_args_t (*mixed_args_func)(
+    uint8_t u8_1, double dbl1_1, uint16_t u16_1, float flt1_1, uint32_t u32_1, double dbl2_1,
+    long lng_1, float flt2_1, uint64_t u64_1, double dbl3_1, uintptr_t uptr_1, float flt3_1,
+    uint8_t u8_2, double dbl1_2, uint16_t u16_2, float flt1_2, uint32_t u32_2, double dbl2_2,
+    long lng_2, float flt2_2, uint64_t u64_2, double dbl3_2, uintptr_t uptr_2, float flt3_2);
+mixed_args_t mixed_args_in_prehook[2];
+static void mixed_args_prehook(funchook_info_t *info)
+{
+    memset(mixed_args_in_prehook, MIXED_ARGS_PADDING_BYTE, sizeof(mixed_args_in_prehook));
+    for (int i = 0; i < 2; i++) {
+        mixed_args_t *arg  = &mixed_args_in_prehook[i];
+        funchook_get_arg(info->arg_handle, 12 * i + 1, &arg->u8);
+        funchook_get_arg(info->arg_handle, 12 * i + 2, &arg->dbl1);
+        funchook_get_arg(info->arg_handle, 12 * i + 3, &arg->u16);
+        funchook_get_arg(info->arg_handle, 12 * i + 4, &arg->flt1);
+        funchook_get_arg(info->arg_handle, 12 * i + 5, &arg->u32);
+        funchook_get_arg(info->arg_handle, 12 * i + 6, &arg->dbl2);
+        funchook_get_arg(info->arg_handle, 12 * i + 7, &arg->lng);
+        funchook_get_arg(info->arg_handle, 12 * i + 8, &arg->flt2);
+        funchook_get_arg(info->arg_handle, 12 * i + 9, &arg->u64);
+        funchook_get_arg(info->arg_handle, 12 * i + 10, &arg->dbl3);
+        funchook_get_arg(info->arg_handle, 12 * i + 11, &arg->uptr);
+        funchook_get_arg(info->arg_handle, 12 * i + 12, &arg->flt3);
+    }
+}
+
+static void test_mixed_args(void)
+{
+    funchook_t *funchook;
+    int rv;
+
+    printf("[%d] test_prehook: mixed_args\n", ++test_cnt);
+
+    funchook = funchook_create();
+
+    mixed_args_func = mixed_args;
+    const funchook_params_t mixed_args_params = {
+        .prehook = mixed_args_prehook,
+        .arg_types = "SbdhfidlfLdpfbdhfidlfLdpf",
+    };
+    rv = funchook_prepare_with_params(funchook, (void**)&mixed_args_func, &mixed_args_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook mixed_args with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    mixed_args_t expected_args[2];
+    memset(expected_args, MIXED_ARGS_PADDING_BYTE, sizeof(expected_args));
+    expected_args[0].u8 = 1;
+    expected_args[0].dbl1 = 2.0;
+    expected_args[0].u16 = 3;
+    expected_args[0].flt1 = 4.0f;
+    expected_args[0].u32 = 5;
+    expected_args[0].dbl2 = 6.0;
+    expected_args[0].lng = 7;
+    expected_args[0].flt2 = 8.0f;
+    expected_args[0].u64 = 9;
+    expected_args[0].dbl3 = 10.0;
+    expected_args[0].uptr = 11;
+    expected_args[0].flt3 = 12.0f;
+    expected_args[1].u8 = 13;
+    expected_args[1].dbl1 = 14.0;
+    expected_args[1].u16 = 15;
+    expected_args[1].flt1 = 16.0f;
+    expected_args[1].u32 = 17;
+    expected_args[1].dbl2 = 18.0;
+    expected_args[1].lng = 19;
+    expected_args[1].flt2 = 20.0f;
+    expected_args[1].u64 = 21;
+    expected_args[1].dbl3 = 22.0;
+    expected_args[1].uptr = 23;
+    expected_args[1].flt3 = 24.0f;
+    mixed_args_t retval = mixed_args(1, 2.0, 3, 4.0f, 5, 6.0,
+                                     7, 8.0f, 9, 10.0, 11, 12.0f,
+                                     13, 14.0, 15, 16.0f, 17, 18.0,
+                                     19, 20.0f, 21, 22.0, 23, 24.0f);
+    if (memcmp(&expected_args, mixed_args_in_prehook, sizeof(expected_args)) != 0 ||
+        memcmp(&expected_args, mixed_args_in_target, sizeof(expected_args)) != 0) {
+        int i;
+        printf("ERROR: unexpected arguments in mixed_args\n"
+               "          expected [");
+        for (i = 0; i < sizeof(expected_args); i++) {
+            printf(" %02x", ((uint8_t*)expected_args)[i]);
+        }
+        printf("]\n"
+               "   args in prehook [");
+        for (int i = 0; i < sizeof(expected_args); i++) {
+            printf(" %02x", ((uint8_t*)mixed_args_in_prehook)[i]);
+        }
+        printf("]\n"
+               "    args in target [");
+        for (i = 0; i < sizeof(expected_args); i++) {
+            printf(" %02x", ((uint8_t*)mixed_args_in_target)[i]);
+        }
+        printf("]\n");
+        error_cnt++;
+        return;
+    }
+
+    funchook_uninstall(funchook, 0);
+    funchook_destroy(funchook);
+}
+
+void test_prehook(void)
+{
+    funchook_set_debug_file("debug.log");
+    test_dllfunc();
+    test_long_args();
+    test_double_args();
+    test_mixed_args();
 }
