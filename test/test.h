@@ -18,5 +18,6 @@ extern int test_cnt;
 extern int error_cnt;
 
 void test_prehook(void);
+void test_cpp(void);
 
 #endif

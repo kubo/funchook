@@ -9,6 +9,17 @@
 #include <dlfcn.h>
 #endif
 
+#define DUMP_BYTES(var) dump_bytes((void *)&var, sizeof(var))
+static void dump_bytes(void *addr, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        if (i != 0 && i % 4 == 0) {
+            printf(" ");
+        }
+        printf("%02x", ((uint8_t*)addr)[i]);
+    }
+}
+
 static int (*dllfunc_1_func)(int a, int b);
 static int (*dllfunc_2_func)(int a, int b);
 
@@ -279,7 +290,7 @@ static mixed_args_t (*mixed_args_func)(
 mixed_args_t mixed_args_in_prehook[2];
 static void mixed_args_prehook(funchook_info_t *info)
 {
-    memset(mixed_args_in_prehook, MIXED_ARGS_PADDING_BYTE, sizeof(mixed_args_in_prehook));
+    memset(mixed_args_in_prehook, PADDING_BYTE, sizeof(mixed_args_in_prehook));
     for (int i = 0; i < 2; i++) {
         mixed_args_t *arg  = &mixed_args_in_prehook[i];
         funchook_get_arg(info->arg_handle, 12 * i + 1, &arg->u8);
@@ -326,7 +337,7 @@ static void test_mixed_args(void)
     }
 
     mixed_args_t expected_args[2];
-    memset(expected_args, MIXED_ARGS_PADDING_BYTE, sizeof(expected_args));
+    memset(expected_args, PADDING_BYTE, sizeof(expected_args));
     expected_args[0].u8 = 1;
     expected_args[0].dbl1 = 2.0;
     expected_args[0].u16 = 3;
@@ -357,27 +368,272 @@ static void test_mixed_args(void)
                                      19, 20.0f, 21, 22.0, 23, 24.0f);
     if (memcmp(&expected_args, mixed_args_in_prehook, sizeof(expected_args)) != 0 ||
         memcmp(&expected_args, mixed_args_in_target, sizeof(expected_args)) != 0) {
-        int i;
         printf("ERROR: unexpected arguments in mixed_args\n"
                "          expected [");
-        for (i = 0; i < sizeof(expected_args); i++) {
-            printf(" %02x", ((uint8_t*)expected_args)[i]);
-        }
+        DUMP_BYTES(expected_args);
         printf("]\n"
                "   args in prehook [");
-        for (int i = 0; i < sizeof(expected_args); i++) {
-            printf(" %02x", ((uint8_t*)mixed_args_in_prehook)[i]);
-        }
+        DUMP_BYTES(mixed_args_in_prehook);
         printf("]\n"
                "    args in target [");
-        for (i = 0; i < sizeof(expected_args); i++) {
-            printf(" %02x", ((uint8_t*)mixed_args_in_target)[i]);
-        }
+        DUMP_BYTES(mixed_args_in_target);
         printf("]\n");
         error_cnt++;
         return;
     }
 
+    funchook_uninstall(funchook, 0);
+    funchook_destroy(funchook);
+}
+
+fastcall_args_t fastcall_args_in_prehook;
+static void fastcall_llld_prehook(funchook_info_t *info)
+{
+    memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
+    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.l2);
+    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l3);
+    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.d);
+}
+static void fastcall_lldl_prehook(funchook_info_t *info)
+{
+    memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
+    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.l2);
+    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.d);
+    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+}
+static void fastcall_ldll_prehook(funchook_info_t *info)
+{
+    memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
+    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.d);
+    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l2);
+    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+}
+static void fastcall_dlll_prehook(funchook_info_t *info)
+{
+    memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.d);
+    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.l1);
+    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l2);
+    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+}
+static void fastcall_ret_struct_prehook(funchook_info_t *info)
+{
+    memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
+    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.d);
+    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l2);
+    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+}
+
+static void test_fastcall_args(void)
+{
+    funchook_t *funchook;
+    int rv;
+    void *target_func;
+
+    printf("[%d] test_prehook: fastcall_args\n", ++test_cnt);
+
+    funchook = funchook_create();
+
+    target_func = (void*)fastcall_llld;
+    const funchook_params_t fastcall_llld_params = {
+        .prehook = fastcall_llld_prehook,
+        .flags = FUNCHOOK_FLAG_FASTCALL,
+        .arg_types = "dllld",
+    };
+    rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_llld_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook fastcall_llld with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    target_func = (void*)fastcall_lldl;
+    const funchook_params_t fastcall_lldl_params = {
+        .prehook = fastcall_lldl_prehook,
+        .flags = FUNCHOOK_FLAG_FASTCALL,
+        .arg_types = "dlldl",
+    };
+    rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_lldl_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook fastcall_lldl with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    target_func = (void*)fastcall_ldll;
+    const funchook_params_t fastcall_ldll_params = {
+        .prehook = fastcall_ldll_prehook,
+        .flags = FUNCHOOK_FLAG_FASTCALL,
+        .arg_types = "dldll",
+    };
+    rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_ldll_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook fastcall_ldll with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    target_func = (void*)fastcall_dlll;
+    const funchook_params_t fastcall_dlll_params = {
+        .prehook = fastcall_dlll_prehook,
+        .flags = FUNCHOOK_FLAG_FASTCALL,
+        .arg_types = "ddlll",
+    };
+    rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_dlll_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook fastcall_dlll with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    target_func = (void*)fastcall_ret_struct;
+    const funchook_params_t fastcall_ret_struct_params = {
+        .prehook = fastcall_ret_struct_prehook,
+        .flags = FUNCHOOK_FLAG_FASTCALL,
+        .arg_types = "Sldll",
+    };
+    rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_ret_struct_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook fastcall_ret_struct with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        funchook_destroy(funchook);
+        return;
+    }
+
+    fastcall_args_t fastcall_args_expected;
+    double retval;
+
+    memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_expected.l1 = 1;
+    fastcall_args_expected.l2 = 2;
+    fastcall_args_expected.l3 = 3;
+    fastcall_args_expected.d = 4.0;
+    retval = fastcall_llld(1, 2, 3, 4.0);
+    if (memcmp(&fastcall_args_expected, &fastcall_args_in_target, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &fastcall_args_in_prehook, sizeof(fastcall_args_t)) != 0) {
+        printf("ERROR: unexpected arguments in fastcall_llld\n"
+               "          expected [");
+        DUMP_BYTES(fastcall_args_expected);
+        printf("]\n"
+               "   args in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook);
+        printf("]\n"
+               "    args in target [");
+        DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n");
+        error_cnt++;
+        goto cleanup;
+    }
+
+    memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_expected.l1 = 1;
+    fastcall_args_expected.l2 = 2;
+    fastcall_args_expected.d = 3.0;
+    fastcall_args_expected.l3 = 4;
+    retval = fastcall_lldl(1, 2, 3, 4.0);
+    if (memcmp(&fastcall_args_expected, &fastcall_args_in_target, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &fastcall_args_in_prehook, sizeof(fastcall_args_t)) != 0) {
+        printf("ERROR: unexpected arguments in fastcall_lldl\n"
+               "          expected [");
+        DUMP_BYTES(fastcall_args_expected);
+        printf("]\n"
+               "   args in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook);
+        printf("]\n"
+               "    args in target [");
+        DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n");
+        error_cnt++;
+        goto cleanup;
+    }
+
+    memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_expected.l1 = 1;
+    fastcall_args_expected.d = 2.0;
+    fastcall_args_expected.l2 = 3;
+    fastcall_args_expected.l3 = 4;
+    retval = fastcall_ldll(1, 2.0, 3, 4);
+    if (memcmp(&fastcall_args_expected, &fastcall_args_in_target, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &fastcall_args_in_prehook, sizeof(fastcall_args_t)) != 0) {
+        printf("ERROR: unexpected arguments in fastcall_ldll\n"
+               "          expected [");
+        DUMP_BYTES(fastcall_args_expected);
+        printf("]\n"
+               "   args in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook);
+        printf("]\n"
+               "    args in target [");
+        DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n");
+        error_cnt++;
+        goto cleanup;
+    }
+
+    memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_expected.d = 1.0;
+    fastcall_args_expected.l1 = 2;
+    fastcall_args_expected.l2 = 3;
+    fastcall_args_expected.l3 = 4;
+    retval = fastcall_dlll(1.0, 2, 3, 4);
+    if (memcmp(&fastcall_args_expected, &fastcall_args_in_target, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &fastcall_args_in_prehook, sizeof(fastcall_args_t)) != 0) {
+        printf("ERROR: unexpected arguments in fastcall_dlll\n"
+               "          expected [");
+        DUMP_BYTES(fastcall_args_expected);
+        printf("]\n"
+               "   args in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook);
+        printf("]\n"
+               "    args in target [");
+        DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n");
+        error_cnt++;
+        goto cleanup;
+    }
+
+    memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_expected.l1 = 1;
+    fastcall_args_expected.d = 2.0;
+    fastcall_args_expected.l2 = 3;
+    fastcall_args_expected.l3 = 4;
+    fastcall_args_t ret_struct = fastcall_ret_struct(1, 2.0, 3, 4);
+    if (memcmp(&fastcall_args_expected, &fastcall_args_in_target, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &fastcall_args_in_prehook, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &ret_struct, sizeof(fastcall_args_t)) != 0) {
+        printf("ERROR: unexpected arguments in fastcall_ret_struct\n"
+               "          expected [");
+        DUMP_BYTES(fastcall_args_expected);
+        printf("]\n"
+               "   args in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook);
+        printf("]\n"
+               "    args in target [");
+        DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n"
+               "      return value [");
+        DUMP_BYTES(ret_struct);
+        printf("]\n");
+        error_cnt++;
+        goto cleanup;
+    }
+
+cleanup:
     funchook_uninstall(funchook, 0);
     funchook_destroy(funchook);
 }
@@ -389,4 +645,5 @@ void test_prehook(void)
     test_long_args();
     test_double_args();
     test_mixed_args();
+    test_fastcall_args();
 }

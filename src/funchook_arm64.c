@@ -385,7 +385,7 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
     return 0;
 }
 
-int funchook_get_arg_offset(const char *arg_types, int pos)
+int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
 {
     const int max_num_int = 8;
     const int max_num_flt = 8;

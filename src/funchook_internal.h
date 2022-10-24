@@ -106,6 +106,7 @@
 struct funchook_arg_handle {
     const size_t *stack_pointer;
     const char *arg_types;
+    uint32_t flags;
 };
 
 typedef struct {
@@ -154,7 +155,7 @@ void *funchook_resolve_func(funchook_t *funchook, void *func);
 /* Functions in funchook_{CPU_NAME}.c */
 int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, const insn_t *func, insn_t *trampoline, size_t *trampoline_size);
 int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_displacement_t *disp);
-int funchook_get_arg_offset(const char *arg_types, int pos);
+int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags);
 #ifdef CPU_X86_64
 int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, uint8_t *addr, ip_displacement_t *disp);
 #else

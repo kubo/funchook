@@ -615,6 +615,7 @@ int main()
     test_hook_open_and_fopen();
     test_hook_many_funcs();
     test_prehook();
+    test_cpp();
 
     if (error_cnt == 0) {
         printf("all %d tests are passed.\n", test_cnt);

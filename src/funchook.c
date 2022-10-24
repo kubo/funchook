@@ -31,6 +31,9 @@
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+#if defined(_MSC_VER) && !defined(_CRT_NONSTDC_NO_WARNINGS)
+#define _CRT_NONSTDC_NO_WARNINGS
+#endif
 #include "config.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -175,7 +178,7 @@ int funchook_get_arg(const funchook_arg_handle_t *handle, int pos, void *out)
     if (handle == NULL || pos <= 0) {
         return -1;
     }
-    int offset = funchook_get_arg_offset(handle->arg_types, pos);
+    int offset = funchook_get_arg_offset(handle->arg_types, pos, handle->flags);
     if (offset == INT_MIN) {
         return -1;
     }
@@ -234,6 +237,7 @@ void funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer)
     funchook_arg_handle_t arg_handle = {
         .stack_pointer = stack_pointer,
         .arg_types = entry->arg_types,
+        .flags = entry->flags,
     };
     funchook_info_t info = {
         .original_target_func = entry->original_target_func,
@@ -350,6 +354,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func,
     entry->prehook = params->prehook;
     entry->user_data = params->user_data;
     entry->arg_types = params->arg_types ? strdup(params->arg_types) : NULL;
+    entry->flags = params->flags;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
     memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
 

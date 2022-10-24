@@ -56,8 +56,8 @@ mixed_args_t mixed_args(
     long lng_2, float flt2_2, uint64_t u64_2, double dbl3_2, uintptr_t uptr_2, float flt3_2)
 {
     mixed_args_t retval = {0,};
-    memset(mixed_args_in_target, MIXED_ARGS_PADDING_BYTE, sizeof(mixed_args_in_target));
-    memset(&retval, MIXED_ARGS_PADDING_BYTE, sizeof(retval));
+    memset(mixed_args_in_target, PADDING_BYTE, sizeof(mixed_args_in_target));
+    memset(&retval, PADDING_BYTE, sizeof(retval));
     mixed_args_in_target[0].u8 = u8_1;
     mixed_args_in_target[0].dbl1 = dbl1_1;
     mixed_args_in_target[0].u16 = u16_1;
@@ -94,6 +94,64 @@ mixed_args_t mixed_args(
     retval.dbl3 = dbl3_1 + dbl3_2;
     retval.uptr = uptr_1 + uptr_2;
     retval.flt3 = flt3_1 + flt3_2;
+    return retval;
+}
+
+fastcall_args_t fastcall_args_in_target;
+
+double FASTCALL fastcall_llld(long l1, long l2, long l3, double d)
+{
+    memset(&fastcall_args_in_target, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_in_target.l1 = l1;
+    fastcall_args_in_target.l2 = l2;
+    fastcall_args_in_target.l3 = l3;
+    fastcall_args_in_target.d = d;
+    return (double)l1 + (double)l2 + (double)l3 + d;
+}
+
+double FASTCALL fastcall_lldl(long l1, long l2, double d, long l3)
+{
+    memset(&fastcall_args_in_target, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_in_target.l1 = l1;
+    fastcall_args_in_target.l2 = l2;
+    fastcall_args_in_target.l3 = l3;
+    fastcall_args_in_target.d = d;
+    return (double)l1 + (double)l2 + (double)l3 + d;
+}
+
+double FASTCALL fastcall_ldll(long l1, double d, long l2, long l3)
+{
+    memset(&fastcall_args_in_target, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_in_target.l1 = l1;
+    fastcall_args_in_target.l2 = l2;
+    fastcall_args_in_target.l3 = l3;
+    fastcall_args_in_target.d = d;
+    return (double)l1 + (double)l2 + (double)l3 + d;
+}
+
+double FASTCALL fastcall_dlll(double d, long l1, long l2, long l3)
+{
+    memset(&fastcall_args_in_target, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_in_target.l1 = l1;
+    fastcall_args_in_target.l2 = l2;
+    fastcall_args_in_target.l3 = l3;
+    fastcall_args_in_target.d = d;
+    return (double)l1 + (double)l2 + (double)l3 + d;
+}
+
+fastcall_args_t FASTCALL fastcall_ret_struct(long l1, double d, long l2, long l3)
+{
+    fastcall_args_t retval;
+    memset(&retval, PADDING_BYTE, sizeof(fastcall_args_t));
+    retval.l1 = l1;
+    retval.l2 = l2;
+    retval.l3 = l3;
+    retval.d = d;
+    memset(&fastcall_args_in_target, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_in_target.l1 = l1;
+    fastcall_args_in_target.l2 = l2;
+    fastcall_args_in_target.l3 = l3;
+    fastcall_args_in_target.d = d;
     return retval;
 }
 

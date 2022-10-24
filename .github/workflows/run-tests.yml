@@ -85,13 +85,13 @@ jobs:
         submodules: true
     - name: Install packages
       run: |
-        sudo apt install -y gcc-multilib
+        sudo apt install -y gcc-multilib g++-multilib
     - name: x86_64 tests on Ubuntu
       run: |
         ./.ci/run-cmake-test.sh x86_64-linux
     - name: i686 tests on Ubuntu
       run: |
-        ./.ci/run-cmake-test.sh i686-linux     -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32
+        ./.ci/run-cmake-test.sh i686-linux     -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
 
   tests_on_windows:
     name: Tests on Windows (x64 and x86)

@@ -399,14 +399,41 @@ int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, ui
 }
 #endif
 
-int funchook_get_arg_offset(const char *arg_types, int pos)
+int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
 {
 #if defined(CPU_X86)
-    int offset = 1;
-    if (arg_types[0] == 'S') {
-        offset++;
+    enum {
+        ST_STACK,
+        ST_THISCALL,
+        ST_FASTCALL0,
+        ST_FASTCALL1,
+    } state = ST_STACK;
+    int offset = INT_MIN;
+    int next_offset = 1;
+#ifdef WIN32
+    if (flags & FUNCHOOK_FLAG_THISCALL) {
+        state = ST_THISCALL;
     }
-    for (int i = 1; i < pos; i++) {
+#endif
+    if (flags & FUNCHOOK_FLAG_FASTCALL) {
+        state = ST_FASTCALL0;
+    }
+    if (arg_types[0] == 'S') {
+        switch (state) {
+        case ST_FASTCALL0:
+#if defined(_MSC_VER)
+            next_offset++;
+#elif defined(__GNUC__)
+            state = ST_FASTCALL1;
+#else
+#error unchecked C compiler
+#endif
+            break;
+        default:
+            next_offset++;
+        }
+    }
+    for (int i = 1; i <= pos; i++) {
         switch (arg_types[i]) {
         case 'b':
         case 'h':
@@ -414,12 +441,33 @@ int funchook_get_arg_offset(const char *arg_types, int pos)
         case 'l':
         case 'p':
         case 'S':
+            switch (state) {
+            case ST_STACK:
+                offset = next_offset;
+                next_offset += 1;
+                break;
+            case ST_THISCALL:
+                state = ST_STACK;
+                offset = -2;
+                break;
+            case ST_FASTCALL0:
+                state = ST_FASTCALL1;
+                offset = -2;
+                break;
+            case ST_FASTCALL1:
+                state = ST_STACK;
+                offset = -3;
+                break;
+            }
+            break;
         case 'f':
-            offset += 1;
+            offset = next_offset;
+            next_offset += 1;
             break;
         case 'L':
         case 'd':
-            offset += 2;
+            offset = next_offset;
+            next_offset += 2;
             break;
         default:
             return INT_MIN;
