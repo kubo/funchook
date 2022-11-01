@@ -17,6 +17,10 @@ if (FUNCHOOK_CPU MATCHES "i.86")
   set(FUNCHOOK_CPU "x86")
 endif ()
 
+if (FUNCHOOK_CPU STREQUAL "arm64")
+  set(FUNCHOOK_CPU "aarch64")
+endif ()
+
 set(TEST_EXE_SOURCES test_main.c test_prehook.c test_cpp.cpp)
 if (FUNCHOOK_CPU STREQUAL x86)
   set(TEST_EXE_SOURCES ${TEST_EXE_SOURCES} ${FUNCHOOK_CPU}_test.S)
