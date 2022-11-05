@@ -70,8 +70,13 @@ static int funchook_write_jump_with_prehook(funchook_t *funchook, funchook_entry
 {
     static const char template[TRANSIT_CODE_SIZE] = TRANSIT_CODE_TEMPLATE;
     memcpy(entry->transit, template, sizeof(template));
+#ifdef TRANSIT_HOOK_FUNC_ADDR
     *(void**)(entry->transit + TRANSIT_HOOK_CALLER_ADDR) = (void*)funchook_hook_caller;
     *(const uint8_t**)(entry->transit + TRANSIT_HOOK_FUNC_ADDR) = dst;
+#else
+    extern void funchook_hook_caller_asm(void);
+    *(void**)(entry->transit + TRANSIT_HOOK_CALLER_ADDR) = (void*)funchook_hook_caller_asm;
+#endif
     funchook_log(funchook, "  Write jump 0x"ADDR_FMT" -> 0x"ADDR_FMT" with hook caller 0x"ADDR_FMT"\n",
                  (size_t)entry->transit, (size_t)dst, (size_t)funchook_hook_caller);
     return 0;

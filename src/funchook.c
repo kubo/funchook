@@ -231,7 +231,7 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...)
     va_end(ap);
 }
 
-void funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer)
+void *funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer)
 {
     funchook_entry_t *entry = (funchook_entry_t *)(transit_addr - offsetof(funchook_entry_t, transit));
     funchook_arg_handle_t arg_handle = {
@@ -248,6 +248,7 @@ void funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer)
         .arg_handle = entry->arg_types ? &arg_handle : NULL,
     };
     entry->prehook(&info);
+    return entry->hook_func ? entry->hook_func : entry->trampoline;
 }
 
 static void funchook_logv(funchook_t *funchook, int set_error, const char *fmt, va_list ap)

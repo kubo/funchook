@@ -168,6 +168,10 @@ endif ()
 
 set(FUNCHOOK_SOURCES src/funchook.c src/funchook_${FUNCHOOK_CPU}.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
 
+if ((NOT WIN32) AND (FUNCHOOK_CPU STREQUAL x86) AND (CMAKE_SIZEOF_VOID_P EQUAL "8"))
+    set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/prehook-x86_64-sysv.S)
+endif ()
+
 set(FUNCHOOK_PROPERTIES
     OUTPUT_NAME funchook
     VERSION ${PROJECT_VERSION}
