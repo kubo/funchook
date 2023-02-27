@@ -130,7 +130,7 @@ Example
 static ssize_t (*send_func)(int sockfd, const void *buf, size_t len, int flags);
 static ssize_t (*recv_func)(int sockfd, void *buf, size_t len, int flags);
 
-static ssize_t send_hook(int sockfd, const void *buf, size_t len, int flags);
+static ssize_t send_hook(int sockfd, const void *buf, size_t len, int flags)
 {
     ssize_t rv;
 
@@ -140,7 +140,7 @@ static ssize_t send_hook(int sockfd, const void *buf, size_t len, int flags);
     return rv;
 }
 
-static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags);
+static ssize_t recv_hook(int sockfd, void *buf, size_t len, int flags)
 {
     ssize_t rv;
 
