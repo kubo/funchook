@@ -103,8 +103,8 @@ static int to_regno(funchook_t *funchook, uint32_t avail_regs, uint32_t *regno)
 static int funchook_write_jump32(funchook_t *funchook, const uint32_t *src, const uint32_t *dst, uint32_t *out)
 {
     intptr_t imm = ROUND_DOWN((size_t)dst, PAGE_SIZE) - ROUND_DOWN((size_t)src, PAGE_SIZE);
-    size_t immlo = (imm >> 12) & 0x03;
-    size_t immhi = (imm >> 14) & 0x7FFFFul;
+    uint32_t immlo = (uint32_t)(imm >> 12) & 0x03;
+    uint32_t immhi = (uint32_t)(imm >> 14) & 0x7FFFFul;
 
     /* adrp x9, dst */
     out[0] = 0x90000009 | (immlo << 29) | (immhi << 5);
@@ -182,7 +182,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
     size_t *literal_pool = (size_t*)(trampoline + LITERAL_POOL_OFFSET);
 
 #define LDR_ADDR(regno, addr) do { \
-    int imm19__ = ((size_t)literal_pool - (size_t)ctx.dst) >> 2; \
+    int imm19__ = (int)((size_t)literal_pool - (size_t)ctx.dst) >> 2; \
     *(literal_pool++) = (addr); \
     *(ctx.dst++) = 0x58000000 | TO_IMM19(imm19__) | (regno); \
 } while (0)
@@ -331,6 +331,13 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
             break;
         }
         ctx.src++;
+
+        // special case
+        if ((func[0] & 0xFC000000) == 0x14000000 && (func[1] & 0xFFFF0000) == 0) {
+            // The first instruction is B (unconditional jump).
+            // The second is UDF (permanently undefined).
+            ctx.src = func + 2;
+        }
         if (ctx.src - func >= JUMP32_SIZE) {
             rv = to_regno(funchook, avail_regs, &regno);
             if (rv != 0) {

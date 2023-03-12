@@ -27,11 +27,14 @@ if (FUNCHOOK_CPU STREQUAL x86)
 endif ()
 
 
-if (MSVC)
+if (NOT MSVC)
+  set(FUNCHOOK_ASM_SUFFIX _gas.S)
+elseif (FUNCHOOK_CPU MATCHES "^x86")
   enable_language(ASM_MASM)
   set(FUNCHOOK_ASM_SUFFIX _masm.asm)
 else ()
-  set(FUNCHOOK_ASM_SUFFIX _gas.S)
+  set(FUNCHOOK_CPU noasm)
+  set(FUNCHOOK_ASM_SUFFIX .c)
 endif ()
 
 add_library(funchook_test SHARED libfunchook_test.c libfunchook_test_cpp.cpp libfunchook_test_${FUNCHOOK_CPU}${FUNCHOOK_ASM_SUFFIX})

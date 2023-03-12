@@ -30,6 +30,7 @@
  */
 #define PSAPI_VERSION 1
 #include <stdint.h>
+#include <stdio.h>
 #include <windows.h>
 #include <psapi.h>
 #include "funchook_internal.h"
@@ -87,7 +88,7 @@ static int alloc_page_info(funchook_t *funchook, page_list_t **pl_out, void *hin
 {
     void *addr;
     page_list_t *pl;
-#ifdef CPU_X86_64
+#ifdef CPU_64BIT
     void *old_hint = hint;
     while (1) {
         MEMORY_BASIC_INFORMATION mbi;
@@ -339,7 +340,7 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
     HMODULE hMod;
     BOOL ok;
     IMAGE_IMPORT_DESCRIPTOR *desc_head, *desc;
-    uint8_t *fn = (uint8_t*)func;
+    insn_t *fn = (insn_t*)func;
     size_t pos = 0;
     DWORD cnt;
 
@@ -349,6 +350,7 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
             funchook_log(funchook, "  func %p is in %.*s\n", func, (int)len, path);
         }
     }
+#if defined CPU_X86 || defined CPU_X86_64
     if (fn[0] == 0xe9) {
         fn = (fn + 5) + *(int*)(fn + 1);
         funchook_log(funchook, "  relative jump to %p\n", fn);
@@ -361,6 +363,31 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
 #endif
         funchook_log(funchook, "  indirect jump to addresss at %p\n", (void*)pos);
     }
+#endif
+#if defined CPU_ARM64
+#define ADRP_XIP0       0x90000010
+#define ADRP_XIP0_MASK  0x9F00001F
+#define ADRP_XIP0_IMMLO 0x60000000
+#define ADRP_XIP0_IMMHI 0x00FFFFE0
+#define LDR_XIP0        0xF9400210
+#define LDR_XIP0_MASK   0xFFC003FF
+#define LDR_XIP0_IMM12  0x003FFC00
+#define BR_XIP0         0xD61F0200
+    if ((fn[0] & ADRP_XIP0_MASK) == ADRP_XIP0 &&
+        (fn[1] & LDR_XIP0_MASK) == LDR_XIP0 &&
+        fn[2] == BR_XIP0) {
+        // fn[0]: addrp xip0, immhi&immlo
+        // fn[1]: ldr   xip0, [xip0,imm12]
+        // fn[2]: br    xip0
+        size_t addr = (size_t)fn & ~((1 << 12) - 1);
+        size_t immhi = ((size_t)(fn[0] & ADRP_XIP0_IMMHI) >> 5) << (12 + 2);
+        size_t immlo = ((size_t)(fn[0] & ADRP_XIP0_IMMLO) >> 29) << 12;
+        size_t imm12 = ((size_t)(fn[1] & LDR_XIP0_IMM12) >> 10) << 3;
+        pos = addr + immhi + immlo + imm12;
+        // fprintf(stderr, "%016I64x: %08x %08x %08x : %I64x %I64x %I64x %I64x\n", (size_t)fn, fn[0], fn[1], fn[2], addr, immhi, immlo, imm12);
+        funchook_log(funchook, "  indirect jump to addresss at %p\n", (void*)pos);
+    }
+#endif
     if (pos == 0) {
         return func;
     }
