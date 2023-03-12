@@ -21,6 +21,10 @@ TODO
 News
 ----
 
+### 1.1.2 (2023-03-12)
+
+* Experimental support for Windows arm64
+
 ### 1.1.1 (2022-10-02)
 
 * More permissive check for page allocation mmap ([#25][])
@@ -63,10 +67,18 @@ Supported Platforms
 
 *1 [`mprotect`] fails with EACCES.  
 
+Tested Platforms
+----------------
+
+Tested on some versions. Not tested in CI.
+
+* Windows arm64 (version 1.1.2)
+
 Unsupported Platforms
 ---------------------
 
 * macOS arm64 (*1)
+* x64/x86 emulation for Windows arm64
 
 *1 I received a mail that [`mprotect`] failed with `EINVAL`. Apple seems to prevent executable memory regions from being writable.
 

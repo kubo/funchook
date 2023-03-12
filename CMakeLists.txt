@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.6)
 
 project(funchook LANGUAGES C ASM)
-set(PROJECT_VERSION 1.1.1)
+set(PROJECT_VERSION 1.1.2)
 set(PROJECT_VERSION_MAJOR 1)
 
 include("GNUInstallDirs")
