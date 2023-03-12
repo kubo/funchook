@@ -282,7 +282,7 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func, v
     for (i = 0; i < LITERAL_POOL_NUM; i++) {
         size_t *addr = (size_t*)(entry->trampoline + LITERAL_POOL_OFFSET + i * 2);
         if (*addr != 0) {
-            funchook_log(funchook, "    %016lx : 0x%lx\n", (size_t)addr, *addr);
+            funchook_log(funchook, "    "ADDR_FMT" : 0x%"PRIxPTR"\n", (size_t)addr, *addr);
         }
     }
 #endif

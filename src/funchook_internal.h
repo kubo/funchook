@@ -66,7 +66,7 @@
 #define ADDR_FMT "%08" PRIxPTR
 #endif
 
-#if defined __aarch64__
+#if defined _M_ARM64 || defined __aarch64__
 #define CPU_ARM64
 #define CPU_64BIT
 #endif
