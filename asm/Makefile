@@ -1,7 +1,6 @@
 
 TEMPLATE_DISASMS = \
-  transit-x86_64-ms.disasm \
-  transit-x86_64-sysv.disasm \
+  transit-x86_64.disasm \
   transit-i686.disasm \
   transit-aarch64.disasm \
 
@@ -10,11 +9,7 @@ all: ../src/template.inc
 ../src/template.inc: $(TEMPLATE_DISASMS) template.rb
 	ruby template.rb > $@
 
-transit-x86_64-ms.disasm: transit-x86_64-ms.s
-	x86_64-linux-gnu-gcc -c $<
-	x86_64-linux-gnu-objdump -d $(<:.s=.o) >$@
-
-transit-x86_64-sysv.disasm: transit-x86_64-sysv.s
+transit-x86_64.disasm: transit-x86_64.s
 	x86_64-linux-gnu-gcc -c $<
 	x86_64-linux-gnu-objdump -d $(<:.s=.o) >$@
 

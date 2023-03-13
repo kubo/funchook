@@ -497,15 +497,15 @@ int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
         case 'L':
         case 'p':
         case 'S':
-            return offset;
+            return -offset;
         case 'd':
         case 'f':
-            return - 11 + offset * 2;
+            return -(4 + 2 * offset);
         default:
             return INT_MIN;
         }
     } else {
-        return offset;
+        return offset + 1;
     }
 #else
     const int max_num_int = 6;

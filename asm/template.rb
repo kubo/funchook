@@ -40,18 +40,11 @@ puts <<EOS
 // -*- c -*-
 // Created by asm/template.rb
 
-#if defined(CPU_X86_64) && defined(WIN32)
+#if defined(CPU_X86_64)
 
-// Windows x64
+// x86_64
 EOS
-disasm_to_c_code('transit-x86_64-ms.disasm')
-puts <<EOS
-
-#elif defined(CPU_X86_64)
-
-// Linux x86_64 (System V ABI)
-EOS
-disasm_to_c_code('transit-x86_64-sysv.disasm')
+disasm_to_c_code('transit-x86_64.disasm')
 puts <<EOS
 
 #elif defined(CPU_X86)

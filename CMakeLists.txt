@@ -168,8 +168,13 @@ endif ()
 
 set(FUNCHOOK_SOURCES src/funchook.c src/funchook_${FUNCHOOK_CPU}.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
 
-if ((NOT WIN32) AND (FUNCHOOK_CPU STREQUAL x86) AND (CMAKE_SIZEOF_VOID_P EQUAL "8"))
+if ((FUNCHOOK_CPU STREQUAL x86) AND (CMAKE_SIZEOF_VOID_P EQUAL "8"))
+  if (WIN32)
+    enable_language(ASM_MASM)
+    set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/prehook-x86_64-ms.asm)
+  else ()
     set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/prehook-x86_64-sysv.S)
+  endif ()
 endif ()
 
 set(FUNCHOOK_PROPERTIES
