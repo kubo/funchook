@@ -2,39 +2,13 @@ name: tests
 on:
   push:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      tests_on_alpine:
-        description: 'Tests on Alpine (true or false)'
-        required: true
-        default: true
-      tests_on_macos:
-        description: 'Tests on macOS (true or false)'
-        required: true
-        default: true
-      tests_on_ubuntu_arm64:
-        description: 'Tests on Ubuntu arm64 (true or false)'
-        required: true
-        default: true
-      tests_on_ubuntu_x86_64:
-        description: 'Tests on Ubuntu x86_64 (true or false)'
-        required: true
-        default: true
-      tests_on_windows:
-        description: 'Tests on Windows (true or false)'
-        required: true
-        default: true
-      tests_on_wine:
-        description: 'Tests on Wine (true or false)'
-        required: true
-        default: true
+
 jobs:
   tests_on_alpine:
     name: Tests on Alpine (x86_64)
-    if: github.event.inputs.tests_on_alpine == 'true' || github.event.inputs.tests_on_alpine == ''
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: x86_64 tests on Alpine
@@ -44,10 +18,9 @@ jobs:
 
   tests_on_macos:
     name: Tests on macOS (x86_64)
-    if: github.event.inputs.tests_on_macos == 'true' || github.event.inputs.tests_on_macos == ''
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: x86_64 tests on macOS
@@ -56,10 +29,9 @@ jobs:
 
   tests_on_ubuntu_arm64:
     name: Tests on Ubuntu (aarch64)
-    if: github.event.inputs.tests_on_ubuntu_arm64 == 'true' || github.event.inputs.tests_on_ubuntu_arm64 == ''
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: uraimo/run-on-arch-action@v2.0.5
@@ -77,10 +49,9 @@ jobs:
 
   tests_on_ubuntu_x86_64:
     name: Tests on Ubuntu (x86_64 and i686)
-    if: github.event.inputs.tests_on_ubuntu_x86_64 == 'true' || github.event.inputs.tests_on_ubuntu_x86_64 == ''
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Install packages
@@ -95,10 +66,9 @@ jobs:
 
   tests_on_windows:
     name: Tests on Windows (x64 and x86)
-    if: github.event.inputs.tests_on_windows == 'true' || github.event.inputs.tests_on_windows == ''
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: x64 tests on Windows
@@ -116,7 +86,7 @@ jobs:
     if: false
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Install packages
