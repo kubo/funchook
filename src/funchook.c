@@ -182,7 +182,7 @@ int funchook_get_arg(const funchook_arg_handle_t *handle, int pos, void *out)
     if (offset == INT_MIN) {
         return -1;
     }
-    const size_t *addr = handle->stack_pointer + offset;
+    const size_t *addr = handle->base_pointer + offset;
     switch (handle->arg_types[pos]) {
     case 'b':
         *(int8_t*)out = *(int8_t*)addr;
@@ -231,11 +231,11 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...)
     va_end(ap);
 }
 
-void *funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer)
+void *funchook_hook_caller(size_t transit_addr, const size_t *base_pointer)
 {
     funchook_entry_t *entry = (funchook_entry_t *)(transit_addr - offsetof(funchook_entry_t, transit));
     funchook_arg_handle_t arg_handle = {
-        .stack_pointer = stack_pointer,
+        .base_pointer = base_pointer,
         .arg_types = entry->arg_types,
         .flags = entry->flags,
     };

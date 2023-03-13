@@ -554,11 +554,11 @@ int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
     }
     switch (arg_type) {
     case ARG_INTEGER:
-        return - (1 + num_int);
+        return - num_int;
     case ARG_FLOATING_POINT:
-        return - (9 + 2 * num_flt);
+        return - (8 + 2 * num_flt);
     case ARG_STACK:
-        return num_stack;
+        return num_stack + 1;
     }
     /* never reach here */
     return INT_MIN;

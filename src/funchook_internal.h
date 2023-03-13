@@ -104,7 +104,7 @@
 #define ALLOCATION_UNIT 0x10000 /* 64k */
 
 struct funchook_arg_handle {
-    const size_t *stack_pointer;
+    const size_t *base_pointer;
     const char *arg_types;
     uint32_t flags;
 };
@@ -133,7 +133,7 @@ extern const size_t funchook_size;
 extern char funchook_debug_file[];
 void funchook_log(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
-void *funchook_hook_caller(size_t transit_addr, const size_t *stack_pointer);
+void *funchook_hook_caller(size_t transit_addr, const size_t *base_pointer);
 
 /* Functions in funchook_unix.c & funchook_windows.c */
 extern const size_t page_size;

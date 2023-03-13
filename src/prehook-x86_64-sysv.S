@@ -62,8 +62,8 @@ funchook_hook_caller_asm:
 	movdqa %xmm0, -0xe0(%rbp)
 	// 1st arg: the start address of transit. Note: %r11 is set by transit-x86_64.s.
 	mov    %r11, %rdi
-	// 2nd arg: stack pointer at the beginning of transit
-	lea    0x8(%rbp), %rsi
+	// 2nd arg: base pointer
+	mov    %rbp, %rsi
 	// call funchook_hook_caller
 	call   funchook_hook_caller
 	mov    %rax, %r11
