@@ -37,9 +37,9 @@
 
 #if defined(_MSC_VER) && _MSC_VER < 1700
 #ifdef _WIN64
-#define PRIxPTR "I64"
+#define PRIxPTR "I64x"
 #else
-#define PRIxPTR ""
+#define PRIxPTR "x"
 #endif
 #else
 #include <inttypes.h>
@@ -54,6 +54,9 @@
 #endif
 
 #ifndef __GNUC__
+#define __attribute__(arg)
+#endif
+#if defined(__MINGW64__) && !defined(_UCRT)
 #define __attribute__(arg)
 #endif
 

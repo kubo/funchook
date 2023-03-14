@@ -80,10 +80,8 @@ jobs:
       run: |
         ./.ci/run-cmake-test.sh x86-windows -A Win32
 
-  # disabled because of unmet package dependencies
   tests_on_wine:
     name: Tests on Wine (x64 and x86)
-    if: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -101,4 +99,4 @@ jobs:
         ./.ci/run-cmake-test.sh x86_64-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake
     - name: x86 tests on Wine
       run: |
-        ./.ci/run-cmake-test.sh i686-mingw32   -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake
+        env WINEPATH=/usr/lib/gcc/i686-w64-mingw32/10-win32 ./.ci/run-cmake-test.sh i686-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake
