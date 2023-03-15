@@ -1,7 +1,8 @@
 // transit code for System V AMD64 ABI
 	.text
 transit:
-	// %r11 is the address of the `transit` member in `funchook_entry_t` struct.
+	// The address of the `transit` member in `funchook_entry_t` struct
+	// is passed to funchook_hook_caller_asm via %r11.
 	lea    transit(%rip), %r11
 	jmp   *hook_caller_addr(%rip)
 hook_caller_addr:

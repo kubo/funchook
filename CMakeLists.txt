@@ -182,6 +182,18 @@ if ((FUNCHOOK_CPU STREQUAL x86) AND (CMAKE_SIZEOF_VOID_P EQUAL "8"))
   endif ()
 endif ()
 
+if ((FUNCHOOK_CPU STREQUAL x86) AND (CMAKE_SIZEOF_VOID_P EQUAL "4"))
+  if (MSVC)
+    # Windows (Microsoft Visual C++)
+    enable_language(ASM_MASM)
+    set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/prehook-i686-ms.asm)
+    set_source_files_properties(src/prehook-i686-ms.asm PROPERTIES COMPILE_OPTIONS "/safeseh")
+  else ()
+    # Windows and Linux (gcc)
+    set(FUNCHOOK_SOURCES ${FUNCHOOK_SOURCES} src/prehook-i686-gas.S)
+  endif ()
+endif ()
+
 set(FUNCHOOK_PROPERTIES
     OUTPUT_NAME funchook
     VERSION ${PROJECT_VERSION}

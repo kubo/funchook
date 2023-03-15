@@ -20,36 +20,18 @@
 // Windows 32-bit and Linux i686
 #define TRANSIT_CODE_TEMPLATE { \
   /* 00000000 <transit>: */ \
-  /*    0: */ 0x55,                               /* push   %ebp */ \
-  /*    1: */ 0x89,0xe5,                          /* mov    %esp,%ebp */ \
-  /*    3: */ 0x51,                               /* push   %ecx */ \
-  /*    4: */ 0x52,                               /* push   %edx */ \
-  /*    5: */ 0xe8,0x22,0x00,0x00,0x00,           /* call   2c <get_eip> */ \
-  /*    a: */ 0x8d,0x40,0xf6,                     /* lea    -0xa(%eax),%eax */ \
-  /*    d: */ 0x83,0xec,0x08,                     /* sub    $0x8,%esp */ \
-  /*   10: */ 0x8d,0x4d,0x04,                     /* lea    0x4(%ebp),%ecx */ \
-  /*   13: */ 0x51,                               /* push   %ecx */ \
-  /*   14: */ 0x50,                               /* push   %eax */ \
-  /*   15: */ 0x8d,0x80,0x30,0x00,0x00,0x00,      /* lea    0x30(%eax),%eax */ \
-  /*   1b: */ 0xff,0x10,                          /* call   *(%eax) */ \
-  /*   1d: */ 0x58,                               /* pop    %eax */ \
-  /*   1e: */ 0x83,0xc4,0x0c,                     /* add    $0xc,%esp */ \
-  /*   21: */ 0x5a,                               /* pop    %edx */ \
-  /*   22: */ 0x59,                               /* pop    %ecx */ \
-  /*   23: */ 0xc9,                               /* leave   */ \
-  /*   24: */ 0x8d,0x80,0x34,0x00,0x00,0x00,      /* lea    0x34(%eax),%eax */ \
-  /*   2a: */ 0xff,0x20,                          /* jmp    *(%eax) */ \
-  /* 0000002c <get_eip>: */ \
-  /*   2c: */ 0x8b,0x04,0x24,                     /* mov    (%esp),%eax */ \
-  /*   2f: */ 0xc3,                               /* ret     */ \
-  /* 00000030 <hook_caller_addr>: */ \
-  /*   30: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%eax) */ \
-  /* 00000034 <hook_func_addr>: */ \
-  /*   34: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%eax) */ \
+  /*    0: */ 0xe8,0x09,0x00,0x00,0x00,           /* call   e <get_eip> */ \
+  /*    5: */ 0x8d,0x40,0xfb,                     /* lea    -0x5(%eax),%eax */ \
+  /*    8: */ 0xff,0xa0,0x14,0x00,0x00,0x00,      /* jmp    *0x14(%eax) */ \
+  /* 0000000e <get_eip>: */ \
+  /*    e: */ 0x8b,0x04,0x24,                     /* mov    (%esp),%eax */ \
+  /*   11: */ 0xc3,                               /* ret     */ \
+  /*   12: */ 0x66,0x90,                          /* xchg   %ax,%ax */ \
+  /* 00000014 <hook_caller_addr>: */ \
+  /*   14: */ 0x0f,0x1f,0x40,0x00,                /* nopl   0x0(%eax) */ \
   }
-#define TRANSIT_HOOK_CALLER_ADDR 0x30
-#define TRANSIT_HOOK_FUNC_ADDR 0x34
-#define TRANSIT_CODE_SIZE 0x38
+#define TRANSIT_HOOK_CALLER_ADDR 0x14
+#define TRANSIT_CODE_SIZE 0x18
 
 #elif defined(CPU_ARM64)
 
