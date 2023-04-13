@@ -13,7 +13,7 @@
 #endif
 funchook_hook_caller_asm:
 	.cfi_startproc
-	endbr64
+	.byte 0xf3, 0x0f, 0x1e, 0xfa // same with `endbr64`, which is `nop` on legacy machines
 	pushq  %rbp
 	.cfi_def_cfa_offset 0x10
 	.cfi_offset rbp, -0x10
