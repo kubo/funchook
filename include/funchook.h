@@ -107,6 +107,7 @@ typedef struct {
     funchook_hook_t prehook;
     void *user_data;
     unsigned int flags;
+    /* The next member is under development. It may be removed later. */
     const char *arg_types;
 } funchook_params_t;
 
@@ -172,6 +173,7 @@ FUNCHOOK_EXPORT const char *funchook_error_message(const funchook_t *funchook);
  */
 FUNCHOOK_EXPORT int funchook_set_debug_file(const char *name);
 
+/* This function is under developemnt. It will be replaced with C++ template functions. */
 FUNCHOOK_EXPORT int funchook_get_arg(const funchook_arg_handle_t *arg_handle, int pos, void *out);
 
 #ifdef __cplusplus
