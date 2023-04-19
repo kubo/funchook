@@ -86,10 +86,10 @@
 #include "template.inc"
 
 #if defined(CPU_ARM64)
-#include "funchook_arm64.h"
+#include "arch_arm64.h"
 #endif
 #if defined(CPU_X86) || defined(CPU_X86_64)
-#include "funchook_x86.h"
+#include "arch_x86.h"
 #endif
 
 #define JUMP32_BYTE_SIZE (JUMP32_SIZE * sizeof(insn_t))
@@ -138,7 +138,7 @@ void funchook_log(funchook_t *funchook, const char *fmt, ...) __attribute__((__f
 void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
 void *funchook_hook_caller(size_t transit_addr, const size_t *base_pointer);
 
-/* Functions in funchook_unix.c & funchook_windows.c */
+/* Functions in os_unix.c & os_windows.c */
 extern const size_t page_size;
 extern const size_t allocation_unit; /* windows only */
 

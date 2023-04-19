@@ -166,7 +166,7 @@ endif ()
 # funchook
 #
 
-set(FUNCHOOK_SOURCES src/funchook.c src/funchook_${FUNCHOOK_CPU}.c src/funchook_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
+set(FUNCHOOK_SOURCES src/funchook.c src/arch_${FUNCHOOK_CPU}.c src/os_${FUNCHOOK_OS}.c src/disasm_${DISASM}.c)
 
 if ((FUNCHOOK_CPU STREQUAL x86) AND (CMAKE_SIZEOF_VOID_P EQUAL "8"))
   if (MSVC)
