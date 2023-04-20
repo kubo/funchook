@@ -120,6 +120,20 @@ typedef struct {
 #endif
 } mem_state_t;
 
+typedef struct funchook_entry {
+    insn_t transit[TRANSIT_CODE_SIZE];
+    void *original_target_func;
+    void *target_func;
+    void *hook_func;
+    funchook_hook_t prehook;
+    void *user_data;
+    char *arg_types;
+    uint32_t flags;
+    insn_t trampoline[TRAMPOLINE_SIZE];
+    insn_t old_code[JUMP32_SIZE];
+    insn_t new_code[JUMP32_SIZE];
+} funchook_entry_t;
+
 typedef struct funchook_page {
 #ifdef FUNCHOOK_ENTRY_AT_PAGE_BOUNDARY
     funchook_entry_t entries[1]; /* This contains at most one. */

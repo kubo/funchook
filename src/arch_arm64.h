@@ -69,20 +69,6 @@ typedef enum {
 
 typedef uint32_t insn_t;
 
-typedef struct funchook_entry {
-    uint32_t transit[TRANSIT_CODE_SIZE];
-    void *original_target_func;
-    void *target_func;
-    void *hook_func;
-    funchook_hook_t prehook;
-    void *user_data;
-    char *arg_types;
-    uint32_t flags;
-    uint32_t trampoline[TRAMPOLINE_SIZE];
-    uint32_t old_code[JUMP32_SIZE];
-    uint32_t new_code[JUMP32_SIZE];
-} funchook_entry_t;
-
 typedef struct {
     int dummy;
 } ip_displacement_t;
