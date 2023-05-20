@@ -64,6 +64,7 @@ typedef struct funchook funchook_t;
 #define FUNCHOOK_ERROR_MEMORY_FUNCTION         9 /* other memory function errors */
 #define FUNCHOOK_ERROR_NOT_INSTALLED          10
 #define FUNCHOOK_ERROR_NO_AVAILABLE_REGISTERS 11
+#define FUNCHOOK_ERROR_NO_SPACE_NEAR_TARGET_ADDR 12
 
 #define FUNCHOOK_FLAG_THISCALL     (1u << 0)
 #define FUNCHOOK_FLAG_FASTCALL     (1u << 1)

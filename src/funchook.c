@@ -516,6 +516,11 @@ static int get_page(funchook_t *funchook, funchook_page_t **page_out, uint8_t *a
     if (rv != 0) {
         return rv;
     }
+    if (!funchook_page_avail(funchook, page, page->used, addr, disp)) {
+        funchook_set_error_message(funchook, "Could not allocate memory near address %p", addr);
+        funchook_page_free(funchook, page);
+        return FUNCHOOK_ERROR_NO_SPACE_NEAR_TARGET_ADDR;
+    }
     page->used = 0;
     page->next = funchook->page_list;
     funchook->page_list = page;
