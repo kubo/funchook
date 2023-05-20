@@ -382,8 +382,8 @@ int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, ui
     const uint8_t *src;
     const uint8_t *dst;
 
-    if (!funchook_jump32_avail(addr, entry->trampoline)) {
-        funchook_log(funchook, "  could not jump function %p to trampoline %p\n", addr, entry->trampoline);
+    if (!funchook_jump32_avail(addr, entry->transit)) {
+        funchook_log(funchook, "  could not jump function %p to transit %p\n", addr, entry->transit);
         return 0;
     }
     src = entry->trampoline + disp->disp[0].src_addr_offset;
