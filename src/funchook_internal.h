@@ -31,7 +31,7 @@
 #ifndef FUNCHOOK_INTERNAL_H
 #define FUNCHOOK_INTERNAL_H 1
 #include "funchook.h"
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -115,7 +115,7 @@ struct funchook_arg_handle {
 typedef struct {
     void *addr;
     size_t size;
-#ifdef WIN32
+#ifdef _WIN32
     DWORD protect;
 #endif
 } mem_state_t;

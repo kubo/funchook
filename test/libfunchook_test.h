@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #ifdef FUNCHOOK_TEST_EXPORTS
 #define TEST_DLL_EXPORT __declspec(dllexport)
 #else

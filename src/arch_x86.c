@@ -415,7 +415,7 @@ int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
     } state = ST_STACK;
     int offset = INT_MIN;
     int next_offset = 1;
-#ifdef WIN32
+#ifdef _WIN32
     if (flags & FUNCHOOK_FLAG_THISCALL) {
         state = ST_THISCALL;
     }
@@ -479,7 +479,7 @@ int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
         }
     }
     return offset;
-#elif defined(WIN32)
+#elif defined(_WIN32)
     size_t num_args = strlen(arg_types);
     if (pos > num_args) {
         return INT_MIN;

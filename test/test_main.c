@@ -3,7 +3,7 @@
 #if defined(__linux__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
 #endif
-#ifdef WIN32
+#ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 #include <stdio.h>
@@ -14,7 +14,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include <io.h>
 #define mode_t int
@@ -33,7 +33,7 @@
 #include "test.h"
 #include "libfunchook_test.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
@@ -125,7 +125,7 @@ enum load_type {
 static void *load_func(const char *module, const char *func)
 {
     void *addr;
-#ifdef WIN32
+#ifdef _WIN32
     HMODULE hMod = GetModuleHandleA(module);
         
     if (hMod == NULL) {
@@ -592,7 +592,7 @@ int main()
     TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump1, FUNCHOOK_ERROR_CANNOT_FIX_IP_RELATIVE);
     TEST_FUNCHOOK_EXPECT_ERROR(x86_test_error_jump2, FUNCHOOK_ERROR_FOUND_BACK_JUMP);
 
-#ifndef WIN32
+#ifndef _WIN32
     TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_ax, LOAD_TYPE_NO_LOAD);
     TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_bx, LOAD_TYPE_NO_LOAD);
     TEST_FUNCHOOK_INT(x86_test_call_get_pc_thunk_cx, LOAD_TYPE_NO_LOAD);

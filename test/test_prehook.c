@@ -3,7 +3,7 @@
 #include <funchook.h>
 #include "test.h"
 #include "libfunchook_test.h"
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <dlfcn.h>
@@ -43,7 +43,7 @@ static void test_dllfunc(void)
     int rv;
     void *dllfunc_1_user_data = (void*)(size_t)0xdeadbeef;
     void *dllfunc_2_user_data = (void*)(size_t)0xcafebabe;
-#ifdef WIN32
+#ifdef _WIN32
     HANDLE hMod = GetModuleHandleA("funchook_test_dll.dll");
     if (hMod == NULL) {
         hMod = GetModuleHandleA("libfunchook_test.so");

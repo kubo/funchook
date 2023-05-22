@@ -61,7 +61,7 @@ label_2_1:
 #endif
 	ret
 
-#ifndef WIN32
+#ifndef _WIN32
 	.p2align 4,,15
 	.globl	x86_test_call_get_pc_thunk_ax
 x86_test_call_get_pc_thunk_ax:

@@ -39,7 +39,7 @@ extern "C" {
  * or libfunchook.so. Others are invisible.
  */
 #ifdef FUNCHOOK_EXPORTS
-#if defined(WIN32)
+#if defined(_WIN32)
 #define FUNCHOOK_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__)
 #define FUNCHOOK_EXPORT __attribute__((visibility("default")))

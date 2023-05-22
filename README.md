@@ -26,6 +26,11 @@ News
 * Add `funchook_prepare_with_params()` to support prehook.
 * Add `funchook_get_arg()` to get arguments in prehook.
 
+### 1.1.3 (2023-06-04)
+
+* Fix build for Windows with raw MSC ([#45][])
+* Fix debug log format warnings by mingw-w64 compiler.
+
 ### 1.1.2 (2023-03-12)
 
 * Experimental support for Windows arm64
@@ -282,4 +287,5 @@ itself is under the GPL.
 [#30]: https://github.com/kubo/funchook/pull/30
 [#31]: https://github.com/kubo/funchook/pull/31
 [#32]: https://github.com/kubo/funchook/pull/32
+[#45]: https://github.com/kubo/funchook/pull/45
 [`mprotect`]: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html

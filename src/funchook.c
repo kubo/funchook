@@ -42,7 +42,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -82,7 +82,7 @@ static void flush_instruction_cache(void *addr, size_t size)
 {
 #if defined __GNUC__
     __builtin___clear_cache((char*)addr, (char*)addr + size);
-#elif defined WIN32
+#elif defined _WIN32
     FlushInstructionCache(GetCurrentProcess(), addr, size);
 #else
 #error unsupported OS or compiler
@@ -308,12 +308,12 @@ static funchook_t *funchook_create_internal(void)
         num_entries_in_page = (page_size - offsetof(funchook_page_t, entries)) / sizeof(funchook_entry_t);
 #endif
         funchook_log(funchook,
-#ifdef WIN32
+#ifdef _WIN32
                      "  allocation_unit=%"PRIuPTR"\n"
 #endif
                      "  page_size=%"PRIuPTR"\n"
                      "  num_entries_in_page=%"PRIuPTR"\n",
-#ifdef WIN32
+#ifdef _WIN32
                      allocation_unit,
 #endif
                      page_size, num_entries_in_page);

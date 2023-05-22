@@ -8,7 +8,7 @@
 #define NOINLINE __declspec(noinline)
 #endif
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #define DLLIMPORT __declspec(dllimport)
 #else
 #define DLLIMPORT
