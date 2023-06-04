@@ -53,8 +53,15 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-#ifndef __GNUC__
-#define __attribute__(arg)
+#ifdef __GNUC__
+#ifdef __MINGW32__
+#include <stdio.h>
+#define ATTR_FORMAT_PRINTF(a, b)  __attribute__((__format__ (__MINGW_PRINTF_FORMAT, a, b)))
+#else
+#define ATTR_FORMAT_PRINTF(a, b)  __attribute__((__format__ (__printf__, a, b)))
+#endif
+#else
+#define ATTR_FORMAT_PRINTF(a, b)
 #endif
 #if defined(__MINGW64__) && !defined(_UCRT)
 #define __attribute__(arg)
@@ -148,8 +155,8 @@ typedef struct funchook_page {
 /* Functions in funchook.c */
 extern const size_t funchook_size;
 extern char funchook_debug_file[];
-void funchook_log(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
-void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
+void funchook_log(funchook_t *funchook, const char *fmt, ...) ATTR_FORMAT_PRINTF(2, 3);
+void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) ATTR_FORMAT_PRINTF(2, 3);
 void *funchook_hook_caller(size_t transit_addr, const size_t *base_pointer);
 
 /* Functions in os_unix.c & os_windows.c */
