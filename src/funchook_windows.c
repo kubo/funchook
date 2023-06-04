@@ -101,7 +101,7 @@ static int alloc_page_info(funchook_t *funchook, page_list_t **pl_out, void *hin
                                        err, to_errmsg(err, errbuf, sizeof(errbuf)));
             return FUNCHOOK_ERROR_MEMORY_FUNCTION;
         }
-        funchook_log(funchook, "  process map: %016I64x-%016I64x %s\n",
+        funchook_log(funchook, "  process map: "ADDR_FMT"-"ADDR_FMT" %s\n",
                      (size_t)mbi.BaseAddress, (size_t)mbi.BaseAddress + mbi.RegionSize,
                      (mbi.State == MEM_FREE) ? "free" : "used");
         if (mbi.State == MEM_FREE) {
@@ -384,7 +384,7 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
         size_t immlo = ((size_t)(fn[0] & ADRP_XIP0_IMMLO) >> 29) << 12;
         size_t imm12 = ((size_t)(fn[1] & LDR_XIP0_IMM12) >> 10) << 3;
         pos = addr + immhi + immlo + imm12;
-        // fprintf(stderr, "%016I64x: %08x %08x %08x : %I64x %I64x %I64x %I64x\n", (size_t)fn, fn[0], fn[1], fn[2], addr, immhi, immlo, imm12);
+        // fprintf(stderr, ADDR_FMT": %08x %08x %08x : %"PRIxPTR" %"PRIxPTR" %"PRIxPTR" %"PRIxPTR"\n", (size_t)fn, fn[0], fn[1], fn[2], addr, immhi, immlo, imm12);
         funchook_log(funchook, "  indirect jump to addresss at %p\n", (void*)pos);
     }
 #endif
