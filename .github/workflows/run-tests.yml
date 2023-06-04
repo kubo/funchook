@@ -56,7 +56,8 @@ jobs:
         submodules: true
     - name: Install packages
       run: |
-        sudo apt install -y gcc-multilib g++-multilib
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib g++-multilib
     - name: x86_64 tests on Ubuntu
       run: |
         ./.ci/run-cmake-test.sh x86_64-linux
@@ -89,11 +90,11 @@ jobs:
         submodules: true
     - name: Install packages
       run: |
-        sudo apt install -y g++-mingw-w64-x86-64 g++-mingw-w64-i686 wine64 wine-binfmt
+        sudo apt-get install -y g++-mingw-w64-x86-64 g++-mingw-w64-i686 wine64 wine-binfmt
         sudo dpkg --add-architecture i386
-        sudo apt update
-        sudo apt install -y wine32
-        sudo update-binfmts --import wine
+        sudo apt-get update
+        sudo apt-get install -y libgcc-s1:i386 libstdc++6:i386 wine32
+        sudo apt-get remove mono-runtime
     - name: x64 tests on Wine
       run: |
         ./.ci/run-cmake-test.sh x86_64-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake
