@@ -2,39 +2,13 @@ name: tests
 on:
   push:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      tests_on_alpine:
-        description: 'Tests on Alpine (true or false)'
-        required: true
-        default: true
-      tests_on_macos:
-        description: 'Tests on macOS (true or false)'
-        required: true
-        default: true
-      tests_on_ubuntu_arm64:
-        description: 'Tests on Ubuntu arm64 (true or false)'
-        required: true
-        default: true
-      tests_on_ubuntu_x86_64:
-        description: 'Tests on Ubuntu x86_64 (true or false)'
-        required: true
-        default: true
-      tests_on_windows:
-        description: 'Tests on Windows (true or false)'
-        required: true
-        default: true
-      tests_on_wine:
-        description: 'Tests on Wine (true or false)'
-        required: true
-        default: true
+
 jobs:
   tests_on_alpine:
     name: Tests on Alpine (x86_64)
-    if: github.event.inputs.tests_on_alpine == 'true' || github.event.inputs.tests_on_alpine == ''
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: x86_64 tests on Alpine
@@ -44,10 +18,9 @@ jobs:
 
   tests_on_macos:
     name: Tests on macOS (x86_64)
-    if: github.event.inputs.tests_on_macos == 'true' || github.event.inputs.tests_on_macos == ''
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: x86_64 tests on macOS
@@ -56,10 +29,9 @@ jobs:
 
   tests_on_ubuntu_arm64:
     name: Tests on Ubuntu (aarch64)
-    if: github.event.inputs.tests_on_ubuntu_arm64 == 'true' || github.event.inputs.tests_on_ubuntu_arm64 == ''
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: uraimo/run-on-arch-action@v2.0.5
@@ -77,15 +49,15 @@ jobs:
 
   tests_on_ubuntu_x86_64:
     name: Tests on Ubuntu (x86_64 and i686)
-    if: github.event.inputs.tests_on_ubuntu_x86_64 == 'true' || github.event.inputs.tests_on_ubuntu_x86_64 == ''
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Install packages
       run: |
-        sudo apt install -y gcc-multilib
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib
     - name: x86_64 tests on Ubuntu
       run: |
         ./.ci/run-cmake-test.sh x86_64-linux
@@ -95,10 +67,9 @@ jobs:
 
   tests_on_windows:
     name: Tests on Windows (x64 and x86)
-    if: github.event.inputs.tests_on_windows == 'true' || github.event.inputs.tests_on_windows == ''
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: x64 tests on Windows
@@ -110,22 +81,20 @@ jobs:
       run: |
         ./.ci/run-cmake-test.sh x86-windows -A Win32
 
-  # disabled because of unmet package dependencies
   tests_on_wine:
     name: Tests on Wine (x64 and x86)
-    if: false
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Install packages
       run: |
-        sudo apt install -y g++-mingw-w64-x86-64 g++-mingw-w64-i686 wine64 wine-binfmt
+        sudo apt-get install -y g++-mingw-w64-x86-64 g++-mingw-w64-i686 wine64 wine-binfmt
         sudo dpkg --add-architecture i386
-        sudo apt update
-        sudo apt install -y wine32
-        sudo update-binfmts --import wine
+        sudo apt-get update
+        sudo apt-get install -y libgcc-s1:i386 libstdc++6:i386 wine32
+        sudo apt-get remove mono-runtime
     - name: x64 tests on Wine
       run: |
         ./.ci/run-cmake-test.sh x86_64-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake
