@@ -12,42 +12,36 @@ funchook_hook_caller_asm:
 	.seh_stackalloc	0xa0
 	.seh_endprologue
 	// save integer or pointer arguments passed in registers.
-	mov  %rcx, -0x08(%rbp)
-	mov  %rdx, -0x10(%rbp)
-	mov  %r8, -0x18(%rbp)
-	mov  %r9, -0x20(%rbp)
+	mov  %rcx, -0x80(%rbp)
+	mov  %rdx, -0x78(%rbp)
+	mov  %r8, -0x70(%rbp)
+	mov  %r9, -0x68(%rbp)
 	// save floating-point registers used as arguments.
-	movdqa %xmm0, -0x30(%rbp)
-	movdqa %xmm1, -0x40(%rbp)
-	movdqa %xmm2, -0x50(%rbp)
-	movdqa %xmm3, -0x60(%rbp)
-	// zero space for return value
-	pxor   %xmm0, %xmm0
-	movdqa %xmm0, -0x70(%rbp)
-	movdqa %xmm0, -0x80(%rbp)
+	movdqu %xmm0, -0x60(%rbp)
+	movdqu %xmm1, -0x50(%rbp)
+	movdqu %xmm2, -0x40(%rbp)
+	movdqu %xmm3, -0x30(%rbp)
+	// save floating-point registers used as __vectorcall arguments
+	movdqu %xmm4, -0x20(%rbp)
+	movdqu %xmm5, -0x10(%rbp)
 	// 1st arg: the start address of transit. Note: r11 is set by transit-x86_64.s.
 	mov  %r11, %rcx
 	// 2nd arg: base pointer
 	mov  %rbp, %rdx
 	// call funchook_hook_caller
 	call funchook_hook_caller
-	mov  %rax, %r11
-	cmpb $0, -0x80(%rbp)
-	jne  .L1
 	// restore saved registers
-	mov  -0x08(%rbp), %rcx
-	mov  -0x10(%rbp), %rdx
-	mov  -0x18(%rbp), %r8
-	mov  -0x20(%rbp), %r9
-	movdqa -0x30(%rbp), %xmm0
-	movdqa -0x40(%rbp), %xmm1
-	movdqa -0x50(%rbp), %xmm2
-	movdqa -0x60(%rbp), %xmm3
+	mov  -0x80(%rbp), %rcx
+	mov  -0x78(%rbp), %rdx
+	mov  -0x70(%rbp), %r8
+	mov  -0x68(%rbp), %r9
+	movdqu -0x60(%rbp), %xmm0
+	movdqu -0x50(%rbp), %xmm1
+	movdqu -0x40(%rbp), %xmm2
+	movdqu -0x30(%rbp), %xmm3
+	movdqu -0x20(%rbp), %xmm4
+	movdqu -0x10(%rbp), %xmm5
 	leave
-	jmp  *%r11
-.L1:
-	mov    -0x78(%rbp), %rax
-	movdqa -0x70(%rbp), %xmm0
-	leave
-	ret
+	// jump to hook_func
+	jmp  *%rax
 	.seh_endproc

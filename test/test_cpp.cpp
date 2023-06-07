@@ -9,9 +9,9 @@ thiscall_args_t thiscall_args;
 
 void thiscall_prehook(funchook_info_t *info)
 {
-    funchook_get_arg(info->arg_handle, 1, &thiscall_args.this_);
-    funchook_get_arg(info->arg_handle, 2, &thiscall_args.a);
-    funchook_get_arg(info->arg_handle, 3, &thiscall_args.b);
+    thiscall_args.this_ = *(void**)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    thiscall_args.a = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    thiscall_args.b = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
 }
 
 static void test_thiscall(void)
@@ -27,7 +27,6 @@ static void test_thiscall(void)
     funchook_params_t params = {0};
     params.prehook = thiscall_prehook;
     params.flags = FUNCHOOK_FLAG_THISCALL;
-    params.arg_types = "lpll";
     rv = funchook_prepare_with_params(funchook, (void**)&target_func, &params);
     if (rv != 0) {
         printf("ERROR: failed to prepare hook TestCpp::call with prehook. (%s)\n", funchook_error_message(funchook));

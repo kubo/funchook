@@ -158,10 +158,18 @@ long long_args_in_prehook[10];
 static void long_args_prehook(funchook_info_t *info)
 {
     for (int i = 0; i < 10; i++) {
-      long val;
-      if (funchook_get_arg(info->arg_handle, i + 1, &val) == 0) {
-          long_args_in_prehook[i] = val;
-      }
+#if defined __x86_64__ || defined _M_AMD64
+#ifdef _WIN32
+        static const int max_int_reg = 4;
+#else
+        static const int max_int_reg = 6;
+#endif
+        if (i < max_int_reg) {
+            long_args_in_prehook[i] = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, i);
+        } else {
+            long_args_in_prehook[i] = *(long*)funchook_arg_get_stack_addr(info->arg_handle, i - max_int_reg);
+        }
+#endif
     }
 }
 
@@ -177,7 +185,6 @@ static void test_long_args(void)
     long_args_func = long_args;
     const funchook_params_t long_args_params = {
         .prehook = long_args_prehook,
-        .arg_types = "lllllllllll",
     };
     rv = funchook_prepare_with_params(funchook, (void**)&long_args_func, &long_args_params);
     if (rv != 0) {
@@ -222,10 +229,18 @@ double double_args_in_prehook[10];
 static void double_args_prehook(funchook_info_t *info)
 {
     for (int i = 0; i < 10; i++) {
-      double val;
-      if (funchook_get_arg(info->arg_handle, i + 1, &val) == 0) {
-          double_args_in_prehook[i] = val;
-      }
+#if defined __x86_64__ || defined _M_AMD64
+#ifdef _WIN32
+        static const int max_flt_reg = 4;
+#else
+        static const int max_flt_reg = 8;
+#endif
+        if (i < max_flt_reg) {
+            double_args_in_prehook[i] = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, i);
+        } else {
+            double_args_in_prehook[i] = *(double*)funchook_arg_get_stack_addr(info->arg_handle, i - max_flt_reg);
+        }
+#endif
     }
 }
 
@@ -241,7 +256,6 @@ static void test_double_args(void)
     double_args_func = double_args;
     const funchook_params_t double_args_params = {
         .prehook = double_args_prehook,
-        .arg_types = "ddddddddddd",
     };
     rv = funchook_prepare_with_params(funchook, (void**)&double_args_func, &double_args_params);
     if (rv != 0) {
@@ -291,21 +305,62 @@ mixed_args_t mixed_args_in_prehook[2];
 static void mixed_args_prehook(funchook_info_t *info)
 {
     memset(mixed_args_in_prehook, PADDING_BYTE, sizeof(mixed_args_in_prehook));
-    for (int i = 0; i < 2; i++) {
-        mixed_args_t *arg  = &mixed_args_in_prehook[i];
-        funchook_get_arg(info->arg_handle, 12 * i + 1, &arg->u8);
-        funchook_get_arg(info->arg_handle, 12 * i + 2, &arg->dbl1);
-        funchook_get_arg(info->arg_handle, 12 * i + 3, &arg->u16);
-        funchook_get_arg(info->arg_handle, 12 * i + 4, &arg->flt1);
-        funchook_get_arg(info->arg_handle, 12 * i + 5, &arg->u32);
-        funchook_get_arg(info->arg_handle, 12 * i + 6, &arg->dbl2);
-        funchook_get_arg(info->arg_handle, 12 * i + 7, &arg->lng);
-        funchook_get_arg(info->arg_handle, 12 * i + 8, &arg->flt2);
-        funchook_get_arg(info->arg_handle, 12 * i + 9, &arg->u64);
-        funchook_get_arg(info->arg_handle, 12 * i + 10, &arg->dbl3);
-        funchook_get_arg(info->arg_handle, 12 * i + 11, &arg->uptr);
-        funchook_get_arg(info->arg_handle, 12 * i + 12, &arg->flt3);
-    }
+#if defined __x86_64__ && !defined _WIN32
+    mixed_args_in_prehook[0].u8 = *(uint8_t*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    mixed_args_in_prehook[0].u16 = *(uint16_t*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    mixed_args_in_prehook[0].u32 = *(uint32_t*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+    mixed_args_in_prehook[0].lng = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 4);
+    mixed_args_in_prehook[0].u64 = *(uint64_t*)funchook_arg_get_int_reg_addr(info->arg_handle, 5);
+
+    mixed_args_in_prehook[0].dbl1 = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+    mixed_args_in_prehook[0].flt1 = *(float*)funchook_arg_get_flt_reg_addr(info->arg_handle, 1);
+    mixed_args_in_prehook[0].dbl2 = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 2);
+    mixed_args_in_prehook[0].flt2 = *(float*)funchook_arg_get_flt_reg_addr(info->arg_handle, 3);
+    mixed_args_in_prehook[0].dbl3 = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 4);
+    mixed_args_in_prehook[0].flt3 = *(float*)funchook_arg_get_flt_reg_addr(info->arg_handle, 5);
+    mixed_args_in_prehook[1].dbl1 = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 6);
+    mixed_args_in_prehook[1].flt1 = *(float*)funchook_arg_get_flt_reg_addr(info->arg_handle, 7);
+
+    mixed_args_in_prehook[0].uptr = *(uintptr_t*)funchook_arg_get_stack_addr(info->arg_handle, 0);
+    mixed_args_in_prehook[1].u8 = *(uint8_t*)funchook_arg_get_stack_addr(info->arg_handle, 1);
+    mixed_args_in_prehook[1].u16 = *(uint16_t*)funchook_arg_get_stack_addr(info->arg_handle, 2);
+    mixed_args_in_prehook[1].u32 = *(uint32_t*)funchook_arg_get_stack_addr(info->arg_handle, 3);
+    mixed_args_in_prehook[1].dbl2 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 4);
+    mixed_args_in_prehook[1].lng = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 5);
+    mixed_args_in_prehook[1].flt2 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 6);
+    mixed_args_in_prehook[1].u64 = *(uint64_t*)funchook_arg_get_stack_addr(info->arg_handle, 7);
+    mixed_args_in_prehook[1].dbl3 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 8);
+    mixed_args_in_prehook[1].uptr = *(uintptr_t*)funchook_arg_get_stack_addr(info->arg_handle, 9);
+    mixed_args_in_prehook[1].flt3 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 10);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    mixed_args_in_prehook[0].u8 = *(uint8_t*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    mixed_args_in_prehook[0].dbl1 = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 2);
+    mixed_args_in_prehook[0].u16 = *(uint16_t*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+
+    mixed_args_in_prehook[0].flt1 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 0);
+    mixed_args_in_prehook[0].u32 = *(uint32_t*)funchook_arg_get_stack_addr(info->arg_handle, 1);
+    mixed_args_in_prehook[0].dbl2 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 2);
+    mixed_args_in_prehook[0].lng = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 3);
+    mixed_args_in_prehook[0].flt2 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 4);
+    mixed_args_in_prehook[0].u64 = *(uint64_t*)funchook_arg_get_stack_addr(info->arg_handle, 5);
+    mixed_args_in_prehook[0].dbl3 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 6);
+    mixed_args_in_prehook[0].uptr = *(uintptr_t*)funchook_arg_get_stack_addr(info->arg_handle, 7);
+    mixed_args_in_prehook[0].flt3 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 8);
+    mixed_args_in_prehook[1].u8 = *(uint8_t*)funchook_arg_get_stack_addr(info->arg_handle, 9);
+    mixed_args_in_prehook[1].dbl1 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 10);
+    mixed_args_in_prehook[1].u16 = *(uint16_t*)funchook_arg_get_stack_addr(info->arg_handle, 11);
+    mixed_args_in_prehook[1].flt1 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 12);
+    mixed_args_in_prehook[1].u32 = *(uint32_t*)funchook_arg_get_stack_addr(info->arg_handle, 13);
+    mixed_args_in_prehook[1].dbl2 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 14);
+    mixed_args_in_prehook[1].lng = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 15);
+    mixed_args_in_prehook[1].flt2 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 16);
+    mixed_args_in_prehook[1].u64 = *(uint64_t*)funchook_arg_get_stack_addr(info->arg_handle, 17);
+    mixed_args_in_prehook[1].dbl3 = *(double*)funchook_arg_get_stack_addr(info->arg_handle, 18);
+    mixed_args_in_prehook[1].uptr = *(uintptr_t*)funchook_arg_get_stack_addr(info->arg_handle, 19);
+    mixed_args_in_prehook[1].flt3 = *(float*)funchook_arg_get_stack_addr(info->arg_handle, 20);
+#endif
 }
 
 static void test_mixed_args(void)
@@ -320,7 +375,6 @@ static void test_mixed_args(void)
     mixed_args_func = mixed_args;
     const funchook_params_t mixed_args_params = {
         .prehook = mixed_args_prehook,
-        .arg_types = "SbdhfidlfLdpfbdhfidlfLdpf",
     };
     rv = funchook_prepare_with_params(funchook, (void**)&mixed_args_func, &mixed_args_params);
     if (rv != 0) {
@@ -387,45 +441,111 @@ static void test_mixed_args(void)
 }
 
 fastcall_args_t fastcall_args_in_prehook;
+fastcall_args_t fastcall_args_in_prehook2;
+fastcall_args_t fastcall_args_in_prehook3;
 static void fastcall_llld_prehook(funchook_info_t *info)
 {
     memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
-    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
-    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.l2);
-    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l3);
-    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.d);
+#if defined(__x86_64__) && !defined(_WIN32)
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 3);
+#endif
 }
 static void fastcall_lldl_prehook(funchook_info_t *info)
 {
     memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
-    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
-    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.l2);
-    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.d);
-    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+#if defined(__x86_64__) && !defined(_WIN32)
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+#endif
 }
 static void fastcall_ldll_prehook(funchook_info_t *info)
 {
     memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
-    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
-    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.d);
-    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l2);
-    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+#if defined(__x86_64__) && !defined(_WIN32)
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+#endif
 }
 static void fastcall_dlll_prehook(funchook_info_t *info)
 {
     memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
-    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.d);
-    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.l1);
-    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l2);
-    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+#if defined(__x86_64__) && !defined(_WIN32)
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+#endif
+}
+static void fastcall_pass_struct_prehook(funchook_info_t *info)
+{
+    memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    memset(&fastcall_args_in_prehook2, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+    memset(&fastcall_args_in_prehook3, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
+#if defined(__x86_64__) && !defined(_WIN32)
+    fastcall_args_in_prehook = *(fastcall_args_t*)funchook_arg_get_stack_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook2 = *(fastcall_args_t*)funchook_arg_get_stack_addr(info->arg_handle, 4);
+    fastcall_args_in_prehook3 = *(fastcall_args_t*)funchook_arg_get_stack_addr(info->arg_handle, 8);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    fastcall_args_in_prehook = **(fastcall_args_t**)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    fastcall_args_in_prehook2 = **(fastcall_args_t**)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook3 = **(fastcall_args_t**)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+#endif
 }
 static void fastcall_ret_struct_prehook(funchook_info_t *info)
 {
     memset(&fastcall_args_in_prehook, PADDING_BYTE, sizeof(fastcall_args_in_prehook));
-    funchook_get_arg(info->arg_handle, 1, &fastcall_args_in_prehook.l1);
-    funchook_get_arg(info->arg_handle, 2, &fastcall_args_in_prehook.d);
-    funchook_get_arg(info->arg_handle, 3, &fastcall_args_in_prehook.l2);
-    funchook_get_arg(info->arg_handle, 4, &fastcall_args_in_prehook.l3);
+#if defined(__x86_64__) && !defined(_WIN32)
+    // System V AMD64 ABI (Linux x86_64 and macOS x86_64)
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 0);
+#endif
+
+#if (defined __x86_64__ || defined _M_AMD64) && defined _WIN32
+    // Microsoft x64 calling convention (Windows x64)
+    fastcall_args_in_prehook.l1 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    fastcall_args_in_prehook.d = *(double*)funchook_arg_get_flt_reg_addr(info->arg_handle, 2);
+    fastcall_args_in_prehook.l2 = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 3);
+    fastcall_args_in_prehook.l3 = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 0);
+#endif
 }
 
 static void test_fastcall_args(void)
@@ -442,7 +562,6 @@ static void test_fastcall_args(void)
     const funchook_params_t fastcall_llld_params = {
         .prehook = fastcall_llld_prehook,
         .flags = FUNCHOOK_FLAG_FASTCALL,
-        .arg_types = "dllld",
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_llld_params);
     if (rv != 0) {
@@ -455,7 +574,6 @@ static void test_fastcall_args(void)
     const funchook_params_t fastcall_lldl_params = {
         .prehook = fastcall_lldl_prehook,
         .flags = FUNCHOOK_FLAG_FASTCALL,
-        .arg_types = "dlldl",
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_lldl_params);
     if (rv != 0) {
@@ -468,7 +586,6 @@ static void test_fastcall_args(void)
     const funchook_params_t fastcall_ldll_params = {
         .prehook = fastcall_ldll_prehook,
         .flags = FUNCHOOK_FLAG_FASTCALL,
-        .arg_types = "dldll",
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_ldll_params);
     if (rv != 0) {
@@ -481,7 +598,6 @@ static void test_fastcall_args(void)
     const funchook_params_t fastcall_dlll_params = {
         .prehook = fastcall_dlll_prehook,
         .flags = FUNCHOOK_FLAG_FASTCALL,
-        .arg_types = "ddlll",
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_dlll_params);
     if (rv != 0) {
@@ -490,11 +606,22 @@ static void test_fastcall_args(void)
         return;
     }
 
+    target_func = (void*)fastcall_pass_struct;
+    const funchook_params_t fastcall_pass_struct_params = {
+        .prehook = fastcall_pass_struct_prehook,
+        .flags = FUNCHOOK_FLAG_FASTCALL,
+    };
+    rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_pass_struct_params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook fastcall_pass_struct with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
     target_func = (void*)fastcall_ret_struct;
     const funchook_params_t fastcall_ret_struct_params = {
         .prehook = fastcall_ret_struct_prehook,
         .flags = FUNCHOOK_FLAG_FASTCALL,
-        .arg_types = "Sldll",
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_ret_struct_params);
     if (rv != 0) {
@@ -512,6 +639,8 @@ static void test_fastcall_args(void)
     }
 
     fastcall_args_t fastcall_args_expected;
+    fastcall_args_t fastcall_args_expected2;
+    fastcall_args_t fastcall_args_expected3;
     double retval;
 
     memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
@@ -601,6 +730,63 @@ static void test_fastcall_args(void)
         printf("]\n"
                "    args in target [");
         DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n");
+        error_cnt++;
+        goto cleanup;
+    }
+
+    memset(&fastcall_args_in_target, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_in_target2, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_in_target3, 0, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected, PADDING_BYTE, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected2, PADDING_BYTE, sizeof(fastcall_args_t));
+    memset(&fastcall_args_expected3, PADDING_BYTE, sizeof(fastcall_args_t));
+    fastcall_args_expected.l1 = 1;
+    fastcall_args_expected.l2 = 2;
+    fastcall_args_expected.l3 = 3;
+    fastcall_args_expected.d = 4.0;
+    fastcall_args_expected2.l1 = 5;
+    fastcall_args_expected2.l2 = 6;
+    fastcall_args_expected2.l3 = 7;
+    fastcall_args_expected2.d = 8.0;
+    fastcall_args_expected3.l1 = 9;
+    fastcall_args_expected3.l2 = 10;
+    fastcall_args_expected3.l3 = 11;
+    fastcall_args_expected3.d = 12.0;
+    retval = fastcall_pass_struct(fastcall_args_expected, fastcall_args_expected2, fastcall_args_expected3);
+    if (memcmp(&fastcall_args_expected, &fastcall_args_in_target, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected, &fastcall_args_in_prehook, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected2, &fastcall_args_in_target2, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected2, &fastcall_args_in_prehook2, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected3, &fastcall_args_in_target3, sizeof(fastcall_args_t)) != 0 ||
+        memcmp(&fastcall_args_expected3, &fastcall_args_in_prehook3, sizeof(fastcall_args_t)) != 0) {
+        printf("ERROR: unexpected arguments in fastcall_pass_struct\n"
+               "   arg1   expected [");
+        DUMP_BYTES(fastcall_args_expected);
+        printf("]\n"
+               "   arg1 in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook);
+        printf("]\n"
+               "   arg1  in target [");
+        DUMP_BYTES(fastcall_args_in_target);
+        printf("]\n"
+               "   arg2   expected [");
+        DUMP_BYTES(fastcall_args_expected2);
+        printf("]\n"
+               "   arg2 in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook2);
+        printf("]\n"
+               "   arg2  in target [");
+        DUMP_BYTES(fastcall_args_in_target2);
+        printf("]\n"
+               "   arg3   expected [");
+        DUMP_BYTES(fastcall_args_expected3);
+        printf("]\n"
+               "   arg3 in prehook [");
+        DUMP_BYTES(fastcall_args_in_prehook3);
+        printf("]\n"
+               "   arg3  in target [");
+        DUMP_BYTES(fastcall_args_in_target3);
         printf("]\n");
         error_cnt++;
         goto cleanup;

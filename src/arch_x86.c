@@ -404,163 +404,29 @@ int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, ui
 }
 #endif
 
-int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
-{
-#if defined(CPU_X86)
-    enum {
-        ST_STACK,
-        ST_THISCALL,
-        ST_FASTCALL0,
-        ST_FASTCALL1,
-    } state = ST_STACK;
-    int offset = INT_MIN;
-    int next_offset = 1;
+#ifdef CPU_X86_64
 #ifdef _WIN32
-    if (flags & FUNCHOOK_FLAG_THISCALL) {
-        state = ST_THISCALL;
-    }
-#endif
-    if (flags & FUNCHOOK_FLAG_FASTCALL) {
-        state = ST_FASTCALL0;
-    }
-    if (arg_types[0] == 'S') {
-        switch (state) {
-        case ST_FASTCALL0:
-#if defined(_MSC_VER)
-            next_offset++;
-#elif defined(__GNUC__)
-            state = ST_FASTCALL1;
+#define INT_REG_OFFSET (0x80 / 8)
+#define FLT_REG_OFFSET (0x60 / 8)
+#define STACK_OFFSET 6
 #else
-#error unchecked C compiler
+#define INT_REG_OFFSET (0xc0 / 8)
+#define FLT_REG_OFFSET (0x80 / 8)
+#define STACK_OFFSET 2
 #endif
-            break;
-        default:
-            next_offset++;
-        }
-    }
-    for (int i = 1; i <= pos; i++) {
-        switch (arg_types[i]) {
-        case 'b':
-        case 'h':
-        case 'i':
-        case 'l':
-        case 'p':
-        case 'S':
-            switch (state) {
-            case ST_STACK:
-                offset = next_offset;
-                next_offset += 1;
-                break;
-            case ST_THISCALL:
-                state = ST_STACK;
-                offset = -2;
-                break;
-            case ST_FASTCALL0:
-                state = ST_FASTCALL1;
-                offset = -2;
-                break;
-            case ST_FASTCALL1:
-                state = ST_STACK;
-                offset = -3;
-                break;
-            }
-            break;
-        case 'f':
-            offset = next_offset;
-            next_offset += 1;
-            break;
-        case 'L':
-        case 'd':
-            offset = next_offset;
-            next_offset += 2;
-            break;
-        default:
-            return INT_MIN;
-        }
-    }
-    return offset;
-#elif defined(_WIN32)
-    size_t num_args = strlen(arg_types);
-    if (pos > num_args) {
-        return INT_MIN;
-    }
-    int offset = pos;
-    if (arg_types[0] == 'S') {
-        offset++;
-    }
-    if (offset < 5) {
-        switch (arg_types[pos]) {
-        case 'b':
-        case 'h':
-        case 'i':
-        case 'l':
-        case 'L':
-        case 'p':
-        case 'S':
-            return -offset;
-        case 'd':
-        case 'f':
-            return -(4 + 2 * offset);
-        default:
-            return INT_MIN;
-        }
-    } else {
-        return offset + 1;
-    }
-#else
-    const int max_num_int = 6;
-    const int max_num_flt = 8;
-    int num_int = 0;
-    int num_flt = 0;
-    int num_stack = 0;
-    enum {
-        ARG_INTEGER,
-        ARG_FLOATING_POINT,
-        ARG_STACK,
-    } arg_type = ARG_INTEGER;
-    if (arg_types[0] == 'S') {
-        num_int++;
-    }
-    for (int i = 1; i <= pos; i++) {
-        switch (arg_types[i]) {
-        case 'b':
-        case 'h':
-        case 'i':
-        case 'l':
-        case 'L':
-        case 'p':
-        case 'S':
-            if (num_int < max_num_int) {
-                num_int++;
-                arg_type = ARG_INTEGER;
-            } else {
-                arg_type = ARG_STACK;
-                num_stack++;
-            }
-            break;
-        case 'd':
-        case 'f':
-            if (num_flt < max_num_flt) {
-                num_flt++;
-                arg_type = ARG_FLOATING_POINT;
-            } else {
-                arg_type = ARG_STACK;
-                num_stack++;
-            }
-            break;
-        default:
-            return INT_MIN;
-        }
-    }
-    switch (arg_type) {
-    case ARG_INTEGER:
-        return - num_int;
-    case ARG_FLOATING_POINT:
-        return - (8 + 2 * num_flt);
-    case ARG_STACK:
-        return num_stack + 1;
-    }
-    /* never reach here */
-    return INT_MIN;
-#endif
+
+void *funchook_arg_get_int_reg_addr(const funchook_arg_handle_t *arg_handle, int pos)
+{
+    return (void*)(arg_handle->base_pointer - INT_REG_OFFSET + pos);
 }
+
+void *funchook_arg_get_flt_reg_addr(const funchook_arg_handle_t *arg_handle, int pos)
+{
+    return (void*)(arg_handle->base_pointer - FLT_REG_OFFSET + 2 * pos);
+}
+
+void *funchook_arg_get_stack_addr(const funchook_arg_handle_t *arg_handle, int pos)
+{
+    return (void*)(arg_handle->base_pointer + STACK_OFFSET + pos);
+}
+#endif
