@@ -9,22 +9,21 @@ thiscall_args_t thiscall_args;
 
 void thiscall_prehook(funchook_info_t *info)
 {
-#if defined __x86_64__ || defined _M_AMD64
-    thiscall_args.this_ = *(void**)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
-    thiscall_args.a = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
-    thiscall_args.b = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
-#endif
-
 #if defined __i686__ && !defined(_WIN32)
+    // All arguments including `this` are passed using stack.
     thiscall_args.this_ = *(void**)funchook_arg_get_stack_addr(info->arg_handle, 0);
     thiscall_args.a = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 1);
     thiscall_args.b = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 2);
-#endif
-
-#if (defined __i686__ && defined(_WIN32)) || defined _M_IX86
+#elif (defined __i686__ && defined(_WIN32)) || defined _M_IX86
+    // `this` is passed by the ecx register. Others arguments are passed using stack.
     thiscall_args.this_ = *(void**)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
     thiscall_args.a = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 0);
     thiscall_args.b = *(long*)funchook_arg_get_stack_addr(info->arg_handle, 1);
+#else
+    // All arguments including `this` are passed using registers.
+    thiscall_args.this_ = *(void**)funchook_arg_get_int_reg_addr(info->arg_handle, 0);
+    thiscall_args.a = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 1);
+    thiscall_args.b = *(long*)funchook_arg_get_int_reg_addr(info->arg_handle, 2);
 #endif
 }
 

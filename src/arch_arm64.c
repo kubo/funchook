@@ -137,8 +137,8 @@ static int funchook_write_jump_with_prehook(funchook_t *funchook, funchook_entry
 {
     static const uint32_t template[TRANSIT_CODE_SIZE] = TRANSIT_CODE_TEMPLATE;
     memcpy(entry->transit, template, sizeof(template));
-    *(void**)(entry->transit + TRANSIT_HOOK_CALLER_ADDR) = (void*)funchook_hook_caller;
-    *(const uint8_t**)(entry->transit + TRANSIT_HOOK_FUNC_ADDR) = dst;
+    extern void funchook_hook_caller_asm(void);
+    *(void**)(entry->transit + TRANSIT_HOOK_CALLER_ADDR) = (void*)funchook_hook_caller_asm;
     funchook_log(funchook, "  Write jump 0x"ADDR_FMT" -> 0x"ADDR_FMT" with hook caller 0x"ADDR_FMT"\n",
                  (size_t)entry->transit, (size_t)dst, (size_t)funchook_hook_caller);
     return 0;
@@ -392,57 +392,17 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
     return 0;
 }
 
-int funchook_get_arg_offset(const char *arg_types, int pos, uint32_t flags)
+void *funchook_arg_get_int_reg_addr(const funchook_arg_handle_t *arg_handle, int pos)
 {
-    const int max_num_int = 8;
-    const int max_num_flt = 8;
-    int num_int = 0;
-    int num_flt = 0;
-    int num_stack = 0;
-    enum {
-        ARG_INTEGER,
-        ARG_FLOATING_POINT,
-        ARG_STACK,
-    } arg_type = ARG_INTEGER;
-    for (int i = 1; i <= pos; i++) {
-        switch (arg_types[i]) {
-        case 'b':
-        case 'h':
-        case 'i':
-        case 'l':
-        case 'L':
-        case 'p':
-        case 'S':
-            if (num_int < max_num_int) {
-                num_int++;
-                arg_type = ARG_INTEGER;
-            } else {
-                arg_type = ARG_STACK;
-                num_stack++;
-            }
-            break;
-        case 'd':
-        case 'f':
-            if (num_flt < max_num_flt) {
-                num_flt++;
-                arg_type = ARG_FLOATING_POINT;
-            } else {
-                arg_type = ARG_STACK;
-                num_stack++;
-            }
-            break;
-        default:
-            return -1;
-        }
-    }
-    switch (arg_type) {
-    case ARG_INTEGER:
-        return - num_int + 2;
-    case ARG_FLOATING_POINT:
-        return - 8 - 2 * num_flt;
-    case ARG_STACK:
-        return 3 + num_stack;
-    }
-    /* never reach here */
-    return INT_MIN;
+    return (void*)(arg_handle->base_pointer + 2  + pos);
+}
+
+void *funchook_arg_get_flt_reg_addr(const funchook_arg_handle_t *arg_handle, int pos)
+{
+    return (void*)(arg_handle->base_pointer + (2 + 10) + 2 * pos);
+}
+
+void *funchook_arg_get_stack_addr(const funchook_arg_handle_t *arg_handle, int pos)
+{
+    return (void*)(arg_handle->base_pointer + (2 + 10 + 16) + pos);
 }
