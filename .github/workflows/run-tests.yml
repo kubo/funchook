@@ -95,9 +95,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libgcc-s1:i386 libstdc++6:i386 wine32
         sudo apt-get remove mono-runtime
+        echo WINEPATH=$(ls -d /usr/lib/gcc/*-mingw*/*-win32 | tr '\n' ';') >> $GITHUB_ENV
     - name: x64 tests on Wine
       run: |
         ./.ci/run-cmake-test.sh x86_64-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.cmake
     - name: x86 tests on Wine
       run: |
-        env WINEPATH=/usr/lib/gcc/i686-w64-mingw32/10-win32 ./.ci/run-cmake-test.sh i686-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake
+        ./.ci/run-cmake-test.sh i686-mingw32 -DCMAKE_TOOLCHAIN_FILE=../cmake/i686-w64-mingw32.cmake
