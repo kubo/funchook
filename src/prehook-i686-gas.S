@@ -26,6 +26,9 @@ funchook_hook_caller_asm:
 	.cfi_offset edx, -0x0C
 	push %ecx
 	.cfi_offset ecx, -0x10
+	// The next instruction isn't necessary usually.
+	// It is just in case in order to ensure alignment.
+	and  $0xfffffff0, %esp
 	// align to a 16-byte boundary for linux gcc
 	sub  $8, %esp
 	// 2nd arg: base pointer
@@ -34,10 +37,9 @@ funchook_hook_caller_asm:
 	push %eax
 	// call funchook_hook_caller
 	call funchook_hook_caller
-	add  $16, %esp
 	// restore ecx, edx
-	pop  %ecx
-	pop  %edx
+	mov  -0x8(%ebp), %ecx
+	mov  -0x4(%ebp), %edx
 	// epilog
 	leave
 	.cfi_def_cfa esp, 4

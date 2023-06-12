@@ -40,6 +40,9 @@ funchook_hook_caller_asm:
 	movdqu %xmm5, -0x30(%rbp)
 	movdqu %xmm6, -0x20(%rbp)
 	movdqu %xmm7, -0x10(%rbp)
+	// The next instruction isn't necessary usually.
+	// It is just in case in order to ensure a 16-byte alignment.
+	and    $0xfffffffffffffff0, %rsp
 	// 1st arg: the start address of transit. Note: %r11 is set by transit-x86_64.s.
 	mov    %r11, %rdi
 	// 2nd arg: base pointer

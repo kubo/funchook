@@ -24,6 +24,9 @@ funchook_hook_caller_asm:
 	// save floating-point registers used as __vectorcall arguments
 	movdqu %xmm4, -0x20(%rbp)
 	movdqu %xmm5, -0x10(%rbp)
+	// The next instruction isn't necessary usually.
+	// It is just in case in order to ensure a 16-byte alignment.
+	and    $0xfffffffffffffff0, %rsp
 	// 1st arg: the start address of transit. Note: r11 is set by transit-x86_64.s.
 	mov  %r11, %rcx
 	// 2nd arg: base pointer
