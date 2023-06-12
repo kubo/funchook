@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <exception>
 #include <funchook.h>
 extern "C" {
 #include "test.h"
@@ -69,7 +70,61 @@ static void test_thiscall(void)
     funchook_destroy(funchook);
 }
 
+namespace {
+struct my_exception : public std::exception {};
+}
+
+void thiscall_exception_in_prehook(funchook_info_t *info)
+{
+    throw my_exception();
+}
+
+static void test_exception_in_prehook(void)
+{
+    funchook_t *funchook;
+    int rv;
+    long (TestCpp::*target_func)(long, long) = &TestCpp::call;
+
+    printf("[%d] test_cpp: exception in prehook\n", ++test_cnt);
+
+    funchook = funchook_create();
+
+    funchook_params_t params = {0};
+    params.prehook = thiscall_exception_in_prehook;
+    params.flags = FUNCHOOK_FLAG_THISCALL;
+    rv = funchook_prepare_with_params(funchook, (void**)&target_func, &params);
+    if (rv != 0) {
+        printf("ERROR: failed to prepare hook TestCpp::call with prehook. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        return;
+    }
+
+    rv = funchook_install(funchook, 0);
+    if (rv != 0) {
+        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
+        error_cnt++;
+        funchook_destroy(funchook);
+        return;
+    }
+
+    TestCpp tc;
+    bool caught_exception = false;
+    try {
+        tc.call(1, 2);
+    } catch (my_exception&) {
+        caught_exception = true;
+    }
+    if (!caught_exception) {
+        printf("ERROR: no exceptions occur\n");
+        error_cnt++;
+    }
+
+    funchook_uninstall(funchook, 0);
+    funchook_destroy(funchook);
+}
+
 void test_cpp(void)
 {
     test_thiscall();
+    test_exception_in_prehook();
 }
