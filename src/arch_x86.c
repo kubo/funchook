@@ -345,6 +345,8 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
     uint32_t *offset_addr;
     void *hook_func = entry->hook_func ? entry->hook_func : entry->trampoline;
 
+    memset(entry->new_code, NOP_INSTRUCTION, sizeof(entry->new_code));
+    entry->patch_code_size = disp->disp[0].dst_addr - (uint8_t*)entry->target_func;
     if (entry->prehook) {
         funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
         funchook_write_jump_with_prehook(funchook, entry, hook_func);

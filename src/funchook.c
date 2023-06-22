@@ -315,8 +315,9 @@ static int funchook_prepare_internal(funchook_t *funchook, void **target_func,
     entry->prehook = params->prehook;
     entry->user_data = params->user_data;
     entry->flags = params->flags;
+    entry->patch_code_size = MAX_PATCH_CODE_SIZE;
     memcpy(entry->trampoline, trampoline, TRAMPOLINE_BYTE_SIZE);
-    memcpy(entry->old_code, func, JUMP32_BYTE_SIZE);
+    memcpy(entry->old_code, func, sizeof(entry->old_code));
 
     funchook_fix_code(funchook, entry, &disp);
     funchook_log_trampoline(funchook, entry->trampoline, trampoline_size);
@@ -384,18 +385,30 @@ static int funchook_install_internal(funchook_t *funchook, int flags)
 
         for (i = 0; i < page->used; i++) {
             funchook_entry_t *entry = &page->entries[i];
+            size_t patch_code_byte_size = entry->patch_code_size * sizeof(insn_t);
             mem_state_t mstate;
-            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, JUMP32_BYTE_SIZE);
+            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, patch_code_byte_size);
 
             if (rv != 0) {
                 return rv;
             }
-            memcpy(entry->target_func, entry->new_code, JUMP32_BYTE_SIZE);
+            memcpy(entry->target_func, entry->new_code, patch_code_byte_size);
             rv = funchook_unprotect_end(funchook, &mstate);
             if (rv != 0) {
                 return rv;
             }
-            flush_instruction_cache(entry->target_func, JUMP32_BYTE_SIZE);
+            flush_instruction_cache(entry->target_func, patch_code_byte_size);
+
+            if (funchook_debug_file[0]) {
+                funchook_disasm_t disasm;
+                const funchook_insn_t *insn;
+                funchook_log(funchook, "  Patched Instructions:\n");
+                funchook_disasm_init(&disasm, funchook, entry->target_func, entry->patch_code_size + 5, (size_t)entry->target_func);
+                while ((rv = funchook_disasm_next(&disasm, &insn)) == 0) {
+                    funchook_disasm_log_instruction(&disasm, insn);
+                }
+                funchook_disasm_cleanup(&disasm);
+            }
         }
     }
     funchook->installed = 1;
@@ -415,18 +428,19 @@ static int funchook_uninstall_internal(funchook_t *funchook, int flags)
 
         for (i = 0; i < page->used; i++) {
             funchook_entry_t *entry = &page->entries[i];
+            size_t patch_code_byte_size = entry->patch_code_size * sizeof(insn_t);
             mem_state_t mstate;
-            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, JUMP32_BYTE_SIZE);
+            int rv = funchook_unprotect_begin(funchook, &mstate, entry->target_func, patch_code_byte_size);
 
             if (rv != 0) {
                 return rv;
             }
-            memcpy(entry->target_func, entry->old_code, JUMP32_BYTE_SIZE);
+            memcpy(entry->target_func, entry->old_code, patch_code_byte_size);
             rv = funchook_unprotect_end(funchook, &mstate);
             if (rv != 0) {
                 return rv;
             }
-            flush_instruction_cache(entry->target_func, JUMP32_BYTE_SIZE);
+            flush_instruction_cache(entry->target_func, patch_code_byte_size);
         }
         funchook_page_unprotect(funchook, page);
     }

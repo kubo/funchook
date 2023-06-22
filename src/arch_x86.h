@@ -37,6 +37,7 @@
 #define JUMP32_SIZE 5
 
 #define TRAMPOLINE_SIZE (JUMP32_SIZE + (MAX_INSN_LEN - 1) + JUMP32_SIZE)
+#define MAX_PATCH_CODE_SIZE (JUMP32_SIZE + MAX_INSN_LEN - 1)
 
 typedef uint8_t insn_t;
 

@@ -99,7 +99,6 @@
 #include "arch_x86.h"
 #endif
 
-#define JUMP32_BYTE_SIZE (JUMP32_SIZE * sizeof(insn_t))
 #define TRAMPOLINE_BYTE_SIZE (TRAMPOLINE_SIZE * sizeof(insn_t))
 
 /* This must be same with sysconf(_SC_PAGE_SIZE) on Unix
@@ -134,9 +133,10 @@ typedef struct funchook_entry {
     funchook_hook_t prehook;
     void *user_data;
     uint32_t flags;
+    uint32_t patch_code_size;
     insn_t trampoline[TRAMPOLINE_SIZE];
-    insn_t old_code[JUMP32_SIZE];
-    insn_t new_code[JUMP32_SIZE];
+    insn_t old_code[MAX_PATCH_CODE_SIZE];
+    insn_t new_code[MAX_PATCH_CODE_SIZE];
 } funchook_entry_t;
 
 typedef struct funchook_page {
