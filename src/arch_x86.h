@@ -34,10 +34,11 @@
 #define MAX_INSN_LEN 16
 #define MAX_INSN_CHECK_SIZE 256
 
-#define JUMP32_SIZE 5
+/* size of an instruction to jump in the range +/-2GB */
+#define REL2G_JUMP_SIZE 5
 
-#define TRAMPOLINE_SIZE (JUMP32_SIZE + (MAX_INSN_LEN - 1) + JUMP32_SIZE)
-#define MAX_PATCH_CODE_SIZE (JUMP32_SIZE + MAX_INSN_LEN - 1)
+#define TRAMPOLINE_SIZE (REL2G_JUMP_SIZE + (MAX_INSN_LEN - 1) + REL2G_JUMP_SIZE)
+#define MAX_PATCH_CODE_SIZE (REL2G_JUMP_SIZE + MAX_INSN_LEN - 1)
 
 typedef uint8_t insn_t;
 

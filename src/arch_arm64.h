@@ -60,11 +60,12 @@ typedef enum {
 } funchook_arm64_insn_id_t;
 
 #define MAX_INSN_CHECK_SIZE 64
-#define JUMP32_SIZE 2
-#define LITERAL_POOL_OFFSET (3 * JUMP32_SIZE + 2)
-#define LITERAL_POOL_NUM (JUMP32_SIZE + 1)
+/* size of an instruction to jump in the range +/-4GB */
+#define REL4G_JUMP_SIZE 2
+#define LITERAL_POOL_OFFSET (3 * REL4G_JUMP_SIZE + 2)
+#define LITERAL_POOL_NUM (REL4G_JUMP_SIZE + 1)
 #define TRAMPOLINE_SIZE (LITERAL_POOL_OFFSET + 2 * LITERAL_POOL_NUM)
-#define MAX_PATCH_CODE_SIZE JUMP32_SIZE
+#define MAX_PATCH_CODE_SIZE REL4G_JUMP_SIZE
 
 #define FUNCHOOK_ENTRY_AT_PAGE_BOUNDARY 1
 

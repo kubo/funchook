@@ -100,7 +100,7 @@ static int to_regno(funchook_t *funchook, uint32_t avail_regs, uint32_t *regno)
     return 0;
 }
 
-static int funchook_write_jump32(funchook_t *funchook, const uint32_t *src, const uint32_t *dst, uint32_t *out)
+static int funchook_write_relative_4g_jump(funchook_t *funchook, const uint32_t *src, const uint32_t *dst, uint32_t *out)
 {
     intptr_t imm = ROUND_DOWN((size_t)dst, PAGE_SIZE) - ROUND_DOWN((size_t)src, PAGE_SIZE);
     uint32_t immlo = (uint32_t)(imm >> 12) & 0x03;
@@ -110,12 +110,12 @@ static int funchook_write_jump32(funchook_t *funchook, const uint32_t *src, cons
     out[0] = 0x90000009 | (immlo << 29) | (immhi << 5);
     /* br x9 */
     out[1] = 0xd61f0120;
-    funchook_log(funchook, "  Write jump32 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
+    funchook_log(funchook, "  Write relative +/-4G jump 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
 
-static int funchook_write_jump64(funchook_t *funchook, uint32_t *src, const uint32_t *dst, uint32_t avail_regs)
+static int funchook_write_absolute_jump(funchook_t *funchook, uint32_t *src, const uint32_t *dst, uint32_t avail_regs)
 {
     uint32_t regno;
     int rv = to_regno(funchook, avail_regs, &regno);
@@ -128,7 +128,7 @@ static int funchook_write_jump64(funchook_t *funchook, uint32_t *src, const uint
     src[1] = 0xd61f0120 | TO_RN(regno);
     /* addr */
     *(const uint32_t**)(src + 2) = dst;
-    funchook_log(funchook, "  Write jump64 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
+    funchook_log(funchook, "  Write absolute jump 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
@@ -338,7 +338,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
             // The second is UDF (permanently undefined).
             ctx.src = func + 2;
         }
-        if (ctx.src - func >= JUMP32_SIZE) {
+        if (ctx.src - func >= REL4G_JUMP_SIZE) {
             rv = to_regno(funchook, avail_regs, &regno);
             if (rv != 0) {
                 goto cleanup;
@@ -353,7 +353,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
                 funchook_insn_info_t info = funchook_disasm_arm64_insn_info(&disasm, insn);
                 funchook_disasm_log_instruction(&disasm, insn);
                 const insn_t *target = (const insn_t *)target_addr((size_t)ctx.src, *ctx.src, info.insn_id);
-                if (func < target && target < func + JUMP32_SIZE) {
+                if (func < target && target < func + REL4G_JUMP_SIZE) {
                     /* jump to the hot-patched region. */
                     funchook_set_error_message(funchook, "instruction jumping back to the hot-patched region was found");
                     rv = FUNCHOOK_ERROR_FOUND_BACK_JUMP;
@@ -367,7 +367,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
         goto cleanup;
     }
     rv = 0;
-    if (ctx.src - func < JUMP32_SIZE) {
+    if (ctx.src - func < REL4G_JUMP_SIZE) {
         funchook_set_error_message(funchook, "Too short instructions");
         rv = FUNCHOOK_ERROR_TOO_SHORT_INSTRUCTIONS;
         goto cleanup;
@@ -382,12 +382,12 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
     void *hook_func = entry->hook_func ? entry->hook_func : entry->trampoline;
 
     /* func -> transit */
-    funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
+    funchook_write_relative_4g_jump(funchook, entry->target_func, entry->transit, entry->new_code);
     /* transit -> hook_func */
     if (entry->prehook) {
         funchook_write_jump_with_prehook(funchook, entry, hook_func);
     } else {
-        funchook_write_jump64(funchook, entry->transit, hook_func, FUNCHOOK_ARM64_REG_X9);
+        funchook_write_absolute_jump(funchook, entry->transit, hook_func, FUNCHOOK_ARM64_REG_X9);
     }
     return 0;
 }

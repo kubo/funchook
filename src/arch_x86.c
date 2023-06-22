@@ -57,11 +57,11 @@ static int handle_x86_get_pc_by_call_and_pop(make_trampoline_context_t *ctx, con
 
 static int handle_rip_relative(make_trampoline_context_t *ctx, const rip_relative_t *rel, size_t insn_size);
 
-static int funchook_write_jump32(funchook_t *funchook, const uint8_t *src, const uint8_t *dst, uint8_t *out)
+static int funchook_write_relative_2g_jump(funchook_t *funchook, const uint8_t *src, const uint8_t *dst, uint8_t *out)
 {
     out[0] = 0xe9;
     *(int*)(out + 1) = (int)(dst - (src + 5));
-    funchook_log(funchook, "  Write jump32 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
+    funchook_log(funchook, "  Write relative +/-2G jump 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
@@ -79,7 +79,7 @@ static int funchook_write_jump_with_prehook(funchook_t *funchook, funchook_entry
 
 #ifdef CPU_X86_64
 
-static int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8_t *dst)
+static int funchook_write_absolute_jump(funchook_t *funchook, uint8_t *src, const uint8_t *dst)
 {
     src[0] = 0xFF;
     src[1] = 0x25;
@@ -88,7 +88,7 @@ static int funchook_write_jump64(funchook_t *funchook, uint8_t *src, const uint8
     src[4] = 0x00;
     src[5] = 0x00;
     *(const uint8_t**)(src + 6) = dst;
-    funchook_log(funchook, "  Write jump64 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
+    funchook_log(funchook, "  Write absolute jump 0x"ADDR_FMT" -> 0x"ADDR_FMT"\n",
                  (size_t)src, (size_t)dst);
     return 0;
 }
@@ -99,7 +99,7 @@ static int funchook_within_32bit_relative(const uint8_t *src, const uint8_t *dst
     return (INT32_MIN <= diff && diff <= INT32_MAX);
 }
 
-static int funchook_jump32_avail(const uint8_t *src, const uint8_t *dst)
+static int funchook_relative_2g_jump_avail(const uint8_t *src, const uint8_t *dst)
 {
     return funchook_within_32bit_relative(src + 5, dst);
 }
@@ -154,7 +154,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
             ctx.src += insn_size;
             ctx.dst += insn_size;
         }
-        if (ctx.src - func >= JUMP32_SIZE) {
+        if (ctx.src - func >= REL2G_JUMP_SIZE) {
             ctx.dst[0] = 0xe9; /* unconditional jump */
             disp->disp[0].dst_addr = ctx.src;
             disp->disp[0].src_addr_offset = (ctx.dst - ctx.dst_base) + 5;
@@ -163,7 +163,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
             while ((rv = funchook_disasm_next(&disasm, &insn)) == 0) {
                 funchook_disasm_log_instruction(&disasm, insn);
                 funchook_disasm_x86_rip_relative(&disasm, insn, &rel_disp, &rel_imm);
-                if (func < rel_imm.addr && rel_imm.addr < func + JUMP32_SIZE) {
+                if (func < rel_imm.addr && rel_imm.addr < func + REL2G_JUMP_SIZE) {
                     /* jump to the hot-patched region. */
                     funchook_set_error_message(funchook, "instruction jumping back to the hot-patched region was found");
                     rv = FUNCHOOK_ERROR_FOUND_BACK_JUMP;
@@ -178,7 +178,7 @@ int funchook_make_trampoline(funchook_t *funchook, ip_displacement_t *disp, cons
     }
     rv = 0;
     /* too short function. Check whether NOP instructions continue. */
-    while (ctx.src - func < JUMP32_SIZE) {
+    while (ctx.src - func < REL2G_JUMP_SIZE) {
         if (*ctx.src != NOP_INSTRUCTION) {
             funchook_set_error_message(funchook, "Too short instructions");
             rv = FUNCHOOK_ERROR_TOO_SHORT_INSTRUCTIONS;
@@ -348,15 +348,15 @@ int funchook_fix_code(funchook_t *funchook, funchook_entry_t *entry, const ip_di
     memset(entry->new_code, NOP_INSTRUCTION, sizeof(entry->new_code));
     entry->patch_code_size = disp->disp[0].dst_addr - (uint8_t*)entry->target_func;
     if (entry->prehook) {
-        funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
+        funchook_write_relative_2g_jump(funchook, entry->target_func, entry->transit, entry->new_code);
         funchook_write_jump_with_prehook(funchook, entry, hook_func);
 #ifdef CPU_X86_64
-    } else if (!funchook_jump32_avail(entry->target_func, hook_func)) {
-        funchook_write_jump32(funchook, entry->target_func, entry->transit, entry->new_code);
-        funchook_write_jump64(funchook, entry->transit, hook_func);
+    } else if (!funchook_relative_2g_jump_avail(entry->target_func, hook_func)) {
+        funchook_write_relative_2g_jump(funchook, entry->target_func, entry->transit, entry->new_code);
+        funchook_write_absolute_jump(funchook, entry->transit, hook_func);
 #endif
     } else {
-        funchook_write_jump32(funchook, entry->target_func, hook_func, entry->new_code);
+        funchook_write_relative_2g_jump(funchook, entry->target_func, hook_func, entry->new_code);
         entry->transit[0] = 0;
     }
 
@@ -379,7 +379,7 @@ int funchook_page_avail(funchook_t *funchook, funchook_page_t *page, int idx, ui
     const uint8_t *src;
     const uint8_t *dst;
 
-    if (!funchook_jump32_avail(addr, entry->transit)) {
+    if (!funchook_relative_2g_jump_avail(addr, entry->transit)) {
         funchook_log(funchook, "  could not jump function %p to transit %p\n", addr, entry->transit);
         return 0;
     }
