@@ -73,6 +73,7 @@ typedef cs_insn funchook_insn_t;
 
 typedef struct {
     ZydisDecodedInstruction insn;
+    ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
     size_t next_address;
 } funchook_insn_t;
 

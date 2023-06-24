@@ -145,26 +145,21 @@ endif ()
 # zydis
 #
 if (DISASM_ZYDIS)
-  include(ExternalProject)
-  ExternalProject_Add(Zydis_src
-    GIT_REPOSITORY    https://github.com/zyantific/zydis.git
-    GIT_TAG           v3.1.0
-    GIT_SHALLOW       TRUE
-    CMAKE_ARGS        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE}
-                      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-                      -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
-                      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-                      -DZYDIS_BUILD_SHARED_LIB=OFF
-                      -DZYDIS_BUILD_EXAMPLES=OFF
-                      -DZYDIS_BUILD_TOOLS=OFF
-    INSTALL_COMMAND  ${CMAKE_COMMAND} --build . --target install && ${CMAKE_COMMAND} --build zycore --target install
+  FetchContent_Declare(
+    Zydis
+    GIT_REPOSITORY https://github.com/zyantific/zydis.git
+    GIT_TAG        v4.0.0
+    GIT_SHALLOW    TRUE
   )
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
-  add_library(Zydis STATIC IMPORTED)
-  set_property(TARGET Zydis PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}Zydis${CMAKE_STATIC_LIBRARY_SUFFIX})
-  set_property(TARGET Zydis PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include)
+  FetchContent_GetProperties(Zydis)
+  if(NOT zydis_POPULATED)
+    FetchContent_Populate(Zydis)
+    set(ZYDIS_BUILD_SHARED_LIB OFF CACHE BOOL "")
+    set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
+    set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
+    add_subdirectory_pic(${zydis_SOURCE_DIR} ${zydis_BINARY_DIR})
+  endif()
+
   list(APPEND FUNCHOOK_DEPS Zydis)
   set(DISASM Zydis)
 endif ()
@@ -220,9 +215,6 @@ configure_file(src/cmake_config.h.in config.h)
 
 function (add_funchook_library target_name target_type)
   add_library(${target_name} ${target_type} ${FUNCHOOK_SOURCES})
-  if (DISASM_ZYDIS)
-    add_dependencies(${target_name} Zydis_src)
-  endif ()
   set_target_properties(${target_name} PROPERTIES ${FUNCHOOK_PROPERTIES})
   target_include_directories(${target_name} PUBLIC include)
   target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}) # to include config.h

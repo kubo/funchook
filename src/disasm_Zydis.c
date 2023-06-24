@@ -37,10 +37,10 @@
 
 #ifdef CPU_X86_64
 #define MACHINE_MODE ZYDIS_MACHINE_MODE_LONG_64
-#define ADDRESS_WIDTH ZYDIS_ADDRESS_WIDTH_64
+#define STACK_WIDTH ZYDIS_STACK_WIDTH_64
 #else
 #define MACHINE_MODE ZYDIS_MACHINE_MODE_LONG_COMPAT_32
-#define ADDRESS_WIDTH ZYDIS_ADDRESS_WIDTH_32
+#define STACK_WIDTH ZYDIS_STACK_WIDTH_32
 #endif
 
 #define HEX(x) ((x) < 10 ? (x) + '0' : (x) - 10 + 'A')
@@ -54,7 +54,7 @@ int funchook_disasm_init(funchook_disasm_t *disasm, funchook_t *funchook, const 
     }
 
     disasm->funchook = funchook;
-    ZydisDecoderInit(&disasm->decoder, MACHINE_MODE, ADDRESS_WIDTH);
+    ZydisDecoderInit(&disasm->decoder, MACHINE_MODE, STACK_WIDTH);
     ZydisFormatterInit(&disasm->formatter, ZYDIS_FORMATTER_STYLE_INTEL);
     disasm->insn.next_address = address;
     disasm->code = code;
@@ -70,7 +70,8 @@ void funchook_disasm_cleanup(funchook_disasm_t *disasm)
 int funchook_disasm_next(funchook_disasm_t *disasm, const funchook_insn_t **next_insn)
 {
     size_t code_size = disasm->code_end - disasm->code;
-    ZyanStatus status = ZydisDecoderDecodeBuffer(&disasm->decoder, disasm->code, code_size, &disasm->insn.insn);
+    ZyanStatus status = ZydisDecoderDecodeFull(&disasm->decoder, disasm->code, code_size,
+                                               &disasm->insn.insn, disasm->insn.operands);
 
     if (ZYAN_SUCCESS(status)) {
         disasm->insn.next_address += disasm->insn.insn.length;
@@ -97,7 +98,8 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
     char hex[24 * 3];
     size_t i;
 
-    ZydisFormatterFormatInstruction(&disasm->formatter, &insn->insn, buffer, sizeof(buffer), addr);
+    ZydisFormatterFormatInstruction(&disasm->formatter, &insn->insn, insn->operands, insn->insn.operand_count,
+                                    buffer, sizeof(buffer), addr, ZYAN_NULL);
 
     for (i = 0; i < size; i++) {
         hex[i * 3 + 0] = HEX(code[i] >> 4);
@@ -127,7 +129,7 @@ void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_
     if (insn->insn.raw.disp.offset != 0) {
         int i;
         for (i = 0; i < insn->insn.operand_count; i++) {
-            const ZydisDecodedOperand *op = &insn->insn.operands[i];
+            const ZydisDecodedOperand *op = &insn->operands[i];
             if (op->mem.disp.has_displacement && op->mem.base == ZYDIS_REGISTER_RIP) {
                 // Fix IP-relative addressing such as:
                 //    mov eax, dword ptr [rip + 0x236eda]
