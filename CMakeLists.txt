@@ -1,9 +1,9 @@
-# GIT_SHALLOW requires cmake 3.6.
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.11)
 
 project(funchook VERSION 2.0.0 LANGUAGES C ASM)
 
 include("GNUInstallDirs")
+include(FetchContent)
 
 if(NOT FUNCHOOK_CPU) 
   set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
@@ -113,28 +113,31 @@ endif ()
 # distorm
 #
 if (DISASM_DISTORM)
-  set(DISTORM_PATH distorm/)
-  set(DISTORM_SRC_DIR ${DISTORM_PATH}/src/)
-  set(DISTORM_SOURCES ${DISTORM_SRC_DIR}/decoder.c ${DISTORM_SRC_DIR}/distorm.c ${DISTORM_SRC_DIR}/instructions.c
-      ${DISTORM_SRC_DIR}/insts.c ${DISTORM_SRC_DIR}/mnemonics.c ${DISTORM_SRC_DIR}/operands.c
-      ${DISTORM_SRC_DIR}/prefix.c ${DISTORM_SRC_DIR}/textdefs.c)
-  if (MSVC)
-    # Suppress warning C4819:
-    #   The file contains a character that cannot be represented in the current code
-    #   page (number). Save the file in Unicode format to prevent data loss.
-    #
-    # prefix.c includes non-ascii chracters and C compiler warns C4819 on multibyte Windows
-    # environment.
-    set_source_files_properties(${DISTORM_SRC_DIR}/prefix.c PROPERTIES COMPILE_FLAGS /wd4819)
-  endif ()
-  add_library(distorm STATIC ${DISTORM_SOURCES})
-  set_target_properties(distorm PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  target_include_directories(distorm PUBLIC ${DISTORM_PATH}/include)
-  if (HAVE_FVISIBILITY_HIDDEN)
-    target_compile_options(distorm PRIVATE -fvisibility=hidden)
-  endif ()
-  set(DISASM distorm)
+  FetchContent_Declare(
+    distorm
+    GIT_REPOSITORY https://github.com/gdabah/distorm.git
+    GIT_TAG        3.5.2b
+    GIT_SHALLOW    TRUE
+  )
+  FetchContent_GetProperties(distorm)
+  if(NOT distorm_POPULATED)
+    FetchContent_Populate(distorm)
+
+    file(GLOB distorm_SRC_FILES ${distorm_SOURCE_DIR}/src/*.c)
+    add_library(distorm STATIC ${distorm_SRC_FILES})
+    set_target_properties(distorm PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(distorm PUBLIC ${distorm_SOURCE_DIR}/include)
+    if (HAVE_FVISIBILITY_HIDDEN)
+      target_compile_options(distorm PRIVATE -fvisibility=hidden)
+    endif ()
+    if (MSVC)
+      # workaround for https://github.com/gdabah/distorm/pull/179
+      set_source_files_properties(${distorm_SOURCE_DIR}/src/prefix.c PROPERTIES COMPILE_FLAGS /wd4819)
+    endif ()
+  endif()
+
   list(APPEND FUNCHOOK_DEPS distorm)
+  set(DISASM distorm)
 endif ()
 
 #
