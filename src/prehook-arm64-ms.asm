@@ -21,7 +21,7 @@
 	stp q2, q3, [sp, 0x80]
 	stp q4, q5, [sp, 0xa0]
 	stp q6, q7, [sp, 0xc0]
-	// 1st arg: the start address of transit. Note: x10 is set by transit-arm64.s.
+	// 1st arg: the start address of transit. Note: x10 is set by transit-aarch64.s.
 	mov x0, x10
 	// 2nd arg: frame pointer
 	mov x1, x29
