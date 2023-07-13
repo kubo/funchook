@@ -692,7 +692,6 @@ static void test_fastcall_args(void)
     target_func = (void*)fastcall_llld;
     const funchook_params_t fastcall_llld_params = {
         .prehook = fastcall_llld_prehook,
-        .flags = FUNCHOOK_FLAG_FASTCALL,
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_llld_params);
     if (rv != 0) {
@@ -704,7 +703,6 @@ static void test_fastcall_args(void)
     target_func = (void*)fastcall_lldl;
     const funchook_params_t fastcall_lldl_params = {
         .prehook = fastcall_lldl_prehook,
-        .flags = FUNCHOOK_FLAG_FASTCALL,
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_lldl_params);
     if (rv != 0) {
@@ -716,7 +714,6 @@ static void test_fastcall_args(void)
     target_func = (void*)fastcall_ldll;
     const funchook_params_t fastcall_ldll_params = {
         .prehook = fastcall_ldll_prehook,
-        .flags = FUNCHOOK_FLAG_FASTCALL,
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_ldll_params);
     if (rv != 0) {
@@ -728,7 +725,6 @@ static void test_fastcall_args(void)
     target_func = (void*)fastcall_dlll;
     const funchook_params_t fastcall_dlll_params = {
         .prehook = fastcall_dlll_prehook,
-        .flags = FUNCHOOK_FLAG_FASTCALL,
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_dlll_params);
     if (rv != 0) {
@@ -740,7 +736,6 @@ static void test_fastcall_args(void)
     target_func = (void*)fastcall_pass_struct;
     const funchook_params_t fastcall_pass_struct_params = {
         .prehook = fastcall_pass_struct_prehook,
-        .flags = FUNCHOOK_FLAG_FASTCALL,
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_pass_struct_params);
     if (rv != 0) {
@@ -752,7 +747,6 @@ static void test_fastcall_args(void)
     target_func = (void*)fastcall_ret_struct;
     const funchook_params_t fastcall_ret_struct_params = {
         .prehook = fastcall_ret_struct_prehook,
-        .flags = FUNCHOOK_FLAG_FASTCALL,
     };
     rv = funchook_prepare_with_params(funchook, &target_func, &fastcall_ret_struct_params);
     if (rv != 0) {

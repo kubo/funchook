@@ -40,7 +40,6 @@ static void test_thiscall(void)
 
     funchook_params_t params = {0};
     params.prehook = thiscall_prehook;
-    params.flags = FUNCHOOK_FLAG_THISCALL;
     rv = funchook_prepare_with_params(funchook, (void**)&target_func, &params);
     if (rv != 0) {
         printf("ERROR: failed to prepare hook TestCpp::call with prehook. (%s)\n", funchook_error_message(funchook));
@@ -91,7 +90,6 @@ static void test_exception_in_prehook(void)
 
     funchook_params_t params = {0};
     params.prehook = thiscall_exception_in_prehook;
-    params.flags = FUNCHOOK_FLAG_THISCALL;
     rv = funchook_prepare_with_params(funchook, (void**)&target_func, &params);
     if (rv != 0) {
         printf("ERROR: failed to prepare hook TestCpp::call with prehook. (%s)\n", funchook_error_message(funchook));
