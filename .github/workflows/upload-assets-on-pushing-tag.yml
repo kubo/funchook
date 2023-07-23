@@ -10,28 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Make Assets
         id: assets
         run: |
-          DIR_NAME=funchook-$(gawk -F '[ ()]' '/set\(PROJECT_VERSION / {print $3}' CMakeLists.txt)
+          PROJECT_VERSION=$(perl -ne 'print $1 if /project\(.*VERSION\s+(\d+.\d+.\d)/' CMakeLists.txt)
+          test -n $PROJECT_VERSION
+          DIR_NAME=funchook-$PROJECT_VERSION
           TGZ_FILE_NAME=$DIR_NAME.tar.gz
           ZIP_FILE_NAME=$DIR_NAME.zip
           git clone --recursive . $DIR_NAME
+          rm -rf $DIR_NAME/.ci
           rm -rf $DIR_NAME/.dockerignore
           rm -rf $DIR_NAME/.git*
-          rm -rf $DIR_NAME/.travis*
-          rm -rf $DIR_NAME/distorm/.git
-          rm -rf $DIR_NAME/distorm/MANIFEST*
-          rm -rf $DIR_NAME/distorm/disOps
-          rm -rf $DIR_NAME/distorm/examples
-          rm -rf $DIR_NAME/distorm/make
-          rm -rf $DIR_NAME/distorm/python
-          rm -rf $DIR_NAME/distorm/setup*
           tar cfz $TGZ_FILE_NAME $DIR_NAME
           zip -rq $ZIP_FILE_NAME $DIR_NAME
-          echo "::set-output name=tgz_file_name::$TGZ_FILE_NAME"
-          echo "::set-output name=zip_file_name::$ZIP_FILE_NAME"
+          echo "tgz_file_name=$TGZ_FILE_NAME" >> $GITHUB_OUTPUT
+          echo "zip_file_name=$ZIP_FILE_NAME" >> $GITHUB_OUTPUT
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
