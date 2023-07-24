@@ -31,6 +31,7 @@
 #endif
 #include <funchook.h>
 #include "test.h"
+#include "unit_test.h"
 #include "libfunchook_test.h"
 
 #ifdef _WIN32
@@ -91,8 +92,6 @@ NOINLINE int reset_register()
 
 int int_val = 0xbaceba11;
 
-int test_cnt;
-int error_cnt;
 static int hook_is_called;
 static int_func_t orig_func;
 static uint64_func_t uint64_orig_func;
@@ -154,11 +153,9 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     funchook_t *funchook = funchook_create();
     int result;
     int expected;
-    int rv;
     int_func_t func_real = NULL;
 
-    test_cnt++;
-    printf("[%d] test_funchook_int: %s\n", test_cnt, func_name);
+    TEST_NAME2("test_funchook_int", func_name);
 
     switch (load_type) {
     case LOAD_TYPE_IN_EXE:
@@ -178,64 +175,30 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     expected = ++int_val;
     set_val_in_dll(int_val);
     reset_register();
-    result = func();
-    if (expected != result) {
-        printf("ERROR: %s should return %d but %d before hooking.\n", func_name, expected, result);
-        error_cnt++;
-        return;
-    }
+    ASSERT_EQUAL_INT(expected, func(), funchook, "before hooking");
     if (func_real != NULL) {
         reset_register();
-        result = func_real();
-        if (expected != result) {
-            printf("ERROR: %s (real) should return %d but %d before hooking.\n", func_name, expected, result);
-            error_cnt++;
-            return;
-        }
+        ASSERT_EQUAL_INT(expected, func_real(), funchook, "before hooking (2)");
     }
     orig_func = func;
-    rv = funchook_prepare(funchook, (void**)&orig_func, hook_func);
-    if (rv != 0) {
-        printf("ERROR: failed to prepare hook %s. (%s)\n", func_name, funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
-    rv = funchook_install(funchook, 0);
-    if (rv != 0) {
-        printf("ERROR: failed to install hook %s. (%s)\n", func_name, funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
+    ASSERT_FUNCHOOK_OK(funchook_prepare(funchook, (void**)&orig_func, hook_func),
+                       funchook, "failed to prepare hook %s", func_name);
+    ASSERT_FUNCHOOK_OK(funchook_install(funchook, 0),
+                       funchook, "failed to install hook %s", func_name);
 
     hook_is_called = 0;
     expected = ++int_val;
     set_val_in_dll(int_val);
     reset_register();
     result = func();
-    if (hook_is_called == 0) {
-        printf("ERROR: hook_func is not called by %s.\n", func_name);
-        error_cnt++;
-        return;
-    }
-    if (expected != result) {
-        printf("ERROR: %s should return %d but %d after hooking.\n", func_name, expected, result);
-        error_cnt++;
-        return;
-    }
+    ASSERT_TRUE(hook_is_called, funchook, "hook_func is not called");
+    ASSERT_EQUAL_INT(expected, result, funchook, "after hooking");
     if (func_real != NULL) {
         hook_is_called = 0;
         reset_register();
         result = func_real();
-        if (hook_is_called == 0) {
-            printf("ERROR: hook_func is not called by %s (real).\n", func_name);
-            error_cnt++;
-            return;
-        }
-        if (expected != result) {
-            printf("ERROR: %s (real) should return %d but %d after hooking.\n", func_name, expected, result);
-            error_cnt++;
-            return;
-        }
+        ASSERT_TRUE(hook_is_called, funchook, "hook_func is not called (2)");
+        ASSERT_EQUAL_INT(expected, result, funchook, "after hooking (2)");
     }
 
     funchook_uninstall(funchook, 0);
@@ -243,20 +206,10 @@ void test_funchook_int(volatile int_func_t func, const char *func_name, enum loa
     expected = ++int_val;
     set_val_in_dll(int_val);
     reset_register();
-    result = func();
-    if (expected != result) {
-        printf("ERROR: %s should return %d but %d after hook is removed.\n", func_name, expected, result);
-        error_cnt++;
-        return;
-    }
+    ASSERT_EQUAL_INT(expected, func(), funchook, "after hooking is removed");
     if (func_real != NULL) {
         reset_register();
-        result = func_real();
-        if (expected != result) {
-            printf("ERROR: %s (real) should return %d but %d after hook is removed.\n", func_name, expected, result);
-            error_cnt++;
-            return;
-        }
+        ASSERT_EQUAL_INT(expected, func_real(), funchook, "after hooking is removed (2)");
     }
 
     funchook_destroy(funchook);
@@ -270,10 +223,8 @@ void test_funchook_uint64(volatile uint64_func_t func, const char *func_name)
     uint64_t results[sizeof(test_data)/sizeof(test_data[0])];
     uint64_t result;
     size_t i, num_test_data = sizeof(test_data)/sizeof(test_data[0]);
-    int rv;
 
-    test_cnt++;
-    printf("[%d] test_funchook_uint64: %s\n", test_cnt, func_name);
+    TEST_NAME2("test_funchook_uint64", func_name);
 
     for (i = 0; i < num_test_data; i++) {
         results[i] = func(test_data[i]);
@@ -281,33 +232,16 @@ void test_funchook_uint64(volatile uint64_func_t func, const char *func_name)
     }
 
     uint64_orig_func = func;
-    rv = funchook_prepare(funchook, (void**)&uint64_orig_func, uint64_hook_func);
-    if (rv != 0) {
-        printf("ERROR: failed to prepare hook %s. (%s)\n", func_name, funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
-    rv = funchook_install(funchook, 0);
-    if (rv != 0) {
-        printf("ERROR: failed to install hook %s. (%s)\n", func_name, funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
-
+    ASSERT_FUNCHOOK_OK(funchook_prepare(funchook, (void**)&uint64_orig_func, uint64_hook_func),
+                       funchook, "failed to prepare hook %s", func_name);
+    ASSERT_FUNCHOOK_OK(funchook_install(funchook, 0),
+                       funchook, "failed to install hook %s", func_name);
     for (i = 0; i < num_test_data; i++) {
         hook_is_called = 0;
         reset_register();
         result = func(test_data[i]);
-        if (hook_is_called == 0) {
-            printf("ERROR: hook_func is not called by %s.\n", func_name);
-            error_cnt++;
-            return;
-        }
-        if (results[i] != result) {
-            printf("ERROR: %s should return 0x%"PRIx64" but 0x%"PRIx64" after hooking.\n", func_name, results[i], result);
-            error_cnt++;
-            return;
-        }
+        ASSERT_TRUE(hook_is_called, funchook, "hook_func is not called by %s.", func_name);
+        ASSERT_EQUAL_UINT64(results[i], result, funchook, "after hooking");
     }
 
     funchook_uninstall(funchook, 0);
@@ -316,16 +250,8 @@ void test_funchook_uint64(volatile uint64_func_t func, const char *func_name)
         hook_is_called = 0;
         reset_register();
         result = func(test_data[i]);
-        if (hook_is_called != 0) {
-            printf("ERROR: hook_func is called after uninstall by %s.\n", func_name);
-            error_cnt++;
-            return;
-        }
-        if (results[i] != result) {
-            printf("ERROR: %s should return 0x%"PRIx64" but 0x%"PRIx64" after uninstall.\n", func_name, results[i], result);
-            error_cnt++;
-            return;
-        }
+        ASSERT_FALSE(hook_is_called, funchook, "hook_func is called after uninstall by %s.", func_name);
+        ASSERT_EQUAL_UINT64(results[i], result, funchook, "after uninstall");
     }
 }
 
@@ -333,17 +259,12 @@ void test_funchook_uint64(volatile uint64_func_t func, const char *func_name)
 void test_funchook_expect_error(int_func_t func, int errcode, const char *func_str, int line)
 {
     funchook_t *funchook = funchook_create();
-    int rv;
 
-    test_cnt++;
-    printf("[%d] test_funchook_expect_error: %s\n", test_cnt, func_str);
+    TEST_NAME2("test_funchook_expect_error", func_str);
 
     orig_func = func;
-    rv = funchook_prepare(funchook, (void**)&orig_func, hook_func);
-    if (rv != errcode) {
-        printf("ERROR at line %d: hooking must fail with %d but %d.\n", line, errcode, rv);
-        error_cnt++;
-    }
+    ASSERT_EQUAL_INT(errcode, funchook_prepare(funchook, (void**)&orig_func, hook_func),
+                     funchook, "hooking must fail at line %d", line);
     funchook_destroy(funchook);
 }
 
@@ -401,22 +322,15 @@ static void check_content(const char *filename, const char *expect, int line)
     char buf[512];
 
     read_content_by_open(filename, buf, sizeof(buf));
-    if (strcmp(buf, expect) != 0) {
-        printf("ERROR at line %d: '%s' != '%s' (open)\n", line, buf, expect);
-        error_cnt++;
-    }
+    ASSERT_TRUE(strcmp(buf, expect) == 0, NULL, "'%s' != '%s' (open) line %d", buf, expect, line);
     read_content_by_fopen(filename, buf, sizeof(buf));
-    if (strcmp(buf, expect) != 0) {
-        printf("ERROR at line %d: '%s' != '%s' (fopen)\n", line, buf, expect);
-        error_cnt++;
-    }
+    ASSERT_TRUE(strcmp(buf, expect) == 0, NULL, "'%s' != '%s' (fopen) line %d", buf, expect, line);
 }
 
 static void test_hook_open_and_fopen(void)
 {
     FILE *fp;
     funchook_t *funchook;
-    int rv;
 
 #ifdef WIN64
     if (getenv("WINELOADERNOEXEC") != NULL) {
@@ -425,8 +339,7 @@ static void test_hook_open_and_fopen(void)
     }
 #endif
 
-    test_cnt++;
-    printf("[%d] test_hook_open_and_fopen\n", test_cnt);
+    TEST_NAME1("test_hook_open_and_fopen");
 
     /* prepare file contents */
     fp = fopen("test-1.txt", "w");
@@ -451,12 +364,8 @@ static void test_hook_open_and_fopen(void)
     check_content("test-1.txt", "This is test-1.txt.", __LINE__);
 
     /* hook `open' and `fopen` */
-    rv = funchook_install(funchook, 0);
-    if (rv != 0) {
-        printf("ERROR: failed to install open and fopen hooks. (%s)\n", funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
+    ASSERT_FUNCHOOK_OK(funchook_install(funchook, 0),
+                       funchook, "failed to install open and fopen hooks.");
     /* Try to open test-1.txt but open test-2.txt. */
     check_content("test-1.txt", "This is test-2.txt.", __LINE__);
 
@@ -515,10 +424,8 @@ static NOINLINE int call_many_funcs(int installed)
 static void test_hook_many_funcs(void)
 {
     funchook_t *funchook;
-    int rv;
 
-    test_cnt++;
-    printf("[%d] test_hook_many_funcs\n", test_cnt);
+    TEST_NAME1("test_hook_many_funcs");
     funchook = funchook_create();
 #define S(suffix) \
     dllfunc_##suffix##_func = dllfunc_##suffix; \
@@ -539,12 +446,8 @@ static void test_hook_many_funcs(void)
 #endif
     putchar('\n');
 
-    rv = funchook_install(funchook, 0);
-    if (rv != 0) {
-        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
+    ASSERT_FUNCHOOK_OK(funchook_install(funchook, 0),
+                       funchook, "failed to install hooks");
     if (call_many_funcs(1) != 0) {
         return;
     }
@@ -559,7 +462,7 @@ static void test_hook_many_funcs(void)
 
 int main()
 {
-    funchook_set_debug_file("debug.log");
+    TEST_BEGIN();
 
 #ifdef SKIP_TESTS_CHANGING_EXE
     printf("*** Skip tests changing executable compiled by Xcode 11.0 or upper on macOS. ***\n");
@@ -617,11 +520,5 @@ int main()
     test_prehook();
     test_cpp();
 
-    if (error_cnt == 0) {
-        printf("all %d tests are passed.\n", test_cnt);
-        return 0;
-    } else {
-        printf("%d of %d tests are failed.\n", error_cnt, test_cnt);
-        return 1;
-    }
+    return TEST_END();
 }

@@ -3,6 +3,7 @@
 #include <funchook.h>
 extern "C" {
 #include "test.h"
+#include "unit_test.h"
 }
 #include "libfunchook_test.h"
 
@@ -31,39 +32,27 @@ void thiscall_prehook(funchook_info_t *info)
 static void test_thiscall(void)
 {
     funchook_t *funchook;
-    int rv;
     long (TestCpp::*target_func)(long, long) = &TestCpp::call;
 
-    printf("[%d] test_cpp: thiscall\n", ++test_cnt);
+    TEST_NAME2("test_cpp", "thiscall");
 
     funchook = funchook_create();
 
-    funchook_params_t params = {0};
+    funchook_params_t params = {NULL, NULL, NULL, 0};
     params.prehook = thiscall_prehook;
-    rv = funchook_prepare_with_params(funchook, (void**)&target_func, &params);
-    if (rv != 0) {
-        printf("ERROR: failed to prepare hook TestCpp::call with prehook. (%s)\n", funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
-
-    rv = funchook_install(funchook, 0);
-    if (rv != 0) {
-        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
-        error_cnt++;
-        funchook_destroy(funchook);
-        return;
-    }
+    ASSERT_FUNCHOOK_OK(funchook_prepare_with_params(funchook, (void**)&target_func, &params),
+                       funchook, "failed to prepare hook TestCpp::call with prehook.");
+    ASSERT_FUNCHOOK_OK(funchook_install(funchook, 0),
+                       funchook, "failed to install hooks.");
 
     TestCpp tc;
     tc.call(1, 2);
-    if (thiscall_args.this_ != &tc || thiscall_args.a != 1 || thiscall_args.b != 2) {
-        printf("ERROR: unexpected arguments in TestCpp::call\n"
-               "   expected [%p, 0x%lx, 0x%lx]\n"
-               "        but [%p, 0x%lx, 0x%lx]\n",
-               &tc, 1l, 2l, thiscall_args.this_, thiscall_args.a, thiscall_args.b);
-        error_cnt++;
-    }
+    ASSERT_TRUE(thiscall_args.this_ == &tc && thiscall_args.a == 1 && thiscall_args.b == 2,
+                funchook,
+                "unexpected arguments in TestCpp::call\n"
+                "   expected [%p, 0x%lx, 0x%lx]\n"
+                "        but [%p, 0x%lx, 0x%lx]\n",
+                &tc, 1l, 2l, thiscall_args.this_, thiscall_args.a, thiscall_args.b);
 
     funchook_uninstall(funchook, 0);
     funchook_destroy(funchook);
@@ -73,7 +62,7 @@ namespace {
 struct my_exception : public std::exception {};
 }
 
-void thiscall_exception_in_prehook(funchook_info_t *info)
+void thiscall_exception_in_prehook(funchook_info_t *info UNUSED_PARAM)
 {
     throw my_exception();
 }
@@ -81,29 +70,18 @@ void thiscall_exception_in_prehook(funchook_info_t *info)
 static void test_exception_in_prehook(void)
 {
     funchook_t *funchook;
-    int rv;
     long (TestCpp::*target_func)(long, long) = &TestCpp::call;
 
-    printf("[%d] test_cpp: exception in prehook\n", ++test_cnt);
+    TEST_NAME2("test_cpp", "exception in prehook");
 
     funchook = funchook_create();
 
-    funchook_params_t params = {0};
+    funchook_params_t params = {NULL, NULL, NULL, 0};
     params.prehook = thiscall_exception_in_prehook;
-    rv = funchook_prepare_with_params(funchook, (void**)&target_func, &params);
-    if (rv != 0) {
-        printf("ERROR: failed to prepare hook TestCpp::call with prehook. (%s)\n", funchook_error_message(funchook));
-        error_cnt++;
-        return;
-    }
-
-    rv = funchook_install(funchook, 0);
-    if (rv != 0) {
-        printf("ERROR: failed to install hooks. (%s)\n", funchook_error_message(funchook));
-        error_cnt++;
-        funchook_destroy(funchook);
-        return;
-    }
+    ASSERT_FUNCHOOK_OK(funchook_prepare_with_params(funchook, (void**)&target_func, &params),
+                       funchook, "failed to prepare hook TestCpp::call with prehook.");
+    ASSERT_FUNCHOOK_OK(funchook_install(funchook, 0),
+                       funchook, "failed to install hooks.");
 
     TestCpp tc;
     bool caught_exception = false;
@@ -112,10 +90,7 @@ static void test_exception_in_prehook(void)
     } catch (my_exception&) {
         caught_exception = true;
     }
-    if (!caught_exception) {
-        printf("ERROR: no exceptions occur\n");
-        error_cnt++;
-    }
+    ASSERT_TRUE(caught_exception, funchook, "no exceptions occur");
 
     funchook_uninstall(funchook, 0);
     funchook_destroy(funchook);

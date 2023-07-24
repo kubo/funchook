@@ -3,9 +3,14 @@
 
 #ifdef __GNUC__
 #define NOINLINE __attribute__((noinline))
+#define UNUSED_PARAM __attribute__((unused))
 #endif
 #ifdef _MSC_VER
 #define NOINLINE __declspec(noinline)
+#endif
+
+#ifndef UNUSED_PARAM
+#define UNUSED_PARAM
 #endif
 
 #if defined(_WIN32)
@@ -13,9 +18,6 @@
 #else
 #define DLLIMPORT
 #endif
-
-extern int test_cnt;
-extern int error_cnt;
 
 void test_prehook(void);
 void test_cpp(void);
