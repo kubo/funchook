@@ -90,7 +90,7 @@ if (DISASM_CAPSTONE)
   FetchContent_Declare(
     capstone
     GIT_REPOSITORY https://github.com/capstone-engine/capstone.git
-    GIT_TAG        5.0-rc4
+    GIT_TAG        5.0.1
     GIT_SHALLOW    TRUE
   )
   FetchContent_GetProperties(capstone)
