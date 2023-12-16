@@ -101,17 +101,6 @@
 
 #define TRAMPOLINE_BYTE_SIZE (TRAMPOLINE_SIZE * sizeof(insn_t))
 
-/* This must be same with sysconf(_SC_PAGE_SIZE) on Unix
- * or the dwPageSize member of the SYSTEM_INFO structure on Windows.
- */
-#undef PAGE_SIZE
-#define PAGE_SIZE 0x1000 /* 4k */
-
-/* This must be same with the dwAllocationGranularity
- * member of the SYSTEM_INFO structure on Windows.
- */
-#define ALLOCATION_UNIT 0x10000 /* 64k */
-
 struct funchook_arg_handle {
     const size_t *base_pointer;
     uint32_t flags;
@@ -158,8 +147,10 @@ void funchook_set_error_message(funchook_t *funchook, const char *fmt, ...) ATTR
 void *funchook_hook_caller(size_t transit_addr, const size_t *base_pointer);
 
 /* Functions in os_unix.c & os_windows.c */
-extern const size_t page_size;
-extern const size_t allocation_unit; /* windows only */
+#define page_size funchook_page_size
+#define allocation_unit funchook_allocation_unit
+extern size_t page_size;
+extern size_t allocation_unit; /* Windows only */
 
 funchook_t *funchook_alloc(void);
 int funchook_free(funchook_t *funchook);

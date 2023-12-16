@@ -37,6 +37,9 @@
 #include "funchook_internal.h"
 #include "disasm.h"
 
+#undef PAGE_SIZE
+#define PAGE_SIZE 4096
+
 // imm26 at bit 25~0
 #define IMM26_MASK 0x03FFFFFF
 #define IMM26_OFFSET(ins) ((int64_t)(int32_t)((ins) << 6) >> 4)

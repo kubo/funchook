@@ -42,10 +42,9 @@ typedef struct page_info {
     char used[1];
 } page_list_t;
 
-const size_t page_size = PAGE_SIZE; /* 4K */
-const size_t allocation_unit = ALLOCATION_UNIT; /* 64K */
+size_t page_size;
+size_t allocation_unit;
 
-static size_t max_num_pages = ALLOCATION_UNIT / PAGE_SIZE - 1; /* 15 */
 static page_list_t page_list = {
     &page_list,
     &page_list,
@@ -71,6 +70,12 @@ static const char *to_errmsg(DWORD err, char *buf, size_t bufsiz)
 
 funchook_t *funchook_alloc(void)
 {
+    if (page_size == 0) {
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        page_size = si.dwPageSize;
+        allocation_unit = si.dwAllocationGranularity;
+    }
     size_t size = ROUND_UP(funchook_size, page_size);
     return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
 }
@@ -159,6 +164,7 @@ int funchook_page_alloc(funchook_t *funchook, funchook_page_t **page_out, uint8_
 {
     page_list_t *pl;
     funchook_page_t *page = NULL;
+    size_t max_num_pages = allocation_unit / page_size - 1;
     size_t i;
 
     for (pl = page_list.next; pl != &page_list; pl = pl->next) {

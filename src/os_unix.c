@@ -51,7 +51,7 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-const size_t page_size = PAGE_SIZE;
+size_t page_size;
 
 const char *funchook_strerror(int errnum, char *buf, size_t buflen)
 {
@@ -69,6 +69,9 @@ const char *funchook_strerror(int errnum, char *buf, size_t buflen)
 
 funchook_t *funchook_alloc(void)
 {
+    if (page_size == 0) {
+        page_size = sysconf(_SC_PAGE_SIZE);
+    }
     size_t size = ROUND_UP(funchook_size, page_size);
     void *mem = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mem == (void*)-1) {
