@@ -90,7 +90,7 @@ Unsupported Platforms
 * macOS arm64 (*1)
 * x64/x86 emulation for Windows arm64
 
-*1 I received a mail that [`mprotect`] failed with `EINVAL`. Apple seems to prevent executable memory regions from being writable.
+*1 I received a mail that [`mprotect`] failed with `EINVAL`. This issue may be same with [#51][] and fixed by [this commit](https://github.com/kubo/funchook/commit/d5faee56e9fb0b7798754692ed4f1ed5579c4759).
 
 Compilation and installation
 -----------
@@ -288,4 +288,5 @@ itself is under the GPL.
 [#31]: https://github.com/kubo/funchook/pull/31
 [#32]: https://github.com/kubo/funchook/pull/32
 [#45]: https://github.com/kubo/funchook/pull/45
+[#51]: https://github.com/kubo/funchook/issues/51
 [`mprotect`]: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html
