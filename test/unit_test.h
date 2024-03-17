@@ -33,7 +33,7 @@ void unit_test_name(const char *name1, const char *name2);
 
 #define ASSERT_EQUAL_INT(expected, actual, funchook, ...) ASSERT_EQUAL_WITH_TYPE(int, "%d", expected, actual, funchook, __VA_ARGS__)
 #define ASSERT_EQUAL_LONG(expected, actual, funchook, ...) ASSERT_EQUAL_WITH_TYPE(long, "%ld", expected, actual, funchook, __VA_ARGS__)
-#define ASSERT_EQUAL_UINT64(expected, actual, funchook, ...) ASSERT_EQUAL_WITH_TYPE(uint64_t, "0x%"PRIx64, expected, actual, funchook, __VA_ARGS__)
+#define ASSERT_EQUAL_UINT64(expected, actual, funchook, ...) ASSERT_EQUAL_WITH_TYPE(uint64_t, "0x%" PRIx64, expected, actual, funchook, __VA_ARGS__)
 #define ASSERT_EQUAL_DOUBLE(expected, actual, funchook, ...) ASSERT_EQUAL_WITH_TYPE(double, "%f", expected, actual, funchook, __VA_ARGS__)
 
 #define ASSERT_TRUE(cond, funchook, ...) do { \
