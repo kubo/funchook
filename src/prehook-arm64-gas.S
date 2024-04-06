@@ -1,7 +1,13 @@
+#if defined __APPLE__
+#define funchook_hook_caller_asm _funchook_hook_caller_asm
+#define funchook_hook_caller _funchook_hook_caller
+#endif
 	.arch armv8-a
 	.text
 	.globl	funchook_hook_caller_asm
+#if defined __linux__
 	.type	funchook_hook_caller_asm, %function
+#endif
 funchook_hook_caller_asm:
 	.cfi_startproc
 	// save frame pointer (x29) and link register (x30).
