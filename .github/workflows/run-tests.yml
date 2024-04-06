@@ -8,7 +8,7 @@ jobs:
     name: Tests on Alpine (x86_64)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
     - name: x86_64 tests on Alpine
@@ -20,7 +20,7 @@ jobs:
     name: Tests on macOS (x86_64)
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
     - name: x86_64 tests on macOS
@@ -31,7 +31,7 @@ jobs:
     name: Tests on Ubuntu (aarch64)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
     - uses: uraimo/run-on-arch-action@v2
@@ -51,7 +51,7 @@ jobs:
     name: Tests on Ubuntu (x86_64 and i686)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
     - name: Install packages
@@ -69,7 +69,7 @@ jobs:
     name: Tests on Windows (x64 and x86)
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
     - name: x64 tests on Windows
@@ -85,7 +85,7 @@ jobs:
     name: Tests on Wine (x64 and x86)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
     - name: Install packages
