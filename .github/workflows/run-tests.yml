@@ -102,6 +102,7 @@ jobs:
         submodules: true
     - name: Install packages
       run: |
+        sudo apt-get update
         sudo apt-get install -y g++-mingw-w64-x86-64 g++-mingw-w64-i686 wine64 wine-binfmt
         sudo dpkg --add-architecture i386
         sudo apt-get update
