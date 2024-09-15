@@ -51,7 +51,7 @@ typedef _DInst funchook_insn_t;
 #endif
 
 #ifdef DISASM_CAPSTONE
-#include <capstone/capstone.h>
+#include <capstone.h>
 
 typedef struct funchook_disasm {
     funchook_t *funchook;

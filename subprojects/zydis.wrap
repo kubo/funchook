@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/zyantific/zydis.git
+revision = cb487f1cb477b2c03345aa72baf7eda725b77507
+depth = 1
+
+[provide]
+dependency_names = zydis

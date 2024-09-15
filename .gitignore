@@ -6,3 +6,8 @@
 *~
 /build*
 
+# subproject directories
+/subprojects/*
+!/subprojects/packagefiles/
+!/subprojects/*.wrap
+/subprojects/zycore.wrap

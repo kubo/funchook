@@ -1,0 +1,6 @@
+option(
+  'disasm',
+  type: 'combo',
+  choices: ['auto', 'Zydis', 'capstone'],
+  value: 'auto',
+)
