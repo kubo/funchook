@@ -416,7 +416,7 @@ void *funchook_resolve_func(funchook_t *funchook, void *func)
         if ((void*)lm->l_addr <= func) {
             if (lmap == NULL) {
                 lmap = lm;
-            } else if (lmap->l_addr > lm->l_addr) {
+            } else if (lmap->l_addr < lm->l_addr) {
                 lmap = lm;
             }
         }
