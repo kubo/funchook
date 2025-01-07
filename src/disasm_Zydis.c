@@ -130,7 +130,11 @@ void funchook_disasm_x86_rip_relative(funchook_disasm_t *disasm, const funchook_
         int i;
         for (i = 0; i < insn->insn.operand_count; i++) {
             const ZydisDecodedOperand *op = &insn->operands[i];
+#if DISASM_ZYDIS_V5
+            if (op->mem.disp.size != 0 && op->mem.base == ZYDIS_REGISTER_RIP) {
+#else
             if (op->mem.disp.has_displacement && op->mem.base == ZYDIS_REGISTER_RIP) {
+#endif
                 // Fix IP-relative addressing such as:
                 //    mov eax, dword ptr [rip + 0x236eda]
                 //    jmp qword ptr [rip + 0x239468]

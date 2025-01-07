@@ -67,7 +67,7 @@ else
 endif
 
 if funchook_disasm == 'Zydis'
-  funchook_deps += dependency(
+  zydis_dep = dependency(
     'zydis',
     version: '>=4.0.0',
     default_options: {
@@ -76,6 +76,20 @@ if funchook_disasm == 'Zydis'
     },
   )
   cdata.set10('DISASM_ZYDIS', true)
+
+  cdata.set10(
+    'DISASM_ZYDIS_V5',
+    cc.has_member(
+      'ZydisDecodedOperandMem',
+      'disp.size',
+      dependencies: zydis_dep.partial_dependency(compile_args: true, includes: true),
+      prefix: '''
+      #include <Zydis/Zydis.h>
+      ''',
+    ),
+  )
+
+  funchook_deps += zydis_dep
 elif disasm == 'capstone'
   funchook_deps += dependency(
     'capstone',
