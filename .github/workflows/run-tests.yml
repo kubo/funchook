@@ -9,8 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: x86_64 tests on Alpine
       run: |
         docker build -f .ci/Dockerfile-alpine-test -t funchook-test .
@@ -21,8 +19,6 @@ jobs:
     runs-on: macos-13
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: x86_64 tests on macOS
       run: |
         ./.ci/run-cmake-test.sh x86_64-darwin
@@ -33,39 +29,28 @@ jobs:
     runs-on: macos-14
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: arm64 tests on macOS
       run: |
         ./.ci/run-cmake-test.sh arm64-darwin
 
   tests_on_ubuntu_arm64:
     name: Tests on Ubuntu (aarch64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: uraimo/run-on-arch-action@v2
-      name: aarch64 tests on Ubuntu
-      id: run_tests
-      with:
-        arch: aarch64
-        distro: ubuntu20.04
-        githubToken: ${{ github.token }}
-        install: |
-          apt-get update -q -y
-          apt-get install -q -y cmake git g++
-        run: |
-          ./.ci/run-cmake-test.sh aarch64-linux
+    - name: Install packages
+      run: |
+        sudo apt-get update -q -y
+        sudo apt-get install -q -y cmake git g++
+    - name: aarch64 tests on Ubuntu
+      run: |
+        ./.ci/run-cmake-test.sh aarch64-linux
 
   tests_on_ubuntu_x86_64:
     name: Tests on Ubuntu (x86_64 and i686)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: Install packages
       run: |
         sudo apt-get update
@@ -82,8 +67,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: x64 tests on Windows
       shell: bash
       run: |
@@ -98,8 +81,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: Install packages
       run: |
         sudo apt-get update
