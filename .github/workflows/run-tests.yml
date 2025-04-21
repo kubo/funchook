@@ -40,8 +40,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install packages
       run: |
-        sudo apt-get update -q -y
-        sudo apt-get install -q -y cmake git g++
+        sudo apt-get update
+        sudo apt-get install cmake git g++
     - name: aarch64 tests on Ubuntu
       run: |
         ./.ci/run-cmake-test.sh aarch64-linux
@@ -60,7 +60,7 @@ jobs:
         ./.ci/run-cmake-test.sh x86_64-linux
     - name: i686 tests on Ubuntu
       run: |
-        ./.ci/run-cmake-test.sh i686-linux     -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
+        ./.ci/run-cmake-test.sh i686-linux -DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
 
   tests_on_windows:
     name: Tests on Windows (x64 and x86)
@@ -84,7 +84,7 @@ jobs:
       - name: arm64 tests on Windows
         shell: bash
         run: |
-          ./.ci/run-cmake-test.sh arm64-windows -A ARM64 -DFUNCHOOK_CPU=arm64 -DFUNCHOOK_BUILD_TESTS=OFF
+          ./.ci/run-cmake-test.sh arm64-windows -A ARM64 -DFUNCHOOK_CPU=arm64
 
   tests_on_wine:
     name: Tests on Wine (x64 and x86)
