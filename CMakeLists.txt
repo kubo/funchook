@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 
 project(funchook VERSION 2.0.0 LANGUAGES C ASM)
 
-include("GNUInstallDirs")
+include(GNUInstallDirs)
 include(FetchContent)
 
-if(NOT FUNCHOOK_CPU) 
+if(NOT FUNCHOOK_CPU)
   set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
   if (FUNCHOOK_CPU MATCHES "x86_64" OR FUNCHOOK_CPU MATCHES "i.86" OR FUNCHOOK_CPU MATCHES "AMD64")
       set(FUNCHOOK_CPU x86)
@@ -82,7 +82,6 @@ endif ()
 # capstone
 #
 if (DISASM_CAPSTONE)
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   string(TOUPPER ${FUNCHOOK_CPU} FUNCHOOK_CPU_UPPER)
   set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
   set(CAPSTONE_BUILD_STATIC_RUNTIME OFF CACHE BOOL "")
@@ -97,6 +96,7 @@ if (DISASM_CAPSTONE)
     GIT_SHALLOW    TRUE
   )
   FetchContent_MakeAvailable(capstone)
+  set_target_properties(capstone PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
   list(APPEND FUNCHOOK_DEPS capstone)
   set(DISASM capstone)
@@ -134,7 +134,6 @@ endif ()
 # zydis
 #
 if (DISASM_ZYDIS)
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(ZYDIS_BUILD_SHARED_LIB OFF CACHE BOOL "")
   set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
   set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
@@ -145,6 +144,7 @@ if (DISASM_ZYDIS)
     GIT_SHALLOW    TRUE
   )
   FetchContent_MakeAvailable(Zydis)
+  set_target_properties(Zydis PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
   list(APPEND FUNCHOOK_DEPS Zydis)
   set(DISASM Zydis)
