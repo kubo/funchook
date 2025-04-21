@@ -13,7 +13,7 @@ else
   GENERATOR_TYPE=single_config
 fi
 
-if test "`uname -m`" = aarch64 -o "`uname -m`" = arm64; then
+if [ "`uname -m`" = "aarch64" ] || [ "`uname -m`" = "arm64" ] || [ "$PROCESSOR_ARCHITECTURE" = "ARM64" ]; then
   DISASM_BACKENDS="capstone"
 else
   DISASM_BACKENDS="distorm zydis capstone"
