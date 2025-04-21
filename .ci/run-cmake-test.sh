@@ -13,10 +13,19 @@ else
   GENERATOR_TYPE=single_config
 fi
 
-if [ "`uname -m`" = "aarch64" ] || [ "`uname -m`" = "arm64" ] || [ "$PROCESSOR_ARCHITECTURE" = "ARM64" ]; then
+if [ "`uname -m`" = "aarch64" ] || [ "`uname -m`" = "arm64" ]; then
   DISASM_BACKENDS="capstone"
 else
-  DISASM_BACKENDS="distorm zydis capstone"
+  for arg in "$@"; do
+    if [ "$arg" = "ARM64" ]; then
+      DISASM_BACKENDS="capstone"
+      break
+    fi
+  done
+
+  if [ -z "$DISASM_BACKENDS" ]; then
+    DISASM_BACKENDS="distorm zydis capstone"
+  fi
 fi
 
 message() {
