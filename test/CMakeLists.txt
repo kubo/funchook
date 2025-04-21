@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(libfunchook_test LANGUAGES C CXX ASM)
 
-if (NOT FUNCHOOK_CPU)
-  set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
-endif ()
+set(FUNCHOOK_CPU ${CMAKE_SYSTEM_PROCESSOR})
 
 if (FUNCHOOK_CPU STREQUAL AMD64)
   set(FUNCHOOK_CPU "x86_64")

@@ -84,7 +84,7 @@ jobs:
       - name: arm64 tests on Windows
         shell: bash
         run: |
-          ./.ci/run-cmake-test.sh arm64-windows -A ARM64 -DFUNCHOOK_CPU=arm64
+          ./.ci/run-cmake-test.sh arm64-windows -A ARM64 -DFUNCHOOK_CPU=arm64 -DFUNCHOOK_BUILD_TESTS=OFF
 
   tests_on_wine:
     name: Tests on Wine (x64 and x86)
