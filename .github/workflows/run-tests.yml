@@ -82,6 +82,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: arm64 tests on Windows
+        shell: cmd
+        run: |
+          echo %PROCESSOR_ARCHITECTURE%
+      - name: arm64 tests on Windows
         shell: bash
         run: |
           uname -m
