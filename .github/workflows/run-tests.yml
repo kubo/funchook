@@ -76,6 +76,16 @@ jobs:
       run: |
         ./.ci/run-cmake-test.sh x86-windows -A Win32
 
+  tests_on_windows_arm64:
+    name: Tests on Windows (aarch64)
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: arm64 tests on Windows
+        shell: bash
+        run: |
+          ./.ci/run-cmake-test.sh arm64-windows
+
   tests_on_wine:
     name: Tests on Wine (x64 and x86)
     runs-on: ubuntu-latest
