@@ -136,7 +136,6 @@ if (DISASM_ZYDIS)
   FetchContent_Declare(
     Zydis
     GIT_REPOSITORY https://github.com/zyantific/zydis.git
-    GIT_TAG        v4.1.1
     GIT_SHALLOW    TRUE
   )
   FetchContent_MakeAvailable(Zydis)
