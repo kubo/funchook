@@ -88,7 +88,7 @@ if (DISASM_CAPSTONE)
   FetchContent_Declare(
     capstone
     GIT_REPOSITORY https://github.com/capstone-engine/capstone.git
-    GIT_TAG        5.0.6
+    GIT_TAG        next
     GIT_SHALLOW    TRUE
   )
   FetchContent_MakeAvailable(capstone)
