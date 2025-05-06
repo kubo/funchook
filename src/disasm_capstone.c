@@ -36,7 +36,7 @@
 #include "disasm.h"
 
 #ifdef CPU_ARM64
-#define CS_ARCH CS_ARCH_ARM64
+#define CS_ARCH CS_ARCH_AARCH64
 #define CS_MODE CS_MODE_LITTLE_ENDIAN
 #endif
 
@@ -230,26 +230,26 @@ void funchook_disasm_log_instruction(funchook_disasm_t *disasm, const funchook_i
 static uint32_t cs2funchook_reg(uint16_t reg)
 {
     switch (reg) {
-    case ARM64_REG_W9:
-    case ARM64_REG_X9:
+    case AARCH64_REG_W9:
+    case AARCH64_REG_X9:
         return FUNCHOOK_ARM64_REG_X9;
-    case ARM64_REG_W10:
-    case ARM64_REG_X10:
+    case AARCH64_REG_W10:
+    case AARCH64_REG_X10:
         return FUNCHOOK_ARM64_REG_X10;
-    case ARM64_REG_W11:
-    case ARM64_REG_X11:
+    case AARCH64_REG_W11:
+    case AARCH64_REG_X11:
         return FUNCHOOK_ARM64_REG_X11;
-    case ARM64_REG_W12:
-    case ARM64_REG_X12:
+    case AARCH64_REG_W12:
+    case AARCH64_REG_X12:
         return FUNCHOOK_ARM64_REG_X12;
-    case ARM64_REG_W13:
-    case ARM64_REG_X13:
+    case AARCH64_REG_W13:
+    case AARCH64_REG_X13:
         return FUNCHOOK_ARM64_REG_X13;
-    case ARM64_REG_W14:
-    case ARM64_REG_X14:
+    case AARCH64_REG_W14:
+    case AARCH64_REG_X14:
         return FUNCHOOK_ARM64_REG_X14;
-    case ARM64_REG_W15:
-    case ARM64_REG_X15:
+    case AARCH64_REG_W15:
+    case AARCH64_REG_X15:
         return FUNCHOOK_ARM64_REG_X15;
     default:
         return 0;
@@ -264,41 +264,41 @@ funchook_insn_info_t funchook_disasm_arm64_insn_info(funchook_disasm_t *disasm, 
     uint8_t rregs_cnt, wregs_cnt, i;
 
     switch (insn->id) {
-    case ARM64_INS_ADR:
+    case AARCH64_INS_ADR:
         info.insn_id = FUNCHOOK_ARM64_INSN_ADR;
         break;
-    case ARM64_INS_ADRP:
+    case AARCH64_INS_ADRP:
         info.insn_id = FUNCHOOK_ARM64_INSN_ADRP;
         break;
-    case ARM64_INS_B:
-        if (detail->arm64.cc == ARM64_CC_INVALID) {
+    case AARCH64_INS_B:
+        if (detail->aarch64.cc == AArch64CC_Invalid) {
             info.insn_id = FUNCHOOK_ARM64_INSN_B;
         } else {
             info.insn_id = FUNCHOOK_ARM64_INSN_B_cond;
         }
         break;
-    case ARM64_INS_BL:
+    case AARCH64_INS_BL:
         info.insn_id = FUNCHOOK_ARM64_INSN_BL;
         break;
-    case ARM64_INS_CBNZ:
+    case AARCH64_INS_CBNZ:
         info.insn_id = FUNCHOOK_ARM64_INSN_CBNZ;
         break;
-    case ARM64_INS_CBZ:
+    case AARCH64_INS_CBZ:
         info.insn_id = FUNCHOOK_ARM64_INSN_CBZ;
         break;
-    case ARM64_INS_LDR:
+    case AARCH64_INS_LDR:
         info.insn_id = FUNCHOOK_ARM64_INSN_LDR;
         break;
-    case ARM64_INS_LDRSW:
+    case AARCH64_INS_LDRSW:
         info.insn_id = FUNCHOOK_ARM64_INSN_LDRSW;
         break;
-    case ARM64_INS_PRFM:
+    case AARCH64_INS_PRFM:
         info.insn_id = FUNCHOOK_ARM64_INSN_PRFM;
         break;
-    case ARM64_INS_TBNZ:
+    case AARCH64_INS_TBNZ:
         info.insn_id = FUNCHOOK_ARM64_INSN_TBNZ;
         break;
-    case ARM64_INS_TBZ:
+    case AARCH64_INS_TBZ:
         info.insn_id = FUNCHOOK_ARM64_INSN_TBZ;
         break;
     }
