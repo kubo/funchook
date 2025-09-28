@@ -1,7 +1,9 @@
 Funchook - an API hook library
 ==============================
 
-[![tests](https://github.com/kubo/funchook/actions/workflows/run-tests.yml/badge.svg?branch=master)](https://github.com/kubo/funchook/actions/workflows/run-tests.yml)
+> [!CAUTION]  
+> Due to a shift in my personal interests, this repository is no longer maintained and has been archived.
+> If you're looking for a successor project, please check [the network graph](https://github.com/kubo/funchook/network) to see if any forks have continued development.
 
 This library depends on one of the following disassemblers.
 
